@@ -1,6 +1,19 @@
 # Shortcut 3 — Expense: Drain Pending Queue
 
+> **iPhone setup:** see [`../IPHONE-UPDATE-GUIDE.md`](../IPHONE-UPDATE-GUIDE.md)  
+> **Import file:** [`../export/Expense - Drain Pending (setup).shortcut`](../export/Expense%20-%20Drain%20Pending%20(setup).shortcut) (setup helper — finish manually)
+
 No user input. Reads all `pending` rows from the Numbers sheet, sends each to the webhook **one by one**, updates status on success.
+
+## Manual changes on iPhone
+
+Build the full drain shortcut on device (see **IPHONE-UPDATE-GUIDE** → Shortcut 2 section). Key points:
+
+1. Create Numbers sheet **Expense Pending Queue** (headers: `idempotencyKey`, `raw`, `status`, `createdAt`, `lastError`)
+2. **Find Rows Where** `status` = `pending`
+3. **Repeat** → **Run Shortcut** → **Expense - Send to Webhook** (bank name included automatically)
+4. **Update Row** → `sent` or `failed`
+5. **Wait** 2 seconds between rows
 
 ## Why one-by-one (not a bulk webhook)?
 

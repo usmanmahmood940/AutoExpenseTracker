@@ -1,5 +1,42 @@
 # Phase 2 — iOS Shortcuts
 
+**Import ready-made shortcuts** from [`export/`](export/) — no need to build from scratch.
+
+```bash
+# Regenerate after changes (macOS only)
+python3 ios/generate-shortcuts.py
+```
+
+## Quick import (recommended)
+
+1. AirDrop these files from `ios/export/` to your iPhone:
+   - **`Expense - Send to Webhook.shortcut`** — core routine (import first)
+   - **`Expense - Manual Test Log.shortcut`** — paste SMS → test → alert
+   - **`Expense - Drain Pending (setup).shortcut`** — setup notes for pending queue
+
+2. Tap each file on iPhone → **Add Shortcut**
+
+3. When importing **Send to Webhook**, paste `WEBHOOK_API_KEY` and **bank name** when prompted
+
+4. Run **Manual Test Log** → paste a bank SMS → confirm alert shows `transactionId`
+
+5. **Finish manual setup:** [`IPHONE-UPDATE-GUIDE.md`](IPHONE-UPDATE-GUIDE.md) (Numbers sheet, drain shortcut, SMS automation)
+
+> Shortcuts are signed with macOS `shortcuts sign` and are safe to share. Your API key is **not** embedded — you enter it once at import.
+
+### Why not all 3 shortcuts are fully automated?
+
+| Shortcut | Importable? | Notes |
+|----------|-------------|-------|
+| Send to Webhook | ✅ Full | Generated + signed |
+| Manual Test Log | ✅ Full | Calls Send to Webhook |
+| Drain Pending | ⚠️ Setup helper | Numbers row loops are device-specific — finish using [`shortcuts/03-drain-pending.md`](shortcuts/03-drain-pending.md) |
+| Process Bank SMS | Manual automation | Create **Automation → Message** once on iPhone (5 min) |
+
+Numbers sheet + SMS automation still need one-time setup on your phone because Apple ties them to your bank senders and your Numbers file.
+
+---
+
 Three shortcuts + one shared routine + one helper. All use the **same** `ingestTransaction` webhook (one message per call).
 
 ## Architecture

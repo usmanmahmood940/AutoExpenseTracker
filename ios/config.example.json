@@ -1,6 +1,7 @@
 {
   "webhookUrl": "https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction",
   "source": "ios_shortcut",
+  "bankName": "HBL",
   "numbersSpreadsheetName": "Expense Pending Queue",
   "numbersSheetName": "Pending",
   "bankSmsSenders": [

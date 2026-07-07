@@ -1,6 +1,16 @@
 # Shortcut 2 — Expense: Manual Test Log
 
+> **iPhone setup:** see [`../IPHONE-UPDATE-GUIDE.md`](../IPHONE-UPDATE-GUIDE.md)  
+> **Import file:** [`../export/Expense - Manual Test Log.shortcut`](../export/Expense%20-%20Manual%20Test%20Log.shortcut)
+
 For testing without waiting for a real bank SMS. Asks you to paste a message, sends it to the webhook, shows the result.
+
+## Manual changes on iPhone
+
+Usually **none** — this shortcut calls **Expense - Send to Webhook**, which already has your bank name.
+
+1. Open shortcut → verify **Run Shortcut** points to **Expense - Send to Webhook**
+2. Run test → confirm Firestore transaction has correct `bank` field
 
 ## Prerequisites
 

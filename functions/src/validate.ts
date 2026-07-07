@@ -73,6 +73,21 @@ export function validateWebhookRequest(
     };
   }
 
+  const bank =
+    record.bank === undefined
+      ? undefined
+      : typeof record.bank === 'string'
+        ? record.bank.trim()
+        : null;
+
+  if (bank === null) {
+    return { ok: false, error: 'bank must be a string when provided' };
+  }
+
+  if (bank !== undefined && bank.length === 0) {
+    return { ok: false, error: 'bank must be a non-empty string when provided' };
+  }
+
   return {
     ok: true,
     data: {
@@ -81,6 +96,7 @@ export function validateWebhookRequest(
       receivedAt,
       messageId,
       idempotencyKey,
+      bank,
     },
   };
 }

@@ -1,5 +1,7 @@
 # Shortcut 1 — Expense: Process Bank SMS (official automation)
 
+> **iPhone setup:** see [`../IPHONE-UPDATE-GUIDE.md`](../IPHONE-UPDATE-GUIDE.md) → **Shortcut 3 — Process Bank SMS**
+
 Runs automatically when you receive a bank SMS.
 
 ## Prerequisites

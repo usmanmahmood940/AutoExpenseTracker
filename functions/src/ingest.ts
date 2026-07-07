@@ -247,7 +247,7 @@ export const ingestTransaction = onRequest(
       category: parsed.category,
       categorySource: 'ai',
       paymentMethod: parsed.paymentMethod,
-      bank: parsed.bank,
+      bank: request.bank ?? parsed.bank,
       accountId: parsed.accountId,
       accountIdMasked: maskAccountId(parsed.accountId),
       branch: parsed.branch,

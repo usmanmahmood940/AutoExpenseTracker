@@ -20,6 +20,7 @@ functions/.secret.local
 
 # Build output
 functions/lib/
+ios/export/_unsigned/
 dist/
 build/
 

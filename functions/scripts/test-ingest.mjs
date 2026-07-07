@@ -22,6 +22,7 @@ const samples = JSON.parse(
 );
 
 const apiKey = process.env.WEBHOOK_API_KEY;
+const defaultBank = process.env.BANK_NAME ?? 'HBL';
 const endpoint =
   process.env.INGEST_URL ??
   'http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransaction';
@@ -43,6 +44,7 @@ for (const [index, sample] of samples.entries()) {
     source: sample.source,
     receivedAt: new Date().toISOString(),
     idempotencyKey: `test-${randomUUID()}`,
+    ...(sample.bank || defaultBank ? { bank: sample.bank ?? defaultBank } : {}),
   };
 
   console.log(`--- [${index + 1}/${samples.length}] ${sample.name} ---`);

@@ -95,6 +95,8 @@ export interface IngestWebhookRequest {
   raw: string;
   source: IngestionSource;
   receivedAt: string;
+  /** Optional — set once in Shortcut; overrides AI-detected bank name */
+  bank?: string;
   messageId?: string;
   idempotencyKey?: string;
 }

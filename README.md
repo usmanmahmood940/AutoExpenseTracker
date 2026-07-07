@@ -106,6 +106,7 @@ curl -X POST \
   -d '{
     "raw": "PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522",
     "source": "ios_shortcut",
+    "bank": "HBL",
     "receivedAt": "2026-07-06T11:27:00+05:00"
   }' \
   https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction

@@ -2,7 +2,8 @@
   {
     "name": "PSO fuel charge (HBL-style)",
     "source": "ios_shortcut",
-    "raw": "PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522"
+    "raw": "PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522",
+    "bank": "HBL"
   },
   {
     "name": "Account debit with reference",

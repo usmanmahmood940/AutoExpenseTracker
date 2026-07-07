@@ -1,10 +1,21 @@
 # Shortcut 0 — Expense: Send to Webhook (shared routine)
 
-Build this **first**. The other three shortcuts call this one.
+> **iPhone setup:** see [`../IPHONE-UPDATE-GUIDE.md`](../IPHONE-UPDATE-GUIDE.md)  
+> **Import file:** [`../export/Expense - Send to Webhook.shortcut`](../export/Expense%20-%20Send%20to%20Webhook.shortcut)
+
+Build this **first**. The other shortcuts call this one.
 
 ## Purpose
 
 Takes a bank SMS string, POSTs it to `ingestTransaction`, returns the JSON response.
+
+## Constants (set once at top)
+
+| Variable | Value | Example |
+|----------|-------|---------|
+| `Webhook URL` | Firebase function URL | `https://asia-south1-.../ingestTransaction` |
+| `API Key` | Your `WEBHOOK_API_KEY` | (from Firebase secrets) |
+| `Bank Name` | Your bank — **fixed, sent every time** | `HBL`, `UBL`, `Meezan` |
 
 ## Input
 
@@ -13,64 +24,37 @@ Takes a bank SMS string, POSTs it to `ingestTransaction`, returns the JSON respo
 | `Message` | Text | Yes |
 | `Idempotency Key` | Text | No (auto-generated if empty) |
 
-## Configuration (set once at top of shortcut)
+## JSON body sent to webhook
 
-Add two **Text** actions at the very top and fill in your values:
+```json
+{
+  "raw": "<Shortcut Input>",
+  "source": "ios_shortcut",
+  "bank": "<Bank Name constant>",
+  "receivedAt": "<ISO 8601>",
+  "idempotencyKey": "<UUID>"
+}
+```
 
-| Variable name | Value |
-|---------------|-------|
-| `Webhook URL` | `https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction` |
-| `API Key` | Your `WEBHOOK_API_KEY` secret |
-
-> Do not share this shortcut with the API key filled in.
+The `bank` field overrides AI detection on the server.
 
 ## Actions (in order)
 
-### 1. Receive input
-- **Receive** `Message` and `Idempotency Key` (optional) as shortcut input
+1. **Text** → API Key  
+2. **Text** → Bank Name  
+3. **Text** → Webhook URL  
+4. **UUID** → Idempotency Key (or use provided input)  
+5. **Format Date** → ISO 8601 → Received At  
+6. **Get Contents of URL** → POST, headers `X-API-Key` + `Content-Type`, JSON body above  
+7. **Get Dictionary from Input** → parse response  
+8. **Return** response dictionary  
 
-### 2. Idempotency key
-- **If** `Idempotency Key` **has any value**
-  - **Set variable** `Key` → `Idempotency Key`
-- **Otherwise**
-  - **Generate UUID** → **Set variable** `Key`
-
-### 3. Build JSON body
-- **Dictionary**
-  - `raw` → `Message`
-  - `source` → `ios_shortcut`
-  - `receivedAt` → **Current Date** formatted as ISO 8601 (`yyyy-MM-dd'T'HH:mm:ssZZZZZ`)
-  - `idempotencyKey` → `Key`
-- **Set variable** `Payload`
-
-### 4. POST to webhook
-- **Get Contents of URL**
-  - URL: `Webhook URL`
-  - Method: `POST`
-  - Headers:
-    - `Content-Type` → `application/json`
-    - `X-API-Key` → `API Key`
-  - Request Body: `JSON` → `Payload`
-
-### 5. Parse response
-- **Get Dictionary from** `Contents of URL`
-- **Set variable** `Response`
-
-### 6. Return result
-- **Return** `Response` from shortcut
-
-## Output dictionary keys
+## Output
 
 | Key | Meaning |
 |-----|---------|
 | `success` | `true` / `false` |
-| `transactionId` | Firestore transaction ID (on parse success) |
-| `ingestionId` | Raw ingestion log ID |
-| `duplicate` | `true` if same transaction already existed |
-| `error` | Error message (parse fail, etc.) |
-
-## Notes
-
-- HTTP **401** → wrong API key
-- HTTP **200** with `error` → message saved but Gemini could not parse (check Firestore `raw_ingestions`)
-- HTTP **200** with `duplicate: true` → same transaction already logged (still OK)
+| `transactionId` | Firestore transaction ID |
+| `ingestionId` | Audit log ID |
+| `duplicate` | Same transaction already existed |
+| `error` | Parse or other error |
