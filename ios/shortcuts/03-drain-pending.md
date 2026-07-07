@@ -73,6 +73,11 @@ Build the full drain shortcut on device (see **IPHONE-UPDATE-GUIDE** → Shortcu
   - `Row Message` → value from column `raw`
   - `Row Number` → **Repeat Index** (or row index from Numbers if available)
 
+  #### 5a2. Skip OTP rows
+  - **If** `Row Message` **contains** `OTP` OR `otp`:
+    - **Update Row** → `status` = `skipped`
+    - **Continue** to next row (no webhook)
+
   #### 5b. Call webhook
   - **Run Shortcut** → **Expense: Send to Webhook**
     - `Message` → `Row Message`
@@ -124,4 +129,5 @@ This matches the backend test harness delay.
 |--------|---------|
 | `pending` | Waiting to be sent |
 | `sent` | Webhook returned `success: true` |
+| `skipped` | OTP message — ignored, not retried |
 | `failed` | Webhook error or network failure — fix and set back to `pending` manually in Numbers if needed |

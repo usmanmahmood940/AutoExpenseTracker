@@ -40,6 +40,8 @@ The `bank` field overrides AI detection on the server.
 
 ## Actions (in order)
 
+0. **If** Shortcut Input contains `OTP` → **Stop** (skip, no webhook)  
+0b. **If** Shortcut Input contains `otp` → **Stop**  
 1. **Text** → API Key  
 2. **Text** → Bank Name  
 3. **Text** → Webhook URL  

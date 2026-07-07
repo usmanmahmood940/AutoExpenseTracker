@@ -12,7 +12,22 @@ Open **Expense - Send to Webhook** → edit these **Text** actions at the top:
 | **Bank Name** | Your bank (sent with every webhook) | `HBL`, `UBL`, `Meezan` |
 | **Webhook URL** | Leave as-is unless you redeployed | `https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction` |
 
-## Constants to set once (in Shortcut 0 only)
+Shortcuts **2** and **3** call Shortcut **0**, so they automatically use your bank name — no extra setup there.
+
+## OTP filter
+
+Messages containing **`OTP`** or **`otp`** are **never** sent to the webhook and **never** saved to the pending queue.
+
+| Shortcut | Behavior |
+|----------|----------|
+| **Send to Webhook** | Checks first → stops with `Skipped: OTP message` |
+| **Process Bank SMS** | Check before drain / pending / webhook |
+| **Drain Pending** | Mark row `skipped`, do not call webhook |
+| **Manual Test** | Inherits filter via Send to Webhook |
+
+---
+
+## Shortcut 0 — Expense: Send to Webhook
 
 ### If imported from `ios/export/` (generated file)
 
@@ -122,6 +137,9 @@ If you only imported the **setup** placeholder shortcut, build the full drain sh
    **C. Loop**
    - Repeat with Each (pending rows):
      - Get `raw` column → variable **Message**
+     - **If** Message contains `OTP` OR `otp`:
+       - **Update Row** → `status` = `skipped`
+       - **Continue** next row (do **not** call webhook)
      - Get `idempotencyKey` column → variable **Key**
      - **Run Shortcut** → **Expense - Send to Webhook**
        - Input: **Message**
@@ -157,6 +175,8 @@ This is the **official automation** (not in export folder — create on iPhone).
 
 1. **New Shortcut** → receives **Shortcut Input** (message text)
 2. Actions:
+   - **If** Shortcut Input **contains** `OTP` → **Stop Shortcut** (do nothing)
+   - **If** Shortcut Input **contains** `otp` → **Stop Shortcut** (do nothing)
    - **Run Shortcut** → **Expense - Drain Pending Queue**
    - **Get Network Details** → if offline:
      - Add row to Numbers (`status` = `pending`, `raw` = Shortcut Input)
@@ -196,6 +216,7 @@ The `bank` field **overrides** whatever Gemini detects. Set it once in Shortcut 
 ## Checklist
 
 - [ ] Backend redeployed (`npm run deploy:functions`)
+- [ ] Shortcut 0: OTP filter at top (`OTP` / `otp` → stop, no webhook)
 - [ ] Shortcut 0: API Key set
 - [ ] Shortcut 0: Bank Name set (e.g. `HBL`)
 - [ ] Shortcut 0: JSON body includes `bank` key

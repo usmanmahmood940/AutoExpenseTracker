@@ -32,11 +32,15 @@ This is a **regular shortcut** (not the automation itself). The automation only 
 ### 1. Receive SMS text
 - Shortcut receives **Shortcut Input** = message body from automation
 
-### 2. Drain pending first
+### 2. Skip OTP messages
+- **If** Shortcut Input **contains** `OTP` → **Stop Shortcut** (no webhook, no pending)
+- **If** Shortcut Input **contains** `otp` → **Stop Shortcut**
+
+### 3. Drain pending first
 - **Run Shortcut** → **Expense: Drain Pending Queue**
 - (Processes any offline/failed messages before the new one)
 
-### 3. Check internet
+### 4. Check internet
 - **Get Network Details** → **Is Connected**
 - **If** `Is Connected` **is** `false`:
   - **Run Shortcut** → **Expense: Save Pending to Sheet** with:
@@ -71,10 +75,12 @@ Small helper used by Shortcut 1 and worth building separately.
 - `Idempotency Key` (optional text)
 
 ### Actions
-1. **If** `Idempotency Key` has no value → **Generate UUID** → `Key`
-2. **Otherwise** → `Key` = `Idempotency Key`
-3. **Current Date** → ISO 8601 → `Created At`
-4. **Add Row** to Numbers spreadsheet **Expense Pending Queue**, sheet **Pending**:
+1. **If** `Message` **contains** `OTP` → **Stop Shortcut**
+2. **If** `Message` **contains** `otp` → **Stop Shortcut**
+3. **If** `Idempotency Key` has no value → **Generate UUID** → `Key`
+4. **Otherwise** → `Key` = `Idempotency Key`
+5. **Current Date** → ISO 8601 → `Created At`
+6. **Add Row** to Numbers spreadsheet **Expense Pending Queue**, sheet **Pending**:
    | idempotencyKey | raw | status | createdAt | lastError |
    |----------------|-----|--------|-----------|-----------|
    | Key | Message | pending | Created At | (empty) |
