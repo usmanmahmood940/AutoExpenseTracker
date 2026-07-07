@@ -1,0 +1,12 @@
+{
+  "name": "auto-expense-tracker",
+  "private": true,
+  "description": "Auto expense logger — SMS/email ingestion to Firestore",
+  "scripts": {
+    "build": "npm --prefix functions run build",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy:functions": "firebase deploy --only functions",
+    "emulators": "firebase emulators:start",
+    "test:ingest": "npm --prefix functions run test:ingest"
+  }
+}

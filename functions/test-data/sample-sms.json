@@ -1,0 +1,22 @@
+[
+  {
+    "name": "PSO fuel charge (HBL-style)",
+    "source": "ios_shortcut",
+    "raw": "PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522"
+  },
+  {
+    "name": "Account debit with reference",
+    "source": "ios_shortcut",
+    "raw": "Your A/C 1234-5678901-02 has been debited with PKR 15,000.00 on 05-Jul-2026. Ref: FT2523456789. Avl Bal PKR 250,000.00"
+  },
+  {
+    "name": "Salary credit",
+    "source": "gmail",
+    "raw": "PKR 2,500.00 credited to A/C xxx9876 on 04-Jul-2026. Info: Salary"
+  },
+  {
+    "name": "ATM withdrawal",
+    "source": "ios_shortcut",
+    "raw": "PKR 10,000.00 withdrawn from A/C xxx4521 at ATM DHA Phase 6 LHR on 03-Jul-2026 14:35. Avl Bal PKR 85,430.00"
+  }
+]

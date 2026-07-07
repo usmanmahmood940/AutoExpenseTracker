@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model (Phase 0)
+    // ===============================================================
+    // users/{userId}
+    // transactions/{transactionId}
+    // raw_ingestions/{ingestionId}
+    //
+    // All writes go through Cloud Functions (Admin SDK).
+    // Client apps will get read access in Phase 5 with Firebase Auth.
+    // ===============================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
