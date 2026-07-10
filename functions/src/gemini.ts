@@ -6,11 +6,12 @@ import {
 
 import type { ParsedTransaction } from './schema';
 
-// gemini-2.0-flash free-tier quota is 0 (deprecated). Use 2.5 flash family.
+// Prefer lite for SMS→JSON; fall back if unavailable or overloaded.
+// 2.5-flash-lite is closed to new API keys; 2.0-flash-lite is retired.
 export const GEMINI_MODELS = [
+  'gemini-3.1-flash-lite',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-2.0-flash-lite',
+  'gemini-3.5-flash',
 ] as const;
 
 export const GEMINI_MODEL = GEMINI_MODELS[0];
@@ -158,8 +159,20 @@ function normalizeParsed(raw: Record<string, unknown>): ParsedTransaction {
   };
 }
 
-function isQuotaError(message: string): boolean {
-  return message.includes('429') || message.includes('RESOURCE_EXHAUSTED');
+/** Quota, overload, unavailable-model, and capacity errors — try the next model. */
+function isRetryableModelError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    message.includes('429') ||
+    message.includes('RESOURCE_EXHAUSTED') ||
+    message.includes('503') ||
+    message.includes('UNAVAILABLE') ||
+    message.includes('404') ||
+    lower.includes('high demand') ||
+    lower.includes('service unavailable') ||
+    lower.includes('no longer available') ||
+    lower.includes('not found')
+  );
 }
 
 function sleep(ms: number): Promise<void> {
@@ -220,7 +233,7 @@ export async function parseTransaction(
         error instanceof Error ? error.message : 'Unknown Gemini parse error';
       lastError = `[${modelName}] ${message}`;
 
-      if (isQuotaError(message)) {
+      if (isRetryableModelError(message)) {
         await sleep(1500);
         continue;
       }

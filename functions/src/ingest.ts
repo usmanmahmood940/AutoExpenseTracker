@@ -77,7 +77,7 @@ function buildIngestionResponse(
 
   if (ingestion.status === 'needs_parse') {
     return {
-      success: true,
+      success: false,
       ingestionId,
       error: ingestion.error ?? 'Parsing needs manual review',
     };
@@ -191,7 +191,7 @@ export const ingestTransaction = onRequest(
       });
 
       res.status(200).json({
-        success: true,
+        success: false,
         ingestionId,
         error: parseResult.error,
       });
@@ -206,7 +206,7 @@ export const ingestTransaction = onRequest(
       });
 
       res.status(200).json({
-        success: true,
+        success: false,
         ingestionId,
         error: fieldValidation.error,
       });

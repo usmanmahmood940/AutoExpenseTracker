@@ -118,7 +118,7 @@ curl -X POST \
 |------|------|------|
 | Success | 200 | `{ "success": true, "ingestionId": "...", "transactionId": "..." }` |
 | Duplicate | 200 | `{ "success": true, "duplicate": true, "transactionId": "..." }` |
-| Parse failed | 200 | `{ "success": true, "ingestionId": "...", "error": "..." }` |
+| Parse failed | 200 | `{ "success": false, "ingestionId": "...", "error": "..." }` |
 | Bad API key | 401 | `{ "success": false, "error": "Unauthorized" }` |
 | Invalid body | 400 | `{ "success": false, "error": "..." }` |
 
