@@ -3,6 +3,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
 
 import { db } from './admin';
+import { dayNameFromDate, parseReceivedAt } from './dates';
 import { computeDedupKey, maskAccountId } from './dedup';
 import { parseTransaction } from './gemini';
 import {
@@ -24,8 +25,12 @@ function unauthorized(): IngestWebhookResponse {
   return { success: false, error: 'Unauthorized' };
 }
 
-function toTimestamp(isoDate: string): Timestamp {
-  return Timestamp.fromDate(new Date(isoDate));
+function toTimestamp(receivedAt: string): Timestamp {
+  const date = parseReceivedAt(receivedAt);
+  if (!date) {
+    throw new Error(`Invalid receivedAt: ${receivedAt}`);
+  }
+  return Timestamp.fromDate(date);
 }
 
 async function findIdempotentIngestion(
@@ -253,6 +258,7 @@ export const ingestTransaction = onRequest(
       branch: parsed.branch,
       transactionTime: parsed.transactionTime,
       transactionDate: parsed.transactionDate,
+      day: dayNameFromDate(parsed.transactionDate) ?? 'Unknown',
       externalId: parsed.externalId,
       externalIdType: parsed.externalIdType,
       dedupKey,

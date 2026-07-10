@@ -63,6 +63,8 @@ export interface Transaction {
   branch: string | null;
   transactionTime: string;
   transactionDate: string;
+  /** Full weekday name derived from transactionDate (e.g. Friday) */
+  day: string;
   externalId: string | null;
   externalIdType: ExternalIdType;
   dedupKey: string;

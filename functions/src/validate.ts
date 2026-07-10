@@ -1,3 +1,4 @@
+import { parseReceivedAt } from './dates';
 import type {
   IngestionSource,
   IngestWebhookRequest,
@@ -41,10 +42,11 @@ export function validateWebhookRequest(
     };
   }
 
-  if (typeof receivedAt !== 'string' || Number.isNaN(Date.parse(receivedAt))) {
+  if (typeof receivedAt !== 'string' || parseReceivedAt(receivedAt) == null) {
     return {
       ok: false,
-      error: 'receivedAt is required and must be a valid ISO date string',
+      error:
+        'receivedAt is required and must be ISO 8601 or dd/mm/yyyy with time (e.g. 10/07/2026, 6:02:00 PM GMT +5)',
     };
   }
 
