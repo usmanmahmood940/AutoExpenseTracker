@@ -125,7 +125,7 @@ Input: PKR 2,500.00 credited to A/C xxx9876 on 04-Jul-2026. Info: Salary
 Output: {"amount":2500,"currency":"PKR","type":"credit","merchant":"Salary","merchantDetails":null,"category":"Income","paymentMethod":"account","bank":"Unknown","accountId":"xxx9876","branch":null,"transactionTime":"2026-07-04T00:00:00+05:00","transactionDate":"2026-07-04","externalId":null,"externalIdType":"unknown","parseConfidence":0.8}`;
 
 export type ParseResult =
-  | { ok: true; parsed: ParsedTransaction }
+  | { ok: true; parsed: ParsedTransaction; model: string }
   | { ok: false; error: string; lowConfidence?: boolean };
 
 function normalizeParsed(raw: Record<string, unknown>): ParsedTransaction {
@@ -227,7 +227,7 @@ export async function parseTransaction(
         };
       }
 
-      return { ok: true, parsed };
+      return { ok: true, parsed, model: modelName };
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown Gemini parse error';

@@ -245,7 +245,7 @@ export const ingestTransaction = onRequest(
       merchant: parsed.merchant,
       merchantDetails: parsed.merchantDetails,
       category: parsed.category,
-      categorySource: 'ai',
+      categorySource: parseResult.model,
       paymentMethod: parsed.paymentMethod,
       bank: request.bank ?? parsed.bank,
       accountId: parsed.accountId,

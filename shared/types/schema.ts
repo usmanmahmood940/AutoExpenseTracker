@@ -5,7 +5,8 @@
 
 export type TransactionType = 'debit' | 'credit';
 
-export type CategorySource = 'ai' | 'user' | 'rule';
+/** 'user', 'rule', or the Gemini model id that categorized the transaction */
+export type CategorySource = 'user' | 'rule' | string;
 
 export type TransactionStatus = 'active' | 'deleted' | 'needs_review';
 
