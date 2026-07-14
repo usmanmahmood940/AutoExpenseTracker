@@ -1,0 +1,76 @@
+---
+description: NovaSpend Flutter clean architecture and Provider conventions
+globs: NovaSpend/lib/**/*.dart
+alwaysApply: false
+---
+
+# NovaSpend Architecture
+
+## Layer boundaries
+
+- **presentation/** — Flutter UI, Provider (ChangeNotifier ViewModels). May import domain + l10n.
+- **domain/** — entities, abstract repositories, use cases. Pure Dart only. No Flutter, Provider, or l10n.
+- **data/** — datasources, models (DTOs), `repository_impl.dart`. Implements domain repositories.
+
+Dependency flow: `presentation → domain ← data`.
+
+## Feature folder layout
+
+```
+features/<feature>/
+├── data/
+│   ├── datasource/
+│   ├── models/
+│   └── repository_impl.dart
+├── domain/
+│   ├── entities/
+│   ├── repositories/<feature>_repository.dart
+│   └── usecases/
+└── presentation/
+    ├── pages/
+    ├── widgets/
+    └── provider/
+```
+
+Features: `auth`, `transactions`, `categories`, `budgets`, `analytics`, `settings`.
+
+## Data flow
+
+```
+UI (pages/widgets)
+  → Provider (presentation/provider/)
+  → UseCase (domain/usecases/)
+  → Repository abstract (domain/repositories/)
+  → RepositoryImpl (data/repository_impl.dart)
+  → DataSource (Firestore / webhook / local)
+```
+
+## Provider conventions
+
+- One ChangeNotifier per screen or cohesive flow in `presentation/provider/`.
+- Providers call use cases, never datasources directly.
+- Map domain `Failure` to user-facing strings in presentation via `context.l10n`.
+
+## Entity / model mapping
+
+- **entities/** — domain objects used by use cases and presentation.
+- **models/** — Firestore/JSON DTOs with `toEntity()` / `fromEntity()` or similar mappers.
+- Align entities with backend schema in `shared/types/schema.ts`.
+
+## Backend integration
+
+- Auth: Firebase Auth; use `uid` as tenant key.
+- Read: Firestore `users/{uid}/transactions` (realtime snapshots).
+- Ingest: POST to `ingestTransactionForUser` with `X-User-Id` header (not client Firestore writes until Phase 5 rules).
+- Settings map to `User` + `UserSettings` in Firestore.
+
+## File naming
+
+- Abstract repo: `<feature>_repository.dart`
+- Implementation: `repository_impl.dart`
+- Use cases: `<verb>_<noun>.dart` (e.g. `get_transactions.dart`)
+- Providers: `<feature>_provider.dart` or `<screen>_provider.dart`
+
+## DI
+
+Register repos, use cases, and providers in `lib/core/di/injection.dart` via GetIt (`sl`).

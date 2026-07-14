@@ -1,0 +1,36 @@
+---
+description: NovaSpend localization rules (ARB + context.l10n)
+globs: NovaSpend/lib/**/*.dart
+alwaysApply: false
+---
+
+# NovaSpend Localization
+
+## Setup
+
+- Template ARB: `NovaSpend/lib/l10n/app_en.arb`
+- Config: `NovaSpend/l10n.yaml`
+- Extension: `NovaSpend/lib/l10n/app_strings.dart`
+
+## Rules
+
+1. **Never hardcode UI text** in widgets, providers, or services.
+2. Use **camelCase** keys in ARB files (`authEmail`, `settingsTitle`).
+3. Access strings via `context.l10n.someKey` (import `app_strings.dart`).
+4. Use ARB placeholders for dynamic text: `"welcomeUser": "Welcome, {name}!"`.
+5. **Do not edit** generated `app_localizations*.dart` files.
+6. **domain/** must stay l10n-free. Map errors to strings in presentation only.
+
+## Adding strings
+
+1. Add key to `lib/l10n/app_en.arb`.
+2. When adding locales later, add the same key to `app_<lang>.arb`.
+3. Run `flutter pub get` to regenerate localizations.
+4. Use `context.l10n.newKey` in UI.
+
+## Locale switching
+
+- `AppLocaleController` persists `languageCode` in SharedPreferences (`app_locale`).
+- `AppLocaleScope.of(context)` exposes the controller.
+- `LanguageSelectionPage` returns selected code via `Navigator.pop(code)`.
+- `MaterialApp.locale`: null = system default.

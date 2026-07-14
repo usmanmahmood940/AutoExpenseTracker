@@ -1,0 +1,77 @@
+---
+description: NovaSpend UI/UX design system — minimal, glass accents, native feel
+globs: NovaSpend/lib/**/*.dart
+alwaysApply: false
+---
+
+# NovaSpend UI/UX
+
+## Design ratio: 90% minimal / 10% glass
+
+- **Default:** flat surfaces, generous whitespace, no decorative clutter.
+- **Glass (sparingly):** use `GlassSurface` only for nav bars, bottom sheets, floating panels, or one hero element per screen — never on every card.
+- Glass = subtle blur + low-opacity fill + thin border. No heavy gradients or neon.
+
+## Native platform feel
+
+- Prefer platform-adaptive widgets: `AdaptiveScaffold`, Material on Android, Cupertino on iOS where it matters (navigation, dialogs, switches).
+- Respect platform safe areas and system fonts (SF Pro on iOS, Roboto on Android via theme).
+- Use `Theme.of(context).platform` or `defaultTargetPlatform` — do not force iOS chrome on Android or vice versa.
+
+## Tokens (use these, do not magic-number in widgets)
+
+| Token | Location | Values |
+|-------|----------|--------|
+| Accent | `AppColors.accent` | Single green `#10B981` — only accent hue in the app |
+| Radius | `AppRadius` | `md` 16, `lg` 20, `xl` 24 |
+| Spacing | `AppSpacing` | `xs` 4 … `xxl` 48 — charts/lists need `lg`+ padding |
+| Motion | `AppMotion` | 200–350 ms, `Curves.easeOutCubic` |
+
+Import from `lib/core/theme/`.
+
+## Layout patterns
+
+### Large balance at top
+
+- Primary screens (home, analytics) lead with `BalanceHeader`: large amount (`displayLarge` / 36–48 sp), muted label above, accent only on positive/trend indicators.
+- Balance sits in top third; actions below, not competing with the number.
+
+### Clean cards
+
+- Use `AppCard` for list items and grouped content: white/dark surface, `AppRadius.lg`, soft shadow or 1 px border — no glass on standard cards.
+- One concept per card; 16 px internal padding minimum.
+
+### Charts
+
+- Simple line/bar only; muted grid lines; accent color for primary series, grey for secondary.
+- Minimum 24 px padding around chart; no 3D, no legend boxes unless necessary.
+- Prefer `fl_chart` (when added) with minimal axis labels.
+
+## Animations
+
+- Page transitions: 300 ms ease-out.
+- List insert/remove: `AnimatedList` or implicit `AnimatedSwitcher` (~250 ms).
+- Balance/count updates: short scale or fade — never bounce or elastic on money values.
+- Respect `MediaQuery.disableAnimations` / reduced motion.
+
+## Color rules
+
+- **One accent** (`AppColors.accent`) for CTAs, active nav, positive trends, chart primary series.
+- Neutrals for text (`primary`, `secondary`, `tertiary` from theme).
+- Semantic colors (error red, warning amber) only for status — not decoration.
+
+## Do / Don't
+
+| Do | Don't |
+|----|-------|
+| Whitespace between sections (`AppSpacing.lg`+) | Dense stacked cards |
+| `context.l10n` for all copy | Hardcoded labels |
+| Shared widgets in `core/widgets/` | Duplicate card styles per feature |
+| Glass on ≤1 surface per screen | Full glassmorphism theme |
+| Theme tokens | Inline `Color(0xFF…)` in features |
+
+## File placement
+
+- Design tokens: `lib/core/theme/`
+- Reusable UI: `lib/core/widgets/` (`AppCard`, `GlassSurface`, `BalanceHeader`, `AdaptiveScaffold`)
+- Feature-specific layouts: `features/<feature>/presentation/widgets/`
