@@ -4,6 +4,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import type { Request, Response } from 'express';
 
 import { db, auth } from './admin';
+import { loadDefaultCategoryNames } from './categories';
 import { dayNameFromDate, parseReceivedAt } from './dates';
 import { computeDedupKey, maskAccountId } from './dedup';
 import { parseTransaction } from './gemini';
@@ -237,7 +238,13 @@ async function processIngest(
 
   const ingestionId = await createRawIngestion(scope, request);
 
-  const parseResult = await parseTransaction(geminiKey, request.raw);
+  // Webhooks categorize only from global defaults (`categories/`), never user customs.
+  const allowedCategories = await loadDefaultCategoryNames();
+  const parseResult = await parseTransaction(
+    geminiKey,
+    request.raw,
+    allowedCategories,
+  );
 
   if (!parseResult.ok) {
     await updateRawIngestion(scope, ingestionId, {
@@ -252,7 +259,10 @@ async function processIngest(
     };
   }
 
-  const fieldValidation = validateParsedTransaction(parseResult.parsed);
+  const fieldValidation = validateParsedTransaction(
+    parseResult.parsed,
+    allowedCategories,
+  );
   if (!fieldValidation.ok) {
     await updateRawIngestion(scope, ingestionId, {
       status: 'needs_parse',

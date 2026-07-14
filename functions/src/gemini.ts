@@ -4,7 +4,11 @@ import {
   type ResponseSchema,
 } from '@google/generative-ai';
 
-import type { ParsedTransaction } from './schema';
+import { resolveAllowedCategory } from './categories';
+import {
+  FALLBACK_CATEGORY_NAME,
+  type ParsedTransaction,
+} from './schema';
 
 // Prefer lite for SMS→JSON; fall back if unavailable or overloaded.
 // 2.5-flash-lite is closed to new API keys; 2.0-flash-lite is retired.
@@ -17,90 +21,100 @@ export const GEMINI_MODELS = [
 export const GEMINI_MODEL = GEMINI_MODELS[0];
 export const MIN_PARSE_CONFIDENCE = 0.5;
 
-const PARSED_TRANSACTION_SCHEMA: ResponseSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    amount: {
-      type: SchemaType.NUMBER,
-      description: 'Transaction amount as a number without commas',
+function buildParsedTransactionSchema(
+  allowedCategories: string[],
+): ResponseSchema {
+  return {
+    type: SchemaType.OBJECT,
+    properties: {
+      amount: {
+        type: SchemaType.NUMBER,
+        description: 'Transaction amount as a number without commas',
+      },
+      currency: {
+        type: SchemaType.STRING,
+        description: 'ISO currency code, usually PKR',
+      },
+      type: {
+        type: SchemaType.STRING,
+        description: 'debit or credit',
+      },
+      merchant: {
+        type: SchemaType.STRING,
+        description: 'Primary merchant or payee name',
+      },
+      merchantDetails: {
+        type: SchemaType.STRING,
+        description: 'Secondary merchant location or detail, or Unknown',
+        nullable: true,
+      },
+      category: {
+        type: SchemaType.STRING,
+        format: 'enum',
+        enum: allowedCategories,
+        description:
+          'Expense category — must be exactly one value from the allowed list',
+      },
+      paymentMethod: {
+        type: SchemaType.STRING,
+        description: 'card, account, wallet, or Unknown',
+      },
+      bank: {
+        type: SchemaType.STRING,
+        description: 'Bank name if known, otherwise Unknown',
+      },
+      accountId: {
+        type: SchemaType.STRING,
+        description: 'Masked account or card identifier from the message',
+      },
+      branch: {
+        type: SchemaType.STRING,
+        description: 'Branch name if present, otherwise Unknown',
+        nullable: true,
+      },
+      transactionTime: {
+        type: SchemaType.STRING,
+        description: 'ISO 8601 datetime with timezone offset',
+      },
+      transactionDate: {
+        type: SchemaType.STRING,
+        description: 'Date in YYYY-MM-DD format',
+      },
+      externalId: {
+        type: SchemaType.STRING,
+        description: 'TID, reference, or STAN if present',
+        nullable: true,
+      },
+      externalIdType: {
+        type: SchemaType.STRING,
+        description: 'tid, ref, stan, or unknown',
+      },
+      parseConfidence: {
+        type: SchemaType.NUMBER,
+        description: 'Confidence from 0 to 1',
+      },
     },
-    currency: {
-      type: SchemaType.STRING,
-      description: 'ISO currency code, usually PKR',
-    },
-    type: {
-      type: SchemaType.STRING,
-      description: 'debit or credit',
-    },
-    merchant: {
-      type: SchemaType.STRING,
-      description: 'Primary merchant or payee name',
-    },
-    merchantDetails: {
-      type: SchemaType.STRING,
-      description: 'Secondary merchant location or detail, or Unknown',
-      nullable: true,
-    },
-    category: {
-      type: SchemaType.STRING,
-      description: 'Expense category such as Fuel, Food, Transfer',
-    },
-    paymentMethod: {
-      type: SchemaType.STRING,
-      description: 'card, account, wallet, or Unknown',
-    },
-    bank: {
-      type: SchemaType.STRING,
-      description: 'Bank name if known, otherwise Unknown',
-    },
-    accountId: {
-      type: SchemaType.STRING,
-      description: 'Masked account or card identifier from the message',
-    },
-    branch: {
-      type: SchemaType.STRING,
-      description: 'Branch name if present, otherwise Unknown',
-      nullable: true,
-    },
-    transactionTime: {
-      type: SchemaType.STRING,
-      description: 'ISO 8601 datetime with timezone offset',
-    },
-    transactionDate: {
-      type: SchemaType.STRING,
-      description: 'Date in YYYY-MM-DD format',
-    },
-    externalId: {
-      type: SchemaType.STRING,
-      description: 'TID, reference, or STAN if present',
-      nullable: true,
-    },
-    externalIdType: {
-      type: SchemaType.STRING,
-      description: 'tid, ref, stan, or unknown',
-    },
-    parseConfidence: {
-      type: SchemaType.NUMBER,
-      description: 'Confidence from 0 to 1',
-    },
-  },
-  required: [
-    'amount',
-    'currency',
-    'type',
-    'merchant',
-    'category',
-    'paymentMethod',
-    'bank',
-    'accountId',
-    'transactionTime',
-    'transactionDate',
-    'externalIdType',
-    'parseConfidence',
-  ],
-};
+    required: [
+      'amount',
+      'currency',
+      'type',
+      'merchant',
+      'category',
+      'paymentMethod',
+      'bank',
+      'accountId',
+      'transactionTime',
+      'transactionDate',
+      'externalIdType',
+      'parseConfidence',
+    ],
+  };
+}
 
-const SYSTEM_PROMPT = `You parse Pakistani bank SMS and email alerts into structured transaction JSON.
+function buildSystemPrompt(allowedCategories: string[]): string {
+  const categoryList = allowedCategories.join(', ');
+
+  return `You parse Pakistani bank SMS and email alerts into structured transaction JSON.
 
 Rules:
 - Amounts must be numbers without commas (e.g. 5990.00 not "5,990.00").
@@ -110,7 +124,9 @@ Rules:
 - Use "Unknown" for missing merchantDetails, branch, bank, or paymentMethod when not inferable.
 - accountId should preserve masking from the message (e.g. xxx1215).
 - externalIdType: use tid for TID, ref for reference numbers, stan for STAN, unknown otherwise.
-- category: infer from merchant (PSO/Shell/Total → Fuel, McDonald's/KFC → Food, ATM → Cash Withdrawal).
+- category: MUST be exactly one of these values: [${categoryList}].
+  Examples: PSO/Shell/Total → Fuel, McDonald's/KFC → Food & Dining, ATM → Cash Withdrawal, salary credit → Income.
+  If none fit, use ${FALLBACK_CATEGORY_NAME}.
 - parseConfidence: 0.0-1.0 based on how clearly fields were extracted.
 
 Examples:
@@ -123,12 +139,16 @@ Output: {"amount":15000,"currency":"PKR","type":"debit","merchant":"Unknown","me
 
 Input: PKR 2,500.00 credited to A/C xxx9876 on 04-Jul-2026. Info: Salary
 Output: {"amount":2500,"currency":"PKR","type":"credit","merchant":"Salary","merchantDetails":null,"category":"Income","paymentMethod":"account","bank":"Unknown","accountId":"xxx9876","branch":null,"transactionTime":"2026-07-04T00:00:00+05:00","transactionDate":"2026-07-04","externalId":null,"externalIdType":"unknown","parseConfidence":0.8}`;
+}
 
 export type ParseResult =
   | { ok: true; parsed: ParsedTransaction; model: string }
   | { ok: false; error: string; lowConfidence?: boolean };
 
-function normalizeParsed(raw: Record<string, unknown>): ParsedTransaction {
+function normalizeParsed(
+  raw: Record<string, unknown>,
+  allowedCategories: string[],
+): ParsedTransaction {
   return {
     amount: Number(raw.amount),
     currency: String(raw.currency ?? 'PKR').toUpperCase(),
@@ -138,7 +158,10 @@ function normalizeParsed(raw: Record<string, unknown>): ParsedTransaction {
       raw.merchantDetails == null || raw.merchantDetails === 'Unknown'
         ? null
         : String(raw.merchantDetails),
-    category: String(raw.category ?? 'Uncategorized'),
+    category: resolveAllowedCategory(
+      String(raw.category ?? FALLBACK_CATEGORY_NAME),
+      allowedCategories,
+    ),
     paymentMethod: String(raw.paymentMethod ?? 'Unknown').toLowerCase(),
     bank: String(raw.bank ?? 'Unknown'),
     accountId: String(raw.accountId ?? 'Unknown'),
@@ -183,14 +206,15 @@ async function generateWithModel(
   apiKey: string,
   modelName: string,
   rawMessage: string,
+  allowedCategories: string[],
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: modelName,
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: buildSystemPrompt(allowedCategories),
     generationConfig: {
       responseMimeType: 'application/json',
-      responseSchema: PARSED_TRANSACTION_SCHEMA,
+      responseSchema: buildParsedTransactionSchema(allowedCategories),
       temperature: 0.1,
     },
   });
@@ -210,14 +234,24 @@ async function generateWithModel(
 export async function parseTransaction(
   apiKey: string,
   rawMessage: string,
+  allowedCategories: string[],
 ): Promise<ParseResult> {
+  if (allowedCategories.length === 0) {
+    return { ok: false, error: 'No allowed categories configured' };
+  }
+
   let lastError = 'Unknown Gemini parse error';
 
   for (const modelName of GEMINI_MODELS) {
     try {
-      const text = await generateWithModel(apiKey, modelName, rawMessage);
+      const text = await generateWithModel(
+        apiKey,
+        modelName,
+        rawMessage,
+        allowedCategories,
+      );
       const json = JSON.parse(text) as Record<string, unknown>;
-      const parsed = normalizeParsed(json);
+      const parsed = normalizeParsed(json, allowedCategories);
 
       if (parsed.parseConfidence < MIN_PARSE_CONFIDENCE) {
         return {

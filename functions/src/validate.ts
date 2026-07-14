@@ -105,6 +105,7 @@ export function validateWebhookRequest(
 
 export function validateParsedTransaction(
   parsed: ParsedTransaction,
+  allowedCategories?: string[],
 ): { ok: true } | { ok: false; error: string } {
   if (!Number.isFinite(parsed.amount) || parsed.amount <= 0) {
     return { ok: false, error: 'amount must be a positive number' };
@@ -120,6 +121,17 @@ export function validateParsedTransaction(
 
   if (!parsed.merchant || typeof parsed.merchant !== 'string') {
     return { ok: false, error: 'merchant is required' };
+  }
+
+  if (
+    allowedCategories &&
+    allowedCategories.length > 0 &&
+    !allowedCategories.includes(parsed.category)
+  ) {
+    return {
+      ok: false,
+      error: `category must be one of the default categories: ${allowedCategories.join(', ')}`,
+    };
   }
 
   if (!ISO_DATE_RE.test(parsed.transactionDate)) {

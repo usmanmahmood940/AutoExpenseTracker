@@ -21,11 +21,209 @@ export type IngestionStatus =
 
 export type ExternalIdType = 'tid' | 'ref' | 'stan' | 'unknown';
 
+export type CategoryType = 'expense' | 'income' | 'other';
+
+/**
+ * Firestore: categories/{categoryId} (global defaults)
+ * Firestore: users/{userId}/categories/{categoryId} (user-created)
+ */
+export interface Category {
+  name: string;
+  type: CategoryType;
+  icon: string;
+  sortOrder: number;
+  /** true for docs under top-level `categories/` */
+  isDefault: boolean;
+  createdAt: FirebaseTimestamp;
+  updatedAt: FirebaseTimestamp;
+}
+
+/** Seed payload without timestamps (Admin SDK sets server timestamps). */
+export interface CategorySeed {
+  id: string;
+  name: string;
+  type: CategoryType;
+  icon: string;
+  sortOrder: number;
+  isDefault: boolean;
+}
+
+/** Fallback when the model returns an unknown category */
+export const FALLBACK_CATEGORY_NAME = 'Uncategorized';
+
+/**
+ * Default categories stored in Firestore `categories/{id}`.
+ * Webhook / Gemini categorization must use only these names.
+ */
+export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
+  {
+    id: 'food_dining',
+    name: 'Food & Dining',
+    type: 'expense',
+    icon: 'restaurant',
+    sortOrder: 1,
+    isDefault: true,
+  },
+  {
+    id: 'groceries',
+    name: 'Groceries',
+    type: 'expense',
+    icon: 'cart',
+    sortOrder: 2,
+    isDefault: true,
+  },
+  {
+    id: 'fuel',
+    name: 'Fuel',
+    type: 'expense',
+    icon: 'local_gas_station',
+    sortOrder: 3,
+    isDefault: true,
+  },
+  {
+    id: 'transport',
+    name: 'Transport',
+    type: 'expense',
+    icon: 'directions_car',
+    sortOrder: 4,
+    isDefault: true,
+  },
+  {
+    id: 'shopping',
+    name: 'Shopping',
+    type: 'expense',
+    icon: 'shopping_bag',
+    sortOrder: 5,
+    isDefault: true,
+  },
+  {
+    id: 'entertainment',
+    name: 'Entertainment',
+    type: 'expense',
+    icon: 'movie',
+    sortOrder: 6,
+    isDefault: true,
+  },
+  {
+    id: 'bills_utilities',
+    name: 'Bills & Utilities',
+    type: 'expense',
+    icon: 'bolt',
+    sortOrder: 7,
+    isDefault: true,
+  },
+  {
+    id: 'healthcare',
+    name: 'Healthcare',
+    type: 'expense',
+    icon: 'medical_services',
+    sortOrder: 8,
+    isDefault: true,
+  },
+  {
+    id: 'education',
+    name: 'Education',
+    type: 'expense',
+    icon: 'school',
+    sortOrder: 9,
+    isDefault: true,
+  },
+  {
+    id: 'travel',
+    name: 'Travel',
+    type: 'expense',
+    icon: 'flight',
+    sortOrder: 10,
+    isDefault: true,
+  },
+  {
+    id: 'personal_care',
+    name: 'Personal Care',
+    type: 'expense',
+    icon: 'spa',
+    sortOrder: 11,
+    isDefault: true,
+  },
+  {
+    id: 'subscriptions',
+    name: 'Subscriptions',
+    type: 'expense',
+    icon: 'replay',
+    sortOrder: 12,
+    isDefault: true,
+  },
+  {
+    id: 'rent_housing',
+    name: 'Rent & Housing',
+    type: 'expense',
+    icon: 'home',
+    sortOrder: 13,
+    isDefault: true,
+  },
+  {
+    id: 'cash_withdrawal',
+    name: 'Cash Withdrawal',
+    type: 'expense',
+    icon: 'atm',
+    sortOrder: 14,
+    isDefault: true,
+  },
+  {
+    id: 'transfer',
+    name: 'Transfer',
+    type: 'expense',
+    icon: 'swap_horiz',
+    sortOrder: 15,
+    isDefault: true,
+  },
+  {
+    id: 'fees_charges',
+    name: 'Fees & Charges',
+    type: 'expense',
+    icon: 'receipt',
+    sortOrder: 16,
+    isDefault: true,
+  },
+  {
+    id: 'donations_zakat',
+    name: 'Donations & Zakat',
+    type: 'expense',
+    icon: 'volunteer_activism',
+    sortOrder: 17,
+    isDefault: true,
+  },
+  {
+    id: 'income',
+    name: 'Income',
+    type: 'income',
+    icon: 'payments',
+    sortOrder: 18,
+    isDefault: true,
+  },
+  {
+    id: 'refund',
+    name: 'Refund',
+    type: 'income',
+    icon: 'undo',
+    sortOrder: 19,
+    isDefault: true,
+  },
+  {
+    id: 'uncategorized',
+    name: 'Uncategorized',
+    type: 'other',
+    icon: 'help_outline',
+    sortOrder: 20,
+    isDefault: true,
+  },
+] as const;
+
 /**
  * Firestore collection: users/{userId}
  * Multi-user data also lives under:
  *   users/{userId}/transactions/{transactionId}
  *   users/{userId}/raw_ingestions/{ingestionId}
+ *   users/{userId}/categories/{categoryId}
  */
 export interface User {
   displayName: string;
@@ -153,15 +351,20 @@ export const COLLECTIONS = {
   users: 'users',
   transactions: 'transactions',
   rawIngestions: 'raw_ingestions',
+  categories: 'categories',
 } as const;
 
-/** Nested collection helpers: users/{uid}/raw_ingestions|transactions */
+/** Nested collection helpers: users/{uid}/raw_ingestions|transactions|categories */
 export function userRawIngestionsPath(uid: string): string {
   return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.rawIngestions}`;
 }
 
 export function userTransactionsPath(uid: string): string {
   return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.transactions}`;
+}
+
+export function userCategoriesPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.categories}`;
 }
 
 /** Default user ID for legacy single-user webhook (top-level collections) */

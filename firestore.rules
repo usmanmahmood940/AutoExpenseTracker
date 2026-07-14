@@ -11,6 +11,9 @@ service cloud.firestore {
     //   users/{userId}
     //   users/{userId}/transactions/{transactionId}
     //   users/{userId}/raw_ingestions/{ingestionId}
+    //   users/{userId}/categories/{categoryId}  (user-created)
+    // Global defaults (webhook categorization source):
+    //   categories/{categoryId}
     //
     // All writes go through Cloud Functions (Admin SDK).
     // Client apps will get read access in Phase 5 with Firebase Auth.
