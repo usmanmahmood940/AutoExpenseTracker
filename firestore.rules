@@ -2,11 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model (Phase 0)
+    // Assumed Data Model
     // ===============================================================
-    // users/{userId}
-    // transactions/{transactionId}
-    // raw_ingestions/{ingestionId}
+    // Legacy (single-user webhook):
+    //   transactions/{transactionId}
+    //   raw_ingestions/{ingestionId}
+    // Multi-user:
+    //   users/{userId}
+    //   users/{userId}/transactions/{transactionId}
+    //   users/{userId}/raw_ingestions/{ingestionId}
     //
     // All writes go through Cloud Functions (Admin SDK).
     // Client apps will get read access in Phase 5 with Firebase Auth.

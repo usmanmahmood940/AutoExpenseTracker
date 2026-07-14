@@ -21,7 +21,12 @@ export type IngestionStatus =
 
 export type ExternalIdType = 'tid' | 'ref' | 'stan' | 'unknown';
 
-/** Firestore collection: users/{userId} */
+/**
+ * Firestore collection: users/{userId}
+ * Multi-user data also lives under:
+ *   users/{userId}/transactions/{transactionId}
+ *   users/{userId}/raw_ingestions/{ingestionId}
+ */
 export interface User {
   displayName: string;
   defaultCurrency: string;
@@ -46,7 +51,10 @@ export interface SmsSource {
   idempotencyKey?: string;
 }
 
-/** Firestore collection: transactions/{transactionId} */
+/**
+ * Firestore collection (legacy single-user): transactions/{transactionId}
+ * Multi-user: users/{userId}/transactions/{transactionId}
+ */
 export interface Transaction {
   userId: string;
   amount: number;
@@ -78,7 +86,10 @@ export interface Transaction {
   updatedAt: FirebaseTimestamp;
 }
 
-/** Firestore collection: raw_ingestions/{ingestionId} */
+/**
+ * Firestore collection (legacy single-user): raw_ingestions/{ingestionId}
+ * Multi-user: users/{userId}/raw_ingestions/{ingestionId}
+ */
 export interface RawIngestion {
   userId: string;
   raw: string;
@@ -137,12 +148,21 @@ export type FirebaseTimestamp =
   | { seconds: number; nanoseconds: number }
   | import('firebase-admin/firestore').Timestamp;
 
-/** Collection path constants */
+/** Collection path constants (legacy top-level + multi-user nested) */
 export const COLLECTIONS = {
   users: 'users',
   transactions: 'transactions',
   rawIngestions: 'raw_ingestions',
 } as const;
 
-/** Default user ID for single-user mode until Firebase Auth (Phase 5) */
+/** Nested collection helpers: users/{uid}/raw_ingestions|transactions */
+export function userRawIngestionsPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.rawIngestions}`;
+}
+
+export function userTransactionsPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.transactions}`;
+}
+
+/** Default user ID for legacy single-user webhook (top-level collections) */
 export const DEFAULT_USER_ID = 'me';

@@ -10,4 +10,4 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-export { ingestTransaction } from './ingest';
+export { ingestTransaction, ingestTransactionForUser } from './ingest';
