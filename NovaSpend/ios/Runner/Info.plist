@@ -66,5 +66,24 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.598409230916-23nmo129ddcri3aevl6pjr0g10t5ggh4</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>598409230916-23nmo129ddcri3aevl6pjr0g10t5ggh4.apps.googleusercontent.com</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>NovaSpend uses Face ID to protect your financial data.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

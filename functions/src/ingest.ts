@@ -4,20 +4,25 @@ import { onRequest } from 'firebase-functions/v2/https';
 import type { Request, Response } from 'express';
 
 import { db, auth } from './admin';
-import { loadDefaultCategoryNames } from './categories';
+import {
+  loadAllowedCategoryNamesForUser,
+  loadDefaultCategoryNames,
+} from './categories';
 import { dayNameFromDate, parseReceivedAt } from './dates';
 import { computeDedupKey, maskAccountId } from './dedup';
 import { parseTransaction } from './gemini';
 import {
   COLLECTIONS,
   DEFAULT_USER_ID,
+  normalizeMerchantKey,
   type IngestWebhookRequest,
   type IngestWebhookResponse,
+  type MerchantCategoryOverride,
   type RawIngestion,
   type Transaction,
-  type User,
 } from './schema';
 import { validateParsedTransaction, validateWebhookRequest } from './validate';
+import { ensureUserDocument } from './user_profile';
 
 const webhookApiKey = defineSecret('WEBHOOK_API_KEY');
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
@@ -68,30 +73,6 @@ function transactionsCollection(scope: IngestScope) {
   return db.collection(COLLECTIONS.transactions);
 }
 
-async function ensureUserDocument(uid: string): Promise<void> {
-  const userRef = db.collection(COLLECTIONS.users).doc(uid);
-  const existing = await userRef.get();
-  if (existing.exists) {
-    return;
-  }
-
-  const now = FieldValue.serverTimestamp();
-  const user: Omit<User, 'createdAt' | 'updatedAt'> & {
-    createdAt: FirebaseFirestore.FieldValue;
-    updatedAt: FirebaseFirestore.FieldValue;
-  } = {
-    displayName: '',
-    defaultCurrency: 'PKR',
-    timezone: 'Asia/Karachi',
-    bankSenders: [],
-    emailFilters: [],
-    settings: { autoCategorize: true },
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  await userRef.set(user);
-}
 
 async function findIdempotentIngestion(
   scope: IngestScope,
@@ -238,8 +219,10 @@ async function processIngest(
 
   const ingestionId = await createRawIngestion(scope, request);
 
-  // Webhooks categorize only from global defaults (`categories/`), never user customs.
-  const allowedCategories = await loadDefaultCategoryNames();
+  const allowedCategories =
+    scope.mode === 'user'
+      ? await loadAllowedCategoryNamesForUser(scope.uid)
+      : await loadDefaultCategoryNames();
   const parseResult = await parseTransaction(
     geminiKey,
     request.raw,
@@ -294,6 +277,17 @@ async function processIngest(
     };
   }
 
+  let category = parsed.category;
+  let categorySource: Transaction['categorySource'] = parseResult.model;
+
+  if (scope.mode === 'user') {
+    const override = await loadMerchantOverride(scope.uid, parsed.merchant);
+    if (override) {
+      category = override.category;
+      categorySource = 'rule';
+    }
+  }
+
   const now = FieldValue.serverTimestamp();
   const transactionRef = transactionsCollection(scope).doc();
   const transaction: Omit<Transaction, 'createdAt' | 'updatedAt'> & {
@@ -306,8 +300,8 @@ async function processIngest(
     type: parsed.type,
     merchant: parsed.merchant,
     merchantDetails: parsed.merchantDetails,
-    category: parsed.category,
-    categorySource: parseResult.model,
+    category,
+    categorySource,
     paymentMethod: parsed.paymentMethod,
     bank: request.bank ?? parsed.bank,
     accountId: parsed.accountId,
@@ -332,7 +326,7 @@ async function processIngest(
     isAutoDetected: true,
     isEdited: false,
     isDuplicate: false,
-    status: 'active',
+    status: parsed.parseConfidence < 0.8 ? 'needs_review' : 'active',
     createdAt: now,
     updatedAt: now,
   };
@@ -343,11 +337,64 @@ async function processIngest(
     transactionId: transactionRef.id,
   });
 
+  if (scope.mode === 'user') {
+    await updateSyncMeta(scope.uid, {
+      lastMerchant: parsed.merchant,
+      lastAmount: parsed.amount,
+      lastTransactionId: transactionRef.id,
+    });
+  }
+
   return {
     success: true,
     ingestionId,
     transactionId: transactionRef.id,
   };
+}
+
+async function loadMerchantOverride(
+  uid: string,
+  merchant: string,
+): Promise<MerchantCategoryOverride | null> {
+  const key = normalizeMerchantKey(merchant);
+  if (!key) {
+    return null;
+  }
+
+  const doc = await db
+    .collection(COLLECTIONS.users)
+    .doc(uid)
+    .collection(COLLECTIONS.merchantCategoryOverrides)
+    .doc(key)
+    .get();
+
+  if (!doc.exists) {
+    return null;
+  }
+
+  return doc.data() as MerchantCategoryOverride;
+}
+
+async function updateSyncMeta(
+  uid: string,
+  patch: {
+    lastMerchant: string;
+    lastAmount: number;
+    lastTransactionId: string;
+  },
+): Promise<void> {
+  await db
+    .collection(COLLECTIONS.users)
+    .doc(uid)
+    .collection(COLLECTIONS.meta)
+    .doc('sync')
+    .set(
+      {
+        lastSyncedAt: FieldValue.serverTimestamp(),
+        ...patch,
+      },
+      { merge: true },
+    );
 }
 
 function extractUid(req: Request): string | null {

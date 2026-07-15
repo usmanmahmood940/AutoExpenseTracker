@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:nova_spend/core/di/injection.dart';
+import 'package:nova_spend/core/locale/app_locale_controller.dart';
+import 'package:nova_spend/core/locale/app_locale_scope.dart';
+import 'package:nova_spend/core/theme/app_theme.dart';
+import 'package:nova_spend/features/auth/presentation/pages/auth_gate.dart';
+import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-
-import 'core/locale/app_locale_controller.dart';
-import 'core/locale/app_locale_scope.dart';
-import 'core/theme/app_theme.dart';
-import 'features/settings/presentation/pages/home_page.dart';
-import 'l10n/app_localizations.dart';
 
 class NovaSpendApp extends StatelessWidget {
   const NovaSpendApp({required this.localeController, super.key});
@@ -20,6 +21,9 @@ class NovaSpendApp extends StatelessWidget {
         ChangeNotifierProvider<AppLocaleController>.value(
           value: localeController,
         ),
+        ChangeNotifierProvider<AuthProvider>(
+          create: (_) => sl<AuthProvider>(),
+        ),
       ],
       child: AppLocaleScope(
         controller: localeController,
@@ -27,7 +31,8 @@ class NovaSpendApp extends StatelessWidget {
           listenable: localeController,
           builder: (context, _) {
             return MaterialApp(
-              title: 'NovaSpend',
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)!.appTitle,
               theme: AppTheme.light,
               darkTheme: AppTheme.dark,
               locale: localeController.locale,
@@ -38,7 +43,7 @@ class NovaSpendApp extends StatelessWidget {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
-              home: const HomePage(),
+              home: const AuthGate(),
             );
           },
         ),

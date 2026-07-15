@@ -231,6 +231,8 @@ export interface User {
   timezone: string;
   bankSenders: string[];
   emailFilters: string[];
+  /** FCM device tokens registered by NovaSpend for push alerts */
+  fcmTokens?: string[];
   createdAt: FirebaseTimestamp;
   updatedAt: FirebaseTimestamp;
   settings: UserSettings;
@@ -280,8 +282,63 @@ export interface Transaction {
   isEdited: boolean;
   isDuplicate: boolean;
   status: TransactionStatus;
+  /** Set when user confirms / dismisses a low-confidence parse in Review */
+  reviewedAt?: FirebaseTimestamp | null;
   createdAt: FirebaseTimestamp;
   updatedAt: FirebaseTimestamp;
+}
+
+/**
+ * Firestore: users/{userId}/merchantCategoryOverrides/{normalizedMerchantKey}
+ * Applied on ingest after Gemini parse so user corrections compound.
+ */
+export interface MerchantCategoryOverride {
+  merchantKey: string;
+  displayName: string;
+  category: string;
+  createdAt: FirebaseTimestamp;
+  updatedAt: FirebaseTimestamp;
+}
+
+/**
+ * Firestore: users/{userId}/monthlySummaries/{YYYY-MM}
+ * Maintained by Cloud Function on transaction write.
+ */
+export interface MonthlySummary {
+  yearMonth: string;
+  currency: string;
+  totalDebit: number;
+  totalCredit: number;
+  net: number;
+  transactionCount: number;
+  /** Debit totals keyed by category name */
+  byCategory: Record<string, number>;
+  /** Debit totals keyed by merchant */
+  byMerchant: Record<string, number>;
+  updatedAt: FirebaseTimestamp;
+}
+
+/**
+ * Firestore: users/{userId}/budgets/{budgetId}
+ */
+export interface Budget {
+  category: string;
+  limit: number;
+  period: 'monthly';
+  currency: string;
+  createdAt: FirebaseTimestamp;
+  updatedAt: FirebaseTimestamp;
+}
+
+/**
+ * Firestore: users/{userId}/meta/sync
+ * Updated on each successful transaction ingest.
+ */
+export interface SyncMeta {
+  lastSyncedAt: FirebaseTimestamp;
+  lastMerchant?: string;
+  lastAmount?: number;
+  lastTransactionId?: string;
 }
 
 /**
@@ -352,6 +409,14 @@ export const COLLECTIONS = {
   transactions: 'transactions',
   rawIngestions: 'raw_ingestions',
   categories: 'categories',
+  merchantCategoryOverrides: 'merchantCategoryOverrides',
+  monthlySummaries: 'monthlySummaries',
+  budgets: 'budgets',
+  meta: 'meta',
+  emailVerificationOtps: 'emailVerificationOtps',
+  passwordResetOtps: 'passwordResetOtps',
+  passwordResetSessions: 'passwordResetSessions',
+  authRateLimits: 'authRateLimits',
 } as const;
 
 /** Nested collection helpers: users/{uid}/raw_ingestions|transactions|categories */
@@ -365,6 +430,23 @@ export function userTransactionsPath(uid: string): string {
 
 export function userCategoriesPath(uid: string): string {
   return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.categories}`;
+}
+
+export function userMerchantOverridesPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.merchantCategoryOverrides}`;
+}
+
+export function userMonthlySummariesPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.monthlySummaries}`;
+}
+
+export function userBudgetsPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.budgets}`;
+}
+
+/** Normalize merchant name for override document ids / lookups */
+export function normalizeMerchantKey(merchant: string): string {
+  return merchant.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 /** Default user ID for legacy single-user webhook (top-level collections) */

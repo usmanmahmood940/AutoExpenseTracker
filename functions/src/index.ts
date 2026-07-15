@@ -11,3 +11,13 @@ setGlobalOptions({
 });
 
 export { ingestTransaction, ingestTransactionForUser } from './ingest';
+export { onUserTransactionWritten } from './aggregates';
+export { onUserTransactionCreatedNotify } from './notify';
+export {
+  sendEmailOtp,
+  completeEmailOtpSignup,
+  sendPasswordResetOtp,
+  verifyPasswordResetOtp,
+  completePasswordReset,
+  ensureUserProfile,
+} from './auth';

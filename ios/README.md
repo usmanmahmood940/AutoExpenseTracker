@@ -37,7 +37,12 @@ Numbers sheet + SMS automation still need one-time setup on your phone because A
 
 ---
 
-Three shortcuts + one shared routine + one helper. All use the **same** `ingestTransaction` webhook (one message per call).
+Three shortcuts + one shared routine + one helper.
+
+**NovaSpend / multi-user:** point Shortcuts at `ingestTransactionForUser` and set header `X-User-Id` to the UID shown in the NovaSpend Settings tab (not the legacy API-key webhook). See [`docs/webhooks.md`](../docs/webhooks.md).
+
+All shortcuts historically used the **same** `ingestTransaction` webhook (one message per call); migrate to the user-scoped URL when using the app.
+
 
 ## Architecture
 

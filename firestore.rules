@@ -1,26 +1,74 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    // Legacy (single-user webhook):
-    //   transactions/{transactionId}
-    //   raw_ingestions/{ingestionId}
-    // Multi-user:
-    //   users/{userId}
-    //   users/{userId}/transactions/{transactionId}
-    //   users/{userId}/raw_ingestions/{ingestionId}
-    //   users/{userId}/categories/{categoryId}  (user-created)
-    // Global defaults (webhook categorization source):
-    //   categories/{categoryId}
-    //
-    // All writes go through Cloud Functions (Admin SDK).
-    // Client apps will get read access in Phase 5 with Firebase Auth.
-    // ===============================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
-    match /{document=**} {
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Global default categories — readable by signed-in clients
+    match /categories/{categoryId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Legacy top-level collections — Admin SDK only
+    match /transactions/{document=**} {
       allow read, write: if false;
+    }
+    match /raw_ingestions/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth OTP / rate-limit collections — Admin SDK only
+    match /emailVerificationOtps/{document=**} {
+      allow read, write: if false;
+    }
+    match /passwordResetOtps/{document=**} {
+      allow read, write: if false;
+    }
+    match /passwordResetSessions/{document=**} {
+      allow read, write: if false;
+    }
+    match /authRateLimits/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /raw_ingestions/{ingestionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /categories/{categoryId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /merchantCategoryOverrides/{overrideId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /monthlySummaries/{summaryId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // maintained by Cloud Functions
+      }
+
+      match /budgets/{budgetId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /meta/{docId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // maintained by Cloud Functions
+      }
     }
   }
 }

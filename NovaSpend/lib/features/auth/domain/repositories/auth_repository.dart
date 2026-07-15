@@ -1,6 +1,11 @@
-/// Auth repository contract.
+import 'package:nova_spend/features/auth/domain/entities/app_user.dart';
+
 abstract class AuthRepository {
-  // Future<User?> getCurrentUser();
-  // Future<User> signInWithEmail(String email, String password);
-  // Future<void> signOut();
+  Stream<AppUser?> watchUser();
+
+  Future<void> signOut();
+
+  String? get currentUid;
+
+  AppUser? get currentUser;
 }

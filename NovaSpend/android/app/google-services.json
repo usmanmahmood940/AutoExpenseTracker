@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "598409230916",
+    "project_id": "auto-expense-tracker-2026",
+    "storage_bucket": "auto-expense-tracker-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:598409230916:android:8b05e4c6d4dfb276c3da11",
+        "android_client_info": {
+          "package_name": "com.example.nova_spend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "598409230916-h3dapo9iq87opnii7rgc6a64j80v92ll.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMC_TaDLVv0ufh9XlkG3-8LZIcowYR8vU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "598409230916-h3dapo9iq87opnii7rgc6a64j80v92ll.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "598409230916-23nmo129ddcri3aevl6pjr0g10t5ggh4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.novaSpend"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

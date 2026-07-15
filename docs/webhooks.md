@@ -122,9 +122,10 @@ curl -X POST \
 
 ---
 
-## 2. Multi-user webhook — `ingestTransactionForUser`
+## 2. Multi-user webhook — `ingestTransactionForUser` (**preferred for NovaSpend**)
 
-Writes under a specific Firebase Auth UID. The UID must exist in Firebase Auth.
+Use this with the Flutter app. Copy your Firebase Auth UID from **Settings** and set `X-User-Id`. Prefer this over the legacy webhook for all new Shortcut setups.
+
 
 ### URL
 

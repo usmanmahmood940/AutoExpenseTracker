@@ -17,7 +17,7 @@ export function defaultCategoryNames(): string[] {
   return DEFAULT_CATEGORIES.map((c) => c.name);
 }
 
-/** Resolve a model-returned category to one from the allowed default list. */
+/** Resolve a model-returned category to one from the allowed list. */
 export function resolveAllowedCategory(
   raw: string,
   allowedNames: string[],
@@ -79,6 +79,45 @@ export async function loadDefaultCategoryNames(): Promise<string[]> {
   cachedNames = fallback;
   cachedAt = now;
   return fallback;
+}
+
+/**
+ * Allowed category names for a user: global defaults + their custom categories.
+ */
+export async function loadAllowedCategoryNamesForUser(
+  uid: string,
+): Promise<string[]> {
+  const defaults = await loadDefaultCategoryNames();
+  try {
+    const snapshot = await db
+      .collection(COLLECTIONS.users)
+      .doc(uid)
+      .collection(COLLECTIONS.categories)
+      .get();
+
+    const custom = snapshot.docs
+      .map((doc) => {
+        const data = doc.data() as Partial<Category>;
+        return typeof data.name === 'string' ? data.name.trim() : '';
+      })
+      .filter((name) => name.length > 0);
+
+    if (custom.length === 0) {
+      return defaults;
+    }
+
+    const seen = new Set(defaults.map((n) => n.toLowerCase()));
+    const merged = [...defaults];
+    for (const name of custom) {
+      if (!seen.has(name.toLowerCase())) {
+        seen.add(name.toLowerCase());
+        merged.push(name);
+      }
+    }
+    return merged;
+  } catch {
+    return defaults;
+  }
 }
 
 /** Build Firestore documents for seeding `categories/{id}`. */
