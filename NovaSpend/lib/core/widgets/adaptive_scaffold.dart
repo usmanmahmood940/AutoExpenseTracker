@@ -29,7 +29,12 @@ class AdaptiveScaffold extends StatelessWidget {
             (title != null
                 ? CupertinoNavigationBar(middle: Text(title!))
                 : null),
-        child: SafeArea(child: body),
+        // Material widgets (TextField, SwitchListTile, etc.) need a Material
+        // ancestor; CupertinoPageScaffold does not provide one.
+        child: Material(
+          type: MaterialType.transparency,
+          child: SafeArea(child: body),
+        ),
       );
     }
 
