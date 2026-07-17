@@ -111,21 +111,51 @@ function buildParsedTransactionSchema(
   };
 }
 
-function buildSystemPrompt(allowedCategories: string[]): string {
+/** Format a Date as Pakistan-local ISO date + datetime for the parse prompt. */
+export function formatPakistanNow(now: Date): {
+  currentDate: string;
+  currentDateTime: string;
+} {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '00';
+
+  const currentDate = `${get('year')}-${get('month')}-${get('day')}`;
+  const currentDateTime = `${currentDate}T${get('hour')}:${get('minute')}:${get('second')}+05:00`;
+  return { currentDate, currentDateTime };
+}
+
+function buildSystemPrompt(
+  allowedCategories: string[],
+  currentDate: string,
+  currentDateTime: string,
+): string {
   const categoryList = allowedCategories.join(', ');
 
-  return `You parse Pakistani bank SMS and email alerts into structured transaction JSON.
+  return `You parse transaction text into structured JSON. Inputs may be Pakistani bank SMS/email alerts OR short natural-language descriptions written by users (e.g. "spent 200 at KFC", "salary 150000", "received 500 from Ali").
 
 Rules:
 - Amounts must be numbers without commas (e.g. 5990.00 not "5,990.00").
 - Currency is usually PKR unless clearly stated otherwise.
-- type must be lowercase "debit" or "credit".
+- type must be lowercase "debit" or "credit". Infer from wording when needed (spent/paid/charged → debit; received/salary/credited → credit).
 - Dates must use ISO format: transactionDate as YYYY-MM-DD, transactionTime as ISO 8601 with +05:00 for Pakistan.
-- Use "Unknown" for missing merchantDetails, branch, bank, or paymentMethod when not inferable.
-- accountId should preserve masking from the message (e.g. xxx1215).
-- externalIdType: use tid for TID, ref for reference numbers, stan for STAN, unknown otherwise.
+- If the input is a manual/natural-language entry and does not specify a date or time, use exactly this current date/time supplied by the application: transactionDate=${currentDate}, transactionTime=${currentDateTime}. Never invent another "today" and never use placeholders.
+- If a bank message includes a date/time, prefer those values from the message.
+- Use "Unknown" for missing merchantDetails, branch, bank, paymentMethod, or accountId when not inferable.
+- accountId should preserve masking from bank messages (e.g. xxx1215).
+- externalIdType: use tid for TID, ref for reference numbers, stan for STAN, unknown otherwise (typical for manual entries).
 - category: MUST be exactly one of these values: [${categoryList}].
-  Examples: PSO/Shell/Total → Fuel, McDonald's/KFC → Food & Dining, ATM → Cash Withdrawal, salary credit → Income.
+  Examples: PSO/Shell/Total → Fuel, McDonald's/KFC → Food & Dining, ATM → Cash Withdrawal, salary → Income.
   If none fit, use ${FALLBACK_CATEGORY_NAME}.
 - parseConfidence: 0.0-1.0 based on how clearly fields were extracted.
 
@@ -134,11 +164,8 @@ Examples:
 Input: PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522
 Output: {"amount":5990,"currency":"PKR","type":"debit","merchant":"PSO RANGERS","merchantDetails":"LAH","category":"Fuel","paymentMethod":"card","bank":"Unknown","accountId":"xxx1215","branch":"DHA PHASE VIII BR LHR","transactionTime":"2026-07-06T11:27:00+05:00","transactionDate":"2026-07-06","externalId":"387522","externalIdType":"tid","parseConfidence":0.95}
 
-Input: Your A/C 1234-5678901-02 has been debited with PKR 15,000.00 on 05-Jul-2026. Ref: FT2523456789. Avl Bal PKR 250,000.00
-Output: {"amount":15000,"currency":"PKR","type":"debit","merchant":"Unknown","merchantDetails":null,"category":"Transfer","paymentMethod":"account","bank":"Unknown","accountId":"1234-5678901-02","branch":null,"transactionTime":"2026-07-05T00:00:00+05:00","transactionDate":"2026-07-05","externalId":"FT2523456789","externalIdType":"ref","parseConfidence":0.85}
-
-Input: PKR 2,500.00 credited to A/C xxx9876 on 04-Jul-2026. Info: Salary
-Output: {"amount":2500,"currency":"PKR","type":"credit","merchant":"Salary","merchantDetails":null,"category":"Income","paymentMethod":"account","bank":"Unknown","accountId":"xxx9876","branch":null,"transactionTime":"2026-07-04T00:00:00+05:00","transactionDate":"2026-07-04","externalId":null,"externalIdType":"unknown","parseConfidence":0.8}`;
+Input: spent 200 at KFC
+Output: {"amount":200,"currency":"PKR","type":"debit","merchant":"KFC","merchantDetails":null,"category":"Food & Dining","paymentMethod":"Unknown","bank":"Unknown","accountId":"Unknown","branch":null,"transactionTime":"${currentDateTime}","transactionDate":"${currentDate}","externalId":null,"externalIdType":"unknown","parseConfidence":0.9}`;
 }
 
 export type ParseResult =
@@ -207,11 +234,17 @@ async function generateWithModel(
   modelName: string,
   rawMessage: string,
   allowedCategories: string[],
+  currentDate: string,
+  currentDateTime: string,
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: modelName,
-    systemInstruction: buildSystemPrompt(allowedCategories),
+    systemInstruction: buildSystemPrompt(
+      allowedCategories,
+      currentDate,
+      currentDateTime,
+    ),
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: buildParsedTransactionSchema(allowedCategories),
@@ -220,7 +253,7 @@ async function generateWithModel(
   });
 
   const result = await model.generateContent(
-    `Parse this Pakistani bank message:\n\n${rawMessage}`,
+    `Current date/time: ${currentDateTime}\n\nParse this transaction message:\n\n${rawMessage}`,
   );
   const text = result.response.text();
 
@@ -235,11 +268,13 @@ export async function parseTransaction(
   apiKey: string,
   rawMessage: string,
   allowedCategories: string[],
+  now: Date = new Date(),
 ): Promise<ParseResult> {
   if (allowedCategories.length === 0) {
     return { ok: false, error: 'No allowed categories configured' };
   }
 
+  const { currentDate, currentDateTime } = formatPakistanNow(now);
   let lastError = 'Unknown Gemini parse error';
 
   for (const modelName of GEMINI_MODELS) {
@@ -249,6 +284,8 @@ export async function parseTransaction(
         modelName,
         rawMessage,
         allowedCategories,
+        currentDate,
+        currentDateTime,
       );
       const json = JSON.parse(text) as Record<string, unknown>;
       const parsed = normalizeParsed(json, allowedCategories);

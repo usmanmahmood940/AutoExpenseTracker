@@ -262,6 +262,12 @@ export interface Transaction {
   type: TransactionType;
   merchant: string;
   merchantDetails: string | null;
+  /** Normalized merchant key for grouping / search (e.g. "kfc") */
+  merchantNormalized: string;
+  /** True when recurring detector has marked this as a subscription-like txn */
+  isRecurring: boolean;
+  /** Links related recurring transactions when detected */
+  recurringGroupId?: string;
   category: string;
   categorySource: CategorySource;
   paymentMethod: string;
@@ -328,6 +334,34 @@ export interface Budget {
   currency: string;
   createdAt: FirebaseTimestamp;
   updatedAt: FirebaseTimestamp;
+}
+
+/**
+ * Firestore: users/{userId}/aiSummaries/{periodId}
+ * Written by scheduled Cloud Functions (weekly / monthly narrative).
+ */
+export interface AiSummary {
+  type: 'weekly' | 'monthly';
+  periodStart: FirebaseTimestamp;
+  periodEnd: FirebaseTimestamp;
+  narrative: string;
+  generatedAt: FirebaseTimestamp;
+  model: string;
+}
+
+/**
+ * Firestore: users/{userId}/recurringPatterns/{merchantKey}
+ * Written by recurring-detection Cloud Function; client read-only.
+ */
+export interface RecurringPattern {
+  merchantDisplay: string;
+  averageAmount: number;
+  currency: string;
+  /** Typical interval between charges (e.g. ~30 for monthly) */
+  intervalDays: number;
+  lastTransactionId: string;
+  lastDate: FirebaseTimestamp;
+  transactionCount: number;
 }
 
 /**
@@ -412,6 +446,8 @@ export const COLLECTIONS = {
   merchantCategoryOverrides: 'merchantCategoryOverrides',
   monthlySummaries: 'monthlySummaries',
   budgets: 'budgets',
+  aiSummaries: 'aiSummaries',
+  recurringPatterns: 'recurringPatterns',
   meta: 'meta',
   emailVerificationOtps: 'emailVerificationOtps',
   passwordResetOtps: 'passwordResetOtps',
@@ -442,6 +478,22 @@ export function userMonthlySummariesPath(uid: string): string {
 
 export function userBudgetsPath(uid: string): string {
   return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.budgets}`;
+}
+
+export function userAiSummariesPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.aiSummaries}`;
+}
+
+export function userRecurringPatternsPath(uid: string): string {
+  return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.recurringPatterns}`;
+}
+
+/**
+ * Normalize merchant name for indexing, overrides, and merchant pages.
+ * Keep in sync with Flutter `normalizeMerchantKey`.
+ */
+export function normalizeMerchant(merchant: string): string {
+  return normalizeMerchantKey(merchant);
 }
 
 /** Normalize merchant name for override document ids / lookups */

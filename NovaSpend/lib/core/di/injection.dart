@@ -15,15 +15,23 @@ import 'package:nova_spend/features/auth/domain/repositories/auth_repository.dar
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/core/services/firebase_user_account_service.dart';
 import 'package:nova_spend/features/auth/domain/services/user_account_service.dart';
-import 'package:nova_spend/features/budgets/data/datasource/firestore_budget_datasource.dart';
-import 'package:nova_spend/features/budgets/data/repository_impl.dart';
-import 'package:nova_spend/features/budgets/domain/repositories/budget_repository.dart';
-import 'package:nova_spend/features/budgets/presentation/provider/budgets_provider.dart';
 import 'package:nova_spend/features/categories/data/datasource/firestore_category_datasource.dart';
 import 'package:nova_spend/features/categories/data/repository_impl.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
 import 'package:nova_spend/features/categories/domain/usecases/create_custom_category.dart';
 import 'package:nova_spend/features/categories/presentation/provider/categories_provider.dart';
+import 'package:nova_spend/features/merchants/data/datasource/firestore_merchant_datasource.dart';
+import 'package:nova_spend/features/merchants/data/repository_impl.dart';
+import 'package:nova_spend/features/merchants/domain/repositories/merchant_repository.dart';
+import 'package:nova_spend/features/merchants/domain/usecases/get_merchant_summary.dart';
+import 'package:nova_spend/features/merchants/domain/usecases/get_merchant_transactions.dart';
+import 'package:nova_spend/features/merchants/presentation/provider/merchant_provider.dart';
+import 'package:nova_spend/features/search/data/datasource/firestore_search_datasource.dart';
+import 'package:nova_spend/features/search/data/datasource/recent_searches_datasource.dart';
+import 'package:nova_spend/features/search/data/repository_impl.dart';
+import 'package:nova_spend/features/search/domain/repositories/search_repository.dart';
+import 'package:nova_spend/features/search/domain/usecases/search_transactions.dart';
+import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/data/datasource/settings_datasource.dart';
 import 'package:nova_spend/features/settings/data/repository_impl.dart';
 import 'package:nova_spend/features/settings/domain/repositories/settings_repository.dart';
@@ -36,7 +44,7 @@ import 'package:nova_spend/features/transactions/domain/usecases/get_transaction
 import 'package:nova_spend/features/transactions/domain/usecases/mark_transaction_reviewed.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/watch_transactions.dart';
-import 'package:nova_spend/features/transactions/presentation/provider/feed_provider.dart';
+import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final GetIt sl = GetIt.instance;
@@ -88,9 +96,11 @@ Future<void> configureDependencies({
   sl.registerLazySingleton(() => UpdateTransaction(sl()));
   sl.registerLazySingleton(() => MarkTransactionReviewed(sl()));
   sl.registerFactory(
-    () => FeedProvider(
+    () => HomeProvider(
       watchTransactions: sl(),
       getTransactionsPage: sl(),
+      analyticsRepository: sl(),
+      transactionRepository: sl(),
     ),
   );
 
@@ -118,19 +128,38 @@ Future<void> configureDependencies({
   );
   sl.registerFactory(() => InsightsProvider(repository: sl()));
 
-  // Budgets
+  // Merchants
   sl.registerLazySingleton(
-    () => FirestoreBudgetDatasource(firestore: sl()),
+    () => FirestoreMerchantDatasource(firestore: sl()),
   );
-  sl.registerLazySingleton<BudgetRepository>(
-    () => BudgetRepositoryImpl(datasource: sl()),
+  sl.registerLazySingleton<MerchantRepository>(
+    () => MerchantRepositoryImpl(datasource: sl()),
   );
+  sl.registerLazySingleton(() => GetMerchantSummary(sl()));
+  sl.registerLazySingleton(() => GetMerchantTransactions(sl()));
   sl.registerFactory(
-    () => BudgetsProvider(
-      budgetRepository: sl(),
-      analyticsRepository: sl(),
-      notificationService: sl(),
-      prefs: sl(),
+    () => MerchantProvider(
+      getMerchantSummary: sl(),
+      getMerchantTransactions: sl(),
+    ),
+  );
+
+  // Search
+  sl.registerLazySingleton(
+    () => FirestoreSearchDatasource(firestore: sl()),
+  );
+  sl.registerLazySingleton(() => RecentSearchesDatasource(sl()));
+  sl.registerLazySingleton<SearchRepository>(
+    () => SearchRepositoryImpl(
+      firestoreDatasource: sl(),
+      recentSearchesDatasource: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => SearchTransactions(sl()));
+  sl.registerFactory(
+    () => SearchProvider(
+      searchTransactions: sl(),
+      searchRepository: sl(),
     ),
   );
 

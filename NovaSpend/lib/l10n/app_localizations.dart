@@ -112,6 +112,18 @@ abstract class AppLocalizations {
   /// **'Feed'**
   String get navFeed;
 
+  /// No description provided for @navHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// No description provided for @navSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get navSearch;
+
   /// No description provided for @navInsights.
   ///
   /// In en, this message translates to:
@@ -129,6 +141,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get navSettings;
+
+  /// No description provided for @searchPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search is coming soon. You\'ll be able to find transactions by merchant, category, and more.'**
+  String get searchPlaceholder;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search transactions'**
+  String get searchHint;
+
+  /// No description provided for @searchRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get searchRecent;
+
+  /// No description provided for @searchClearRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get searchClearRecent;
+
+  /// No description provided for @searchQuickFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick filters'**
+  String get searchQuickFilters;
+
+  /// No description provided for @searchFilterThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get searchFilterThisMonth;
+
+  /// No description provided for @searchFilterDebits.
+  ///
+  /// In en, this message translates to:
+  /// **'Debits'**
+  String get searchFilterDebits;
+
+  /// No description provided for @searchFilterCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get searchFilterCredits;
+
+  /// No description provided for @searchFilterSubscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions'**
+  String get searchFilterSubscriptions;
+
+  /// No description provided for @searchEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by merchant, category, or bank'**
+  String get searchEmptyTitle;
+
+  /// No description provided for @searchEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Examples: KFC, Food, Meezan'**
+  String get searchEmptyHint;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions match your search'**
+  String get searchNoResults;
+
+  /// No description provided for @searchResultsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Results ({count})'**
+  String searchResultsCount(String count);
+
+  /// No description provided for @settingsSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsSectionAccount;
+
+  /// No description provided for @settingsSectionPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get settingsSectionPrivacy;
+
+  /// No description provided for @settingsSectionSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup'**
+  String get settingsSectionSetup;
+
+  /// No description provided for @settingsSectionAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get settingsSectionAdvanced;
+
+  /// No description provided for @settingsSectionAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsSectionAbout;
+
+  /// No description provided for @settingsFixParsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix parsing issues'**
+  String get settingsFixParsing;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String settingsVersion(String version);
 
   /// No description provided for @settingsLanguage.
   ///
@@ -279,6 +411,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Budgets'**
   String get settingsBudgets;
+
+  /// No description provided for @homeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get homeTitle;
+
+  /// No description provided for @homePeriodToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get homePeriodToday;
+
+  /// No description provided for @homePeriodThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get homePeriodThisWeek;
+
+  /// No description provided for @homePeriodThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get homePeriodThisMonth;
+
+  /// No description provided for @homeSpentSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} spent'**
+  String homeSpentSummary(String amount);
+
+  /// No description provided for @homeReceivedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} received'**
+  String homeReceivedSummary(String amount);
+
+  /// No description provided for @homeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions yet'**
+  String get homeEmpty;
+
+  /// No description provided for @homeEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the iOS Shortcut to start seeing your spending automatically.'**
+  String get homeEmptyHint;
+
+  /// No description provided for @homeEmptySetupCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Open setup guide'**
+  String get homeEmptySetupCta;
+
+  /// No description provided for @reviewBannerMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item needs review} other{{count} items need review}}'**
+  String reviewBannerMessage(int count);
+
+  /// No description provided for @merchantPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Merchant details are coming soon. You\'ll see spending history and trends here.'**
+  String get merchantPlaceholder;
+
+  /// No description provided for @merchantTotalVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} total · {visits} visits'**
+  String merchantTotalVisits(String total, String visits);
+
+  /// No description provided for @merchantAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg {amount} per visit'**
+  String merchantAverage(String amount);
+
+  /// No description provided for @merchantThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month: {amount} ({visits} visits)'**
+  String merchantThisMonth(String amount, String visits);
+
+  /// No description provided for @merchantAllTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'All transactions'**
+  String get merchantAllTransactions;
+
+  /// No description provided for @merchantEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions for this merchant'**
+  String get merchantEmpty;
+
+  /// No description provided for @commonDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get commonDismiss;
 
   /// No description provided for @feedTitle.
   ///

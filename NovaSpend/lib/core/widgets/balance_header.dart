@@ -7,18 +7,24 @@ import '../theme/app_spacing.dart';
 class BalanceHeader extends StatelessWidget {
   const BalanceHeader({
     required this.label,
-    required this.amount,
+    this.amount,
     this.subtitle,
+    this.spentAmount,
+    this.receivedAmount,
     super.key,
   });
 
   final String label;
-  final String amount;
+  final String? amount;
   final String? subtitle;
+  final String? spentAmount;
+  final String? receivedAmount;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showDualTotals =
+        spentAmount != null && receivedAmount != null && amount == null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -35,22 +41,40 @@ class BalanceHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            amount,
-            style: theme.textTheme.displayMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.5,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: AppSpacing.xs),
+          if (showDualTotals) ...[
             Text(
-              subtitle!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.accent,
+              spentAmount!,
+              style: theme.textTheme.displayMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+                color: theme.colorScheme.onSurface,
               ),
             ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              receivedAmount!,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ] else if (amount != null) ...[
+            Text(
+              amount!,
+              style: theme.textTheme.displayMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.accent,
+                ),
+              ),
+            ],
           ],
         ],
       ),

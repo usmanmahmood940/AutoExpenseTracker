@@ -9,7 +9,8 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "test:ingest": "node scripts/test-ingest.mjs",
-    "seed:categories": "npm run build && node scripts/seed-categories.mjs"
+    "seed:categories": "npm run build && node scripts/seed-categories.mjs",
+    "backfill:merchant-normalized": "npm run build && node scripts/backfill-merchant-normalized.mjs"
   },
   "engines": {
     "node": "22"

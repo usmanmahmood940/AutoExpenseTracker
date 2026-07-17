@@ -1,6 +1,6 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
@@ -8,9 +8,9 @@ import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/balance_header.dart';
-import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/presentation/provider/insights_provider.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
@@ -112,92 +112,15 @@ class _InsightsView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    _SectionTitle(l10n.insightsCashFlow),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      child: AppCard(
-                        child: SizedBox(
-                          height: 180,
-                          child: BarChart(
-                            BarChartData(
-                              gridData: const FlGridData(show: false),
-                              borderData: FlBorderData(show: false),
-                              titlesData: FlTitlesData(
-                                topTitles: const AxisTitles(),
-                                rightTitles: const AxisTitles(),
-                                leftTitles: const AxisTitles(),
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    getTitlesWidget: (value, _) {
-                                      if (value == 0) {
-                                        return Text(l10n.insightsSpent);
-                                      }
-                                      if (value == 1) {
-                                        return Text(l10n.insightsIncome);
-                                      }
-                                      return const SizedBox.shrink();
-                                    },
-                                  ),
-                                ),
-                              ),
-                              barGroups: [
-                                BarChartGroupData(
-                                  x: 0,
-                                  barRods: [
-                                    BarChartRodData(
-                                      toY: summary.totalDebit,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.35),
-                                      width: 28,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ],
-                                ),
-                                BarChartGroupData(
-                                  x: 1,
-                                  barRods: [
-                                    BarChartRodData(
-                                      toY: summary.totalCredit,
-                                      color: AppColors.accent,
-                                      width: 28,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
                     _SectionTitle(l10n.insightsByCategory),
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
                       ),
                       child: AppCard(
-                        child: SizedBox(
-                          height: 220,
-                          child: _CategoryBars(byCategory: summary.byCategory),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _SectionTitle(l10n.insightsTrends),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      child: AppCard(
-                        child: SizedBox(
-                          height: 200,
-                          child: _TrendLine(summaries: provider.recent),
+                        child: _HorizontalCategoryBars(
+                          byCategory: summary.byCategory,
+                          currency: currency,
                         ),
                       ),
                     ),
@@ -217,6 +140,17 @@ class _InsightsView extends StatelessWidget {
                                   trailing: Text(
                                     formatMoney(e.value, currency: currency),
                                   ),
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => MerchantPage(
+                                          merchantNormalized:
+                                              normalizeMerchantKey(e.key),
+                                          displayName: e.key,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               )
                               .toList(),
@@ -283,116 +217,88 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _CategoryBars extends StatelessWidget {
-  const _CategoryBars({required this.byCategory});
+class _HorizontalCategoryBars extends StatelessWidget {
+  const _HorizontalCategoryBars({
+    required this.byCategory,
+    required this.currency,
+  });
 
   final Map<String, double> byCategory;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
     final entries = byCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final top = entries.take(6).toList();
-    if (top.isEmpty) {
-      return Center(child: Text(context.l10n.insightsEmpty));
-    }
-    final maxY = top.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final top = entries.take(5).toList();
 
-    return BarChart(
-      BarChartData(
-        maxY: maxY * 1.2,
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          topTitles: const AxisTitles(),
-          rightTitles: const AxisTitles(),
-          leftTitles: const AxisTitles(),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 42,
-              getTitlesWidget: (value, _) {
-                final i = value.toInt();
-                if (i < 0 || i >= top.length) return const SizedBox.shrink();
-                final label = top[i].key;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    label.length > 8 ? '${label.substring(0, 8)}…' : label,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                );
-              },
-            ),
+    if (top.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Center(child: Text(context.l10n.insightsEmpty)),
+      );
+    }
+
+    final maxValue = top.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+
+    return Column(
+      children: [
+        for (final entry in top) ...[
+          _CategoryBarRow(
+            label: entry.key,
+            amount: formatMoney(entry.value, currency: currency),
+            fraction: maxValue > 0 ? entry.value / maxValue : 0,
           ),
-        ),
-        barGroups: [
-          for (var i = 0; i < top.length; i++)
-            BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: top[i].value,
-                  color: AppColors.accent,
-                  width: 16,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ],
-            ),
+          if (entry != top.last) const SizedBox(height: AppSpacing.sm),
         ],
-      ),
+      ],
     );
   }
 }
 
-class _TrendLine extends StatelessWidget {
-  const _TrendLine({required this.summaries});
+class _CategoryBarRow extends StatelessWidget {
+  const _CategoryBarRow({
+    required this.label,
+    required this.amount,
+    required this.fraction,
+  });
 
-  final List<MonthlySummaryEntity> summaries;
+  final String label;
+  final String amount;
+  final double fraction;
 
   @override
   Widget build(BuildContext context) {
-    final chronological = [...summaries].reversed.toList();
-    if (chronological.isEmpty) {
-      return Center(child: Text(context.l10n.insightsEmpty));
-    }
-
-    final spots = <FlSpot>[
-      for (var i = 0; i < chronological.length; i++)
-        FlSpot(i.toDouble(), chronological[i].totalDebit),
-    ];
-
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(
-          topTitles: AxisTitles(),
-          rightTitles: AxisTitles(),
-          leftTitles: AxisTitles(),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: AppColors.accent,
-            barWidth: 3,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: AppColors.accentMuted,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(amount, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: fraction.clamp(0.0, 1.0),
+            minHeight: 8,
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.08),
+            color: AppColors.accent,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

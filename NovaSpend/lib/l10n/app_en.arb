@@ -3,9 +3,41 @@
   "appTitle": "NovaSpend",
   "homeWelcome": "Welcome to NovaSpend",
   "navFeed": "Feed",
+  "navHome": "Home",
+  "navSearch": "Search",
   "navInsights": "Insights",
   "navReview": "Review",
   "navSettings": "Settings",
+  "searchPlaceholder": "Search is coming soon. You'll be able to find transactions by merchant, category, and more.",
+  "searchHint": "Search transactions",
+  "searchRecent": "Recent searches",
+  "searchClearRecent": "Clear",
+  "searchQuickFilters": "Quick filters",
+  "searchFilterThisMonth": "This month",
+  "searchFilterDebits": "Debits",
+  "searchFilterCredits": "Credits",
+  "searchFilterSubscriptions": "Subscriptions",
+  "searchEmptyTitle": "Search by merchant, category, or bank",
+  "searchEmptyHint": "Examples: KFC, Food, Meezan",
+  "searchNoResults": "No transactions match your search",
+  "searchResultsCount": "Results ({count})",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "settingsSectionAccount": "Account",
+  "settingsSectionPrivacy": "Privacy",
+  "settingsSectionSetup": "Setup",
+  "settingsSectionAdvanced": "Advanced",
+  "settingsSectionAbout": "About",
+  "settingsFixParsing": "Fix parsing issues",
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
   "settingsLanguage": "Language",
   "settingsLanguageEnglish": "English",
   "settingsTitle": "Settings",
@@ -31,6 +63,55 @@
   "settingsSignOut": "Sign out",
   "settingsCategories": "Manage categories",
   "settingsBudgets": "Budgets",
+  "homeTitle": "Home",
+  "homePeriodToday": "Today",
+  "homePeriodThisWeek": "This week",
+  "homePeriodThisMonth": "This month",
+  "homeSpentSummary": "{amount} spent",
+  "@homeSpentSummary": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "homeReceivedSummary": "{amount} received",
+  "@homeReceivedSummary": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "homeEmpty": "No transactions yet",
+  "homeEmptyHint": "Set up the iOS Shortcut to start seeing your spending automatically.",
+  "homeEmptySetupCta": "Open setup guide",
+  "reviewBannerMessage": "{count, plural, =1{1 item needs review} other{{count} items need review}}",
+  "@reviewBannerMessage": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "merchantPlaceholder": "Merchant details are coming soon. You'll see spending history and trends here.",
+  "merchantTotalVisits": "{total} total · {visits} visits",
+  "@merchantTotalVisits": {
+    "placeholders": {
+      "total": {"type": "String"},
+      "visits": {"type": "String"}
+    }
+  },
+  "merchantAverage": "Avg {amount} per visit",
+  "@merchantAverage": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "merchantThisMonth": "This month: {amount} ({visits} visits)",
+  "@merchantThisMonth": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "visits": {"type": "String"}
+    }
+  },
+  "merchantAllTransactions": "All transactions",
+  "merchantEmpty": "No transactions for this merchant",
+  "commonDismiss": "Dismiss",
   "feedTitle": "Transactions",
   "feedEmpty": "No transactions yet",
   "feedEmptyHint": "Send a bank SMS via your Shortcut to get started.",

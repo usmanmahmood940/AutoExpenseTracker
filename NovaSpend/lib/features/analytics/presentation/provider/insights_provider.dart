@@ -12,11 +12,9 @@ class InsightsProvider extends ChangeNotifier {
   final AnalyticsRepository _repository;
 
   StreamSubscription<MonthlySummaryEntity?>? _summarySub;
-  StreamSubscription<List<MonthlySummaryEntity>>? _recentSub;
 
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   MonthlySummaryEntity? summary;
-  List<MonthlySummaryEntity> recent = [];
   bool isLoading = true;
   String? error;
   String? _uid;
@@ -48,7 +46,6 @@ class InsightsProvider extends ChangeNotifier {
     final uid = _uid;
     if (uid == null) return;
     _summarySub?.cancel();
-    _recentSub?.cancel();
     isLoading = true;
     notifyListeners();
 
@@ -65,22 +62,11 @@ class InsightsProvider extends ChangeNotifier {
       },
     );
 
-    _recentSub = _repository.watchRecentSummaries(uid).listen(
-      (list) {
-        recent = list;
-        notifyListeners();
-      },
-      onError: (Object e) {
-        error = e.toString();
-        notifyListeners();
-      },
-    );
   }
 
   @override
   void dispose() {
     _summarySub?.cancel();
-    _recentSub?.cancel();
     super.dispose();
   }
 }

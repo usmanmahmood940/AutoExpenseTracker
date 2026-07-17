@@ -169,11 +169,15 @@ class FirestoreTransactionDatasource {
         'isAutoDetected': false,
         'isEdited': true,
         'isDuplicate': false,
+        'isRecurring': false,
         'status': 'active',
         'reviewedAt': now,
         'createdAt': now,
         'updatedAt': now,
         ...transactionFields,
+        'merchantNormalized': normalizeMerchantKey(
+          (transactionFields['merchant'] as String?) ?? '',
+        ),
       };
 
       final batch = _db.batch();

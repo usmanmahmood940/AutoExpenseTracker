@@ -14,6 +14,7 @@ import { parseTransaction } from './gemini';
 import {
   COLLECTIONS,
   DEFAULT_USER_ID,
+  normalizeMerchant,
   normalizeMerchantKey,
   type IngestWebhookRequest,
   type IngestWebhookResponse,
@@ -227,6 +228,7 @@ async function processIngest(
     geminiKey,
     request.raw,
     allowedCategories,
+    new Date(),
   );
 
   if (!parseResult.ok) {
@@ -300,6 +302,8 @@ async function processIngest(
     type: parsed.type,
     merchant: parsed.merchant,
     merchantDetails: parsed.merchantDetails,
+    merchantNormalized: normalizeMerchant(parsed.merchant),
+    isRecurring: false,
     category,
     categorySource,
     paymentMethod: parsed.paymentMethod,

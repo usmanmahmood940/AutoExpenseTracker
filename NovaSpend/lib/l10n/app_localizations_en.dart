@@ -18,6 +18,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navFeed => 'Feed';
 
   @override
+  String get navHome => 'Home';
+
+  @override
+  String get navSearch => 'Search';
+
+  @override
   String get navInsights => 'Insights';
 
   @override
@@ -25,6 +31,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navSettings => 'Settings';
+
+  @override
+  String get searchPlaceholder =>
+      'Search is coming soon. You\'ll be able to find transactions by merchant, category, and more.';
+
+  @override
+  String get searchHint => 'Search transactions';
+
+  @override
+  String get searchRecent => 'Recent searches';
+
+  @override
+  String get searchClearRecent => 'Clear';
+
+  @override
+  String get searchQuickFilters => 'Quick filters';
+
+  @override
+  String get searchFilterThisMonth => 'This month';
+
+  @override
+  String get searchFilterDebits => 'Debits';
+
+  @override
+  String get searchFilterCredits => 'Credits';
+
+  @override
+  String get searchFilterSubscriptions => 'Subscriptions';
+
+  @override
+  String get searchEmptyTitle => 'Search by merchant, category, or bank';
+
+  @override
+  String get searchEmptyHint => 'Examples: KFC, Food, Meezan';
+
+  @override
+  String get searchNoResults => 'No transactions match your search';
+
+  @override
+  String searchResultsCount(String count) {
+    return 'Results ($count)';
+  }
+
+  @override
+  String get settingsSectionAccount => 'Account';
+
+  @override
+  String get settingsSectionPrivacy => 'Privacy';
+
+  @override
+  String get settingsSectionSetup => 'Setup';
+
+  @override
+  String get settingsSectionAdvanced => 'Advanced';
+
+  @override
+  String get settingsSectionAbout => 'About';
+
+  @override
+  String get settingsFixParsing => 'Fix parsing issues';
+
+  @override
+  String settingsVersion(String version) {
+    return 'Version $version';
+  }
 
   @override
   String get settingsLanguage => 'Language';
@@ -101,6 +172,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsBudgets => 'Budgets';
+
+  @override
+  String get homeTitle => 'Home';
+
+  @override
+  String get homePeriodToday => 'Today';
+
+  @override
+  String get homePeriodThisWeek => 'This week';
+
+  @override
+  String get homePeriodThisMonth => 'This month';
+
+  @override
+  String homeSpentSummary(String amount) {
+    return '$amount spent';
+  }
+
+  @override
+  String homeReceivedSummary(String amount) {
+    return '$amount received';
+  }
+
+  @override
+  String get homeEmpty => 'No transactions yet';
+
+  @override
+  String get homeEmptyHint =>
+      'Set up the iOS Shortcut to start seeing your spending automatically.';
+
+  @override
+  String get homeEmptySetupCta => 'Open setup guide';
+
+  @override
+  String reviewBannerMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items need review',
+      one: '1 item needs review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get merchantPlaceholder =>
+      'Merchant details are coming soon. You\'ll see spending history and trends here.';
+
+  @override
+  String merchantTotalVisits(String total, String visits) {
+    return '$total total · $visits visits';
+  }
+
+  @override
+  String merchantAverage(String amount) {
+    return 'Avg $amount per visit';
+  }
+
+  @override
+  String merchantThisMonth(String amount, String visits) {
+    return 'This month: $amount ($visits visits)';
+  }
+
+  @override
+  String get merchantAllTransactions => 'All transactions';
+
+  @override
+  String get merchantEmpty => 'No transactions for this merchant';
+
+  @override
+  String get commonDismiss => 'Dismiss';
 
   @override
   String get feedTitle => 'Transactions';

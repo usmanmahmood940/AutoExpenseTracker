@@ -28,6 +28,9 @@ class TransactionEntity extends Equatable {
     required this.type,
     required this.merchant,
     this.merchantDetails,
+    this.merchantNormalized,
+    this.isRecurring = false,
+    this.recurringGroupId,
     required this.category,
     required this.categorySource,
     required this.paymentMethod,
@@ -59,6 +62,10 @@ class TransactionEntity extends Equatable {
   final String type;
   final String merchant;
   final String? merchantDetails;
+  /// Normalized merchant key (Phase C). Falls back to derived key when null.
+  final String? merchantNormalized;
+  final bool isRecurring;
+  final String? recurringGroupId;
   final String category;
   final String categorySource;
   final String paymentMethod;
@@ -85,6 +92,15 @@ class TransactionEntity extends Equatable {
   bool get needsConfidenceReview =>
       parseConfidence < 0.8 && reviewedAt == null && status != 'deleted';
 
+  /// Effective key for merchant grouping / navigation.
+  String get resolvedMerchantKey {
+    final stored = merchantNormalized;
+    if (stored != null && stored.trim().isNotEmpty) {
+      return stored.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    }
+    return merchant.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
   TransactionEntity copyWith({
     String? merchant,
     double? amount,
@@ -104,6 +120,9 @@ class TransactionEntity extends Equatable {
       type: type ?? this.type,
       merchant: merchant ?? this.merchant,
       merchantDetails: merchantDetails,
+      merchantNormalized: merchantNormalized,
+      isRecurring: isRecurring,
+      recurringGroupId: recurringGroupId,
       category: category ?? this.category,
       categorySource: categorySource ?? this.categorySource,
       paymentMethod: paymentMethod,
@@ -138,6 +157,9 @@ class TransactionEntity extends Equatable {
         type,
         merchant,
         merchantDetails,
+        merchantNormalized,
+        isRecurring,
+        recurringGroupId,
         category,
         categorySource,
         paymentMethod,

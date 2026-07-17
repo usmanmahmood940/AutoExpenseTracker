@@ -10,18 +10,24 @@ class TransactionListTile extends StatelessWidget {
   const TransactionListTile({
     required this.transaction,
     this.onTap,
+    this.onMerchantTap,
     super.key,
   });
 
   final TransactionEntity transaction;
   final VoidCallback? onTap;
+  final VoidCallback? onMerchantTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isCredit = transaction.type == 'credit';
-    final amountColor = isCredit ? AppColors.accent : theme.colorScheme.onSurface;
+    final amountColor =
+        isCredit ? AppColors.accent : theme.colorScheme.onSurface;
     final sign = isCredit ? '+' : '−';
+    final merchantLabel = transaction.merchant.isEmpty
+        ? context.l10n.transactionMerchant
+        : transaction.merchant;
 
     return AppCard(
       onTap: onTap,
@@ -35,14 +41,28 @@ class TransactionListTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  transaction.merchant.isEmpty
-                      ? context.l10n.transactionMerchant
-                      : transaction.merchant,
-                  style: theme.textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                onMerchantTap == null
+                    ? Text(
+                        merchantLabel,
+                        style: theme.textTheme.titleMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : InkWell(
+                        onTap: onMerchantTap,
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            merchantLabel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: AppColors.accent,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   [

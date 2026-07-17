@@ -61,6 +61,15 @@ service cloud.firestore {
         allow write: if false; // maintained by Cloud Functions
       }
 
+      match /aiSummaries/{summaryId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /recurringPatterns/{patternId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // maintained by Cloud Functions
+      }
+
       match /budgets/{budgetId} {
         allow read, write: if isOwner(userId);
       }
