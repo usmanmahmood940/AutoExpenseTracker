@@ -241,7 +241,10 @@ Sequenced, actionable tasks only. Each task should be completable and verifiable
 - [ ] iOS + Android smoke test
 
 ### I4. Cleanup dead code
-- [ ] Remove unused budget UI imports/routes
+- [x] Remove unused budget UI imports/routes — deleted the entire unwired
+  `features/budgets/` stack (was kept on disk per A2, never re-wired) and
+  the orphaned `CategoriesPage`/`CategoriesProvider`/`CreateCustomCategory`
+  (category picker still works via `CategoryRepository`, injected directly)
 - [ ] Remove unused chart widgets from analytics if no longer referenced
 - [ ] Remove or archive complex `transaction_filter_sheet` if fully replaced by Search
 
