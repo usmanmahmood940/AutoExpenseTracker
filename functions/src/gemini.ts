@@ -276,8 +276,9 @@ export async function parseTransaction(
 
   const { currentDate, currentDateTime } = formatPakistanNow(now);
   let lastError = 'Unknown Gemini parse error';
+  const attempts: string[] = [];
 
-  for (const modelName of GEMINI_MODELS) {
+  for (const [index, modelName] of GEMINI_MODELS.entries()) {
     try {
       const text = await generateWithModel(
         apiKey,
@@ -298,20 +299,42 @@ export async function parseTransaction(
         };
       }
 
+      if (index > 0) {
+        // Surface fallback usage — a 404/"not found" here likely means an
+        // earlier model in GEMINI_MODELS is misconfigured or deprecated,
+        // not just transiently overloaded, and should be investigated.
+        console.warn('Gemini parse succeeded on fallback model', {
+          model: modelName,
+          skipped: GEMINI_MODELS.slice(0, index),
+          attempts,
+        });
+      }
+
       return { ok: true, parsed, model: modelName };
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown Gemini parse error';
       lastError = `[${modelName}] ${message}`;
+      attempts.push(lastError);
 
       if (isRetryableModelError(message)) {
+        console.warn('Gemini model failed, trying next fallback', {
+          model: modelName,
+          message,
+        });
         await sleep(1500);
         continue;
       }
 
+      console.error('Gemini parse failed with a non-retryable error', {
+        model: modelName,
+        message,
+        attempts,
+      });
       return { ok: false, error: lastError };
     }
   }
 
+  console.error('Gemini parse exhausted all fallback models', { attempts });
   return { ok: false, error: lastError };
 }

@@ -1,0 +1,21 @@
+{
+  "description": "Cross-language test vectors for normalizeMerchantKey(). Both the TypeScript implementation (functions/src/schema.ts) and the Dart implementation (NovaSpend/lib/core/constants/app_constants.dart) must produce identical output for every case below — they drive merchant grouping, category overrides, and search prefix queries, so behavior must match exactly across backend and client.",
+  "cases": [
+    { "input": "KFC", "expected": "kfc" },
+    { "input": "  KFC  ", "expected": "kfc" },
+    { "input": "PSO RANGERS", "expected": "pso rangers" },
+    { "input": "PSO   RANGERS", "expected": "pso rangers" },
+    { "input": "PSO\tRANGERS", "expected": "pso rangers" },
+    { "input": "PSO\nRANGERS", "expected": "pso rangers" },
+    { "input": "PSO\r\nRANGERS", "expected": "pso rangers" },
+    { "input": "Mc Donald's", "expected": "mc donald's" },
+    { "input": "", "expected": "" },
+    { "input": "   ", "expected": "" },
+    { "input": "Café Lumière", "expected": "café lumière" },
+    { "input": "ALREADY lower case", "expected": "already lower case" },
+    { "input": "MiXeD   CaSe   Spacing", "expected": "mixed case spacing" },
+    { "input": "Trailing space ", "expected": "trailing space" },
+    { "input": " Leading space", "expected": "leading space" },
+    { "input": "Single", "expected": "single" }
+  ]
+}

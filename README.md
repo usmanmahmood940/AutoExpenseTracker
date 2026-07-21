@@ -29,8 +29,25 @@ Personal auto expense logger: bank SMS/email → webhook → Gemini parsing → 
 │   │   └── schema.ts         # Firestore types
 │   ├── scripts/test-ingest.mjs
 │   └── test-data/sample-sms.json
-└── shared/types/schema.ts    # Mirrored schema for future app
+├── scripts/sync-shared-schema.mjs  # Regenerates shared/types/schema.ts
+└── shared/types/schema.ts    # GENERATED mirror of functions/src/schema.ts
 ```
+
+### Keeping `shared/types/schema.ts` in sync
+
+`functions/src/schema.ts` is the source of truth (it's what actually
+deploys). `shared/types/schema.ts` is a generated mirror for future
+client apps that can't import across the Cloud Functions deploy boundary.
+Never hand-edit `shared/types/schema.ts` — after changing
+`functions/src/schema.ts`, run:
+
+```bash
+npm run sync:shared-types    # regenerate shared/types/schema.ts
+npm run verify:shared-types  # CI-friendly check; exits non-zero if stale
+```
+
+`npm run build` runs `verify:shared-types` automatically and fails if the
+two files have drifted.
 
 ## Prerequisites
 

@@ -8,6 +8,7 @@
     "shell": "npm run build && firebase functions:shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
+    "test": "npm run build && node --test lib",
     "test:ingest": "node scripts/test-ingest.mjs",
     "seed:categories": "npm run build && node scripts/seed-categories.mjs",
     "backfill:merchant-normalized": "npm run build && node scripts/backfill-merchant-normalized.mjs"

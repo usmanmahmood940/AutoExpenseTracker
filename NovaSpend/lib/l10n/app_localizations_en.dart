@@ -168,12 +168,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSignOut => 'Sign out';
 
   @override
-  String get settingsCategories => 'Manage categories';
-
-  @override
-  String get settingsBudgets => 'Budgets';
-
-  @override
   String get homeTitle => 'Home';
 
   @override
@@ -411,60 +405,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsNextMonth => 'Next';
-
-  @override
-  String get categoriesTitle => 'Categories';
-
-  @override
-  String get categoriesAdd => 'Add category';
-
-  @override
-  String get categoriesName => 'Name';
-
-  @override
-  String get categoriesType => 'Type';
-
-  @override
-  String get categoriesSave => 'Save';
-
-  @override
-  String get categoriesEmpty => 'No custom categories';
-
-  @override
-  String get categoriesDefault => 'Defaults';
-
-  @override
-  String get categoriesCustom => 'Yours';
-
-  @override
-  String get budgetsTitle => 'Budgets';
-
-  @override
-  String get budgetsAdd => 'Add budget';
-
-  @override
-  String get budgetsLimit => 'Monthly limit';
-
-  @override
-  String get budgetsEmpty => 'No budgets yet';
-
-  @override
-  String budgetsProgress(String spent, String limit) {
-    return '$spent of $limit';
-  }
-
-  @override
-  String get budgetsAlertTitle => 'Budget alert';
-
-  @override
-  String budgetsAlertNear(String category, String percent) {
-    return '$category is at $percent% of your monthly budget';
-  }
-
-  @override
-  String budgetsAlertOver(String category) {
-    return '$category exceeded your monthly budget';
-  }
 
   @override
   String get authUnlockTitle => 'Unlock NovaSpend';

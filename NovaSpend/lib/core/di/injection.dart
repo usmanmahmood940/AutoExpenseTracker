@@ -18,8 +18,6 @@ import 'package:nova_spend/features/auth/domain/services/user_account_service.da
 import 'package:nova_spend/features/categories/data/datasource/firestore_category_datasource.dart';
 import 'package:nova_spend/features/categories/data/repository_impl.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
-import 'package:nova_spend/features/categories/domain/usecases/create_custom_category.dart';
-import 'package:nova_spend/features/categories/presentation/provider/categories_provider.dart';
 import 'package:nova_spend/features/merchants/data/datasource/firestore_merchant_datasource.dart';
 import 'package:nova_spend/features/merchants/data/repository_impl.dart';
 import 'package:nova_spend/features/merchants/domain/repositories/merchant_repository.dart';
@@ -104,19 +102,13 @@ Future<void> configureDependencies({
     ),
   );
 
-  // Categories
+  // Categories — only CategoryRepository is consumed directly (by the
+  // transaction edit picker); there is no standalone categories screen.
   sl.registerLazySingleton(
     () => FirestoreCategoryDatasource(firestore: sl()),
   );
   sl.registerLazySingleton<CategoryRepository>(
     () => CategoryRepositoryImpl(datasource: sl()),
-  );
-  sl.registerLazySingleton(() => CreateCustomCategory(sl()));
-  sl.registerFactory(
-    () => CategoriesProvider(
-      repository: sl(),
-      createCustomCategory: sl(),
-    ),
   );
 
   // Analytics

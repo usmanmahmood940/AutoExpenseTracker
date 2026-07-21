@@ -31,13 +31,11 @@ class AppConstants {
   static const String categories = 'categories';
   static const String merchantCategoryOverrides = 'merchantCategoryOverrides';
   static const String monthlySummaries = 'monthlySummaries';
-  static const String budgets = 'budgets';
   static const String meta = 'meta';
 
   static const double confidenceReviewThreshold = 0.8;
 
   static const String prefBiometricLock = 'biometric_lock_enabled';
-  static const String prefBudgetAlerted = 'budget_alerted_';
   static const String localePreferenceKey = 'app_locale';
 }
 

@@ -400,18 +400,6 @@ abstract class AppLocalizations {
   /// **'Sign out'**
   String get settingsSignOut;
 
-  /// No description provided for @settingsCategories.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage categories'**
-  String get settingsCategories;
-
-  /// No description provided for @settingsBudgets.
-  ///
-  /// In en, this message translates to:
-  /// **'Budgets'**
-  String get settingsBudgets;
-
   /// No description provided for @homeTitle.
   ///
   /// In en, this message translates to:
@@ -843,102 +831,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next'**
   String get insightsNextMonth;
-
-  /// No description provided for @categoriesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Categories'**
-  String get categoriesTitle;
-
-  /// No description provided for @categoriesAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Add category'**
-  String get categoriesAdd;
-
-  /// No description provided for @categoriesName.
-  ///
-  /// In en, this message translates to:
-  /// **'Name'**
-  String get categoriesName;
-
-  /// No description provided for @categoriesType.
-  ///
-  /// In en, this message translates to:
-  /// **'Type'**
-  String get categoriesType;
-
-  /// No description provided for @categoriesSave.
-  ///
-  /// In en, this message translates to:
-  /// **'Save'**
-  String get categoriesSave;
-
-  /// No description provided for @categoriesEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No custom categories'**
-  String get categoriesEmpty;
-
-  /// No description provided for @categoriesDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Defaults'**
-  String get categoriesDefault;
-
-  /// No description provided for @categoriesCustom.
-  ///
-  /// In en, this message translates to:
-  /// **'Yours'**
-  String get categoriesCustom;
-
-  /// No description provided for @budgetsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Budgets'**
-  String get budgetsTitle;
-
-  /// No description provided for @budgetsAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Add budget'**
-  String get budgetsAdd;
-
-  /// No description provided for @budgetsLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'Monthly limit'**
-  String get budgetsLimit;
-
-  /// No description provided for @budgetsEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No budgets yet'**
-  String get budgetsEmpty;
-
-  /// No description provided for @budgetsProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'{spent} of {limit}'**
-  String budgetsProgress(String spent, String limit);
-
-  /// No description provided for @budgetsAlertTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Budget alert'**
-  String get budgetsAlertTitle;
-
-  /// No description provided for @budgetsAlertNear.
-  ///
-  /// In en, this message translates to:
-  /// **'{category} is at {percent}% of your monthly budget'**
-  String budgetsAlertNear(String category, String percent);
-
-  /// No description provided for @budgetsAlertOver.
-  ///
-  /// In en, this message translates to:
-  /// **'{category} exceeded your monthly budget'**
-  String budgetsAlertOver(String category);
 
   /// No description provided for @authUnlockTitle.
   ///

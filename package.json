@@ -3,10 +3,13 @@
   "private": true,
   "description": "Auto expense logger — SMS/email ingestion to Firestore",
   "scripts": {
+    "prebuild": "npm run verify:shared-types",
     "build": "npm --prefix functions run build",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:functions": "firebase deploy --only functions",
     "emulators": "firebase emulators:start",
-    "test:ingest": "npm --prefix functions run test:ingest"
+    "test:ingest": "npm --prefix functions run test:ingest",
+    "sync:shared-types": "node scripts/sync-shared-schema.mjs",
+    "verify:shared-types": "node scripts/sync-shared-schema.mjs --check"
   }
 }

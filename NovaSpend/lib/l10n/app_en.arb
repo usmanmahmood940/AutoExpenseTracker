@@ -61,8 +61,6 @@
   "settingsExport": "Export CSV",
   "settingsExportDone": "CSV ready to share",
   "settingsSignOut": "Sign out",
-  "settingsCategories": "Manage categories",
-  "settingsBudgets": "Budgets",
   "homeTitle": "Home",
   "homePeriodToday": "Today",
   "homePeriodThisWeek": "This week",
@@ -172,39 +170,6 @@
   "insightsEmpty": "No summary for this month yet",
   "insightsPrevMonth": "Previous",
   "insightsNextMonth": "Next",
-  "categoriesTitle": "Categories",
-  "categoriesAdd": "Add category",
-  "categoriesName": "Name",
-  "categoriesType": "Type",
-  "categoriesSave": "Save",
-  "categoriesEmpty": "No custom categories",
-  "categoriesDefault": "Defaults",
-  "categoriesCustom": "Yours",
-  "budgetsTitle": "Budgets",
-  "budgetsAdd": "Add budget",
-  "budgetsLimit": "Monthly limit",
-  "budgetsEmpty": "No budgets yet",
-  "budgetsProgress": "{spent} of {limit}",
-  "@budgetsProgress": {
-    "placeholders": {
-      "spent": {"type": "String"},
-      "limit": {"type": "String"}
-    }
-  },
-  "budgetsAlertTitle": "Budget alert",
-  "budgetsAlertNear": "{category} is at {percent}% of your monthly budget",
-  "@budgetsAlertNear": {
-    "placeholders": {
-      "category": {"type": "String"},
-      "percent": {"type": "String"}
-    }
-  },
-  "budgetsAlertOver": "{category} exceeded your monthly budget",
-  "@budgetsAlertOver": {
-    "placeholders": {
-      "category": {"type": "String"}
-    }
-  },
   "authUnlockTitle": "Unlock NovaSpend",
   "authUnlockSubtitle": "Authenticate to view your finances",
   "authUnlockButton": "Unlock",

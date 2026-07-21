@@ -1,4 +1,14 @@
 /**
+ * GENERATED FILE — DO NOT EDIT DIRECTLY.
+ *
+ * Mirrors `functions/src/schema.ts` (the deployed source of truth) for
+ * future client apps that cannot import across the Cloud Functions
+ * deploy boundary. Edit the source file, then run:
+ *
+ *   node scripts/sync-shared-schema.mjs
+ */
+
+/**
  * Shared Firestore schema types for Auto Expense Tracker.
  * Used by Cloud Functions (Phase 1+) and future client apps.
  */
@@ -490,7 +500,7 @@ export function userRecurringPatternsPath(uid: string): string {
 
 /**
  * Normalize merchant name for indexing, overrides, and merchant pages.
- * Alias used by ingest; keep in sync with Flutter `normalizeMerchantKey`.
+ * Keep in sync with Flutter `normalizeMerchantKey`.
  */
 export function normalizeMerchant(merchant: string): string {
   return normalizeMerchantKey(merchant);

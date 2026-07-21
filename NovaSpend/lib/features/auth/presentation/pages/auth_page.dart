@@ -6,18 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/forms/validators.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
-import 'package:nova_spend/core/locale/app_locale_scope.dart';
-import 'package:nova_spend/core/theme/app_colors.dart';
-import 'package:nova_spend/core/theme/app_radius.dart';
-import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
 import 'package:nova_spend/features/auth/presentation/auth_error_mapper.dart';
 import 'package:nova_spend/features/auth/presentation/auth_service.dart';
 import 'package:nova_spend/features/auth/presentation/auth_submit_flow.dart';
-import 'package:nova_spend/features/auth/presentation/widgets/social_sign_in_buttons.dart';
-import 'package:nova_spend/features/settings/presentation/pages/language_selection_page.dart';
+import 'package:nova_spend/features/auth/presentation/widgets/change_password_form.dart';
+import 'package:nova_spend/features/auth/presentation/widgets/forgot_password_form.dart';
+import 'package:nova_spend/features/auth/presentation/widgets/login_signup_form.dart';
+import 'package:nova_spend/features/auth/presentation/widgets/otp_verification_form.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Single host for login, signup, OTP verification, and password reset.
 class AuthPage extends StatefulWidget {
@@ -503,11 +500,6 @@ class _AuthPageState extends State<AuthPage> {
     return text.contains('cancel') || text.contains('canceled');
   }
 
-  Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
   @override
   Widget build(BuildContext context) {
     final body = _showChangePasswordScreen
@@ -551,201 +543,42 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildAuthForm() {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                tooltip: l10n.settingsLanguage,
-                onPressed: () async {
-                  final code = await Navigator.of(context).push<String>(
-                    MaterialPageRoute(
-                      builder: (_) => const LanguageSelectionPage(),
-                    ),
-                  );
-                  if (code != null && context.mounted) {
-                    await AppLocaleScope.of(context).setLocale(Locale(code));
-                  }
-                },
-                icon: const Icon(Icons.language),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.appTitle,
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.accent,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _isLogin ? l10n.authWelcomeBack : l10n.authCreateAccount,
-              style: theme.textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              _isLogin ? l10n.authLoginSubtitle : l10n.authSignupSubtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            TextFormField(
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              decoration: InputDecoration(
-                labelText: l10n.authEmail,
-                suffixIcon: _checkingEmail
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : null,
-              ),
-              validator: (v) => AppValidators.email(v, l10n),
-              onChanged: _onEmailChanged,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _passwordCtrl,
-              obscureText: _obscurePassword,
-              autofillHints: [
-                if (_isLogin) AutofillHints.password else AutofillHints.newPassword,
-              ],
-              decoration: InputDecoration(
-                labelText: l10n.authPassword,
-                suffixIcon: IconButton(
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  ),
-                ),
-              ),
-              validator: (v) => AppValidators.password(v, l10n),
-            ),
-            if (_isLogin) ...[
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _isSubmitting
-                      ? null
-                      : () {
-                          setState(() {
-                            _showForgotPasswordScreen = true;
-                            _validationMessage = null;
-                            _infoText = null;
-                          });
-                        },
-                  child: Text(l10n.authForgotPassword),
-                ),
-              ),
-            ],
-            if (!_isLogin) ...[
-              const SizedBox(height: AppSpacing.sm),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _acceptedTerms,
-                onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(l10n.authTermsConsent),
-              ),
-            ],
-            if (_validationMessage != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                _validationMessage!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ],
-            if (_infoText != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                _infoText!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.accent,
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: _isSubmitting ? null : _submitAuthForm,
-              child: Text(_isLogin ? l10n.authLogin : l10n.authSignUp),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextButton(
-              onPressed: _isSubmitting
-                  ? null
-                  : () {
-                      setState(() {
-                        _isLogin = !_isLogin;
-                        _validationMessage = null;
-                        _infoText = null;
-                        _acceptedTerms = false;
-                      });
-                    },
-              child: Text(
-                _isLogin ? l10n.authNeedAccount : l10n.authHaveAccount,
-              ),
-            ),
-            if (_isLogin) ...[
-              const SizedBox(height: AppSpacing.lg),
-              _OrDivider(label: l10n.authOr),
-              const SizedBox(height: AppSpacing.lg),
-              SocialSignInButtons(
-                enabled: !_isSubmitting,
-                googleLabel: l10n.authContinueWithGoogle,
-                appleLabel: l10n.authContinueWithApple,
-                onGooglePressed: _signInWithGoogle,
-                onApplePressed: _signInWithApple,
-              ),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(l10n.authLegalPrefix),
-                TextButton(
-                  onPressed: () => _openUrl(AppConstants.termsUrl),
-                  child: Text(l10n.authTerms),
-                ),
-                Text(l10n.authAnd),
-                TextButton(
-                  onPressed: () => _openUrl(AppConstants.privacyUrl),
-                  child: Text(l10n.authPrivacy),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return LoginSignupForm(
+      formKey: _formKey,
+      emailController: _emailCtrl,
+      passwordController: _passwordCtrl,
+      isLogin: _isLogin,
+      obscurePassword: _obscurePassword,
+      acceptedTerms: _acceptedTerms,
+      isSubmitting: _isSubmitting,
+      checkingEmail: _checkingEmail,
+      validationMessage: _validationMessage,
+      infoText: _infoText,
+      onEmailChanged: _onEmailChanged,
+      onTogglePasswordVisibility: () =>
+          setState(() => _obscurePassword = !_obscurePassword),
+      onForgotPassword: () => setState(() {
+        _showForgotPasswordScreen = true;
+        _validationMessage = null;
+        _infoText = null;
+      }),
+      onAcceptedTermsChanged: (v) => setState(() => _acceptedTerms = v),
+      onSubmit: _submitAuthForm,
+      onToggleMode: () => setState(() {
+        _isLogin = !_isLogin;
+        _validationMessage = null;
+        _infoText = null;
+        _acceptedTerms = false;
+      }),
+      onGoogleSignIn: _signInWithGoogle,
+      onAppleSignIn: _signInWithApple,
     );
   }
 
   Widget _buildVerificationScreen() {
     final l10n = context.l10n;
     final email = _pendingSignupEmail ?? '';
-    return _OtpScaffold(
+    return OtpVerificationForm(
       title: l10n.authVerifyEmailTitle,
       body: l10n.authVerifyEmailBody(email),
       otpController: _otpCtrl,
@@ -768,47 +601,19 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildForgotPasswordScreen() {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l10n.authResetPasswordTitle, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: AppSpacing.sm),
-          Text(l10n.authResetPasswordSubtitle),
-          const SizedBox(height: AppSpacing.xl),
-          TextFormField(
-            controller: _emailCtrl,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(labelText: l10n.authEmail),
-          ),
-          if (_validationMessage != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _validationMessage!,
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(
-            onPressed: _isSubmitting ? null : _sendForgotPasswordOtp,
-            child: Text(l10n.authSendResetCode),
-          ),
-          TextButton(
-            onPressed: () => _clearAuthScreenState(),
-            child: Text(l10n.authBackToLogin),
-          ),
-        ],
-      ),
+    return ForgotPasswordForm(
+      emailController: _emailCtrl,
+      isSubmitting: _isSubmitting,
+      validationMessage: _validationMessage,
+      onSendResetCode: _sendForgotPasswordOtp,
+      onBack: _clearAuthScreenState,
     );
   }
 
   Widget _buildPasswordResetOtpScreen() {
     final l10n = context.l10n;
     final email = _resetEmail ?? '';
-    return _OtpScaffold(
+    return OtpVerificationForm(
       title: l10n.authResetPasswordTitle,
       body: l10n.authPasswordResetOtpInstructions(email),
       otpController: _otpCtrl,
@@ -828,158 +633,16 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildChangePasswordScreen() {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.authCreateNewPasswordTitle,
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          TextFormField(
-            controller: _newPasswordCtrl,
-            obscureText: _obscureNewPassword,
-            decoration: InputDecoration(
-              labelText: l10n.authNewPassword,
-              suffixIcon: IconButton(
-                onPressed: () =>
-                    setState(() => _obscureNewPassword = !_obscureNewPassword),
-                icon: Icon(
-                  _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          TextFormField(
-            controller: _confirmPasswordCtrl,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.authConfirmPassword),
-          ),
-          if (_validationMessage != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _validationMessage!,
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(
-            onPressed: _isSubmitting ? null : _completePasswordChange,
-            child: Text(l10n.authChangePassword),
-          ),
-          TextButton(
-            onPressed: () => _clearAuthScreenState(),
-            child: Text(l10n.authBackToLogin),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).dividerColor;
-    return Row(
-      children: [
-        Expanded(child: Divider(color: color)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Text(label),
-        ),
-        Expanded(child: Divider(color: color)),
-      ],
-    );
-  }
-}
-
-class _OtpScaffold extends StatelessWidget {
-  const _OtpScaffold({
-    required this.title,
-    required this.body,
-    required this.otpController,
-    required this.otpLabel,
-    required this.onVerify,
-    required this.onResend,
-    required this.resendLabel,
-    required this.canResend,
-    required this.onBack,
-    required this.backLabel,
-    required this.verifyLabel,
-    this.validationMessage,
-    this.infoText,
-  });
-
-  final String title;
-  final String body;
-  final TextEditingController otpController;
-  final String otpLabel;
-  final VoidCallback onVerify;
-  final VoidCallback onResend;
-  final String resendLabel;
-  final bool canResend;
-  final VoidCallback onBack;
-  final String backLabel;
-  final String verifyLabel;
-  final String? validationMessage;
-  final String? infoText;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(title, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: AppSpacing.sm),
-          Text(body),
-          const SizedBox(height: AppSpacing.xl),
-          TextFormField(
-            controller: otpController,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            decoration: InputDecoration(
-              labelText: otpLabel,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-            ),
-          ),
-          if (validationMessage != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              validationMessage!,
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-          ],
-          if (infoText != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              infoText!,
-              style: const TextStyle(color: AppColors.accent),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(onPressed: onVerify, child: Text(verifyLabel)),
-          TextButton(
-            onPressed: canResend ? onResend : null,
-            child: Text(resendLabel),
-          ),
-          TextButton(onPressed: onBack, child: Text(backLabel)),
-        ],
-      ),
+    return ChangePasswordForm(
+      newPasswordController: _newPasswordCtrl,
+      confirmPasswordController: _confirmPasswordCtrl,
+      obscureNewPassword: _obscureNewPassword,
+      isSubmitting: _isSubmitting,
+      validationMessage: _validationMessage,
+      onToggleNewPasswordVisibility: () =>
+          setState(() => _obscureNewPassword = !_obscureNewPassword),
+      onSubmit: _completePasswordChange,
+      onBack: () => _clearAuthScreenState(),
     );
   }
 }
