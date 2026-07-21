@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
+import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
@@ -227,37 +228,40 @@ class _SearchViewState extends State<_SearchView> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    for (final tx in provider.results)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.xs,
-                        ),
-                        child: TransactionListTile(
-                          transaction: tx,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    TransactionDetailPage(transaction: tx),
-                              ),
-                            );
-                          },
-                          onMerchantTap: tx.merchant.isEmpty
-                              ? null
-                              : () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => MerchantPage(
-                                        merchantNormalized:
-                                            tx.resolvedMerchantKey,
-                                        displayName: tx.merchant,
-                                      ),
-                                    ),
-                                  );
-                                },
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
                       ),
+                      child: TransactionGroupCard(
+                        children: [
+                          for (final tx in provider.results)
+                            TransactionListTile(
+                              transaction: tx,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        TransactionDetailPage(transaction: tx),
+                                  ),
+                                );
+                              },
+                              onMerchantTap: tx.merchant.isEmpty
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => MerchantPage(
+                                            merchantNormalized:
+                                                tx.resolvedMerchantKey,
+                                            displayName: tx.merchant,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                            ),
+                        ],
+                      ),
+                    ),
                     if (provider.isLoadingMore)
                       const Padding(
                         padding: EdgeInsets.all(AppSpacing.md),

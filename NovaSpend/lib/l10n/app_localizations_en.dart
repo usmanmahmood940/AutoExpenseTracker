@@ -200,6 +200,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeEmptySetupCta => 'Open setup guide';
 
   @override
+  String get homeBrandName => 'NovaSpend';
+
+  @override
+  String get homeRecentTransactions => 'Recent Transactions';
+
+  @override
+  String get homeViewAll => 'View All';
+
+  @override
+  String get homeHighestSpend => 'Highest spend';
+
+  @override
+  String get homeHighestReceived => 'Highest received';
+
+  @override
+  String get homeHighlightNone => 'No activity yet';
+
+  @override
+  String homeReceivedWithSign(String amount) {
+    return '+ $amount received';
+  }
+
+  @override
+  String homeHighlightSubtitle(String merchant, String day) {
+    return '$merchant • $day';
+  }
+
+  @override
+  String get homeAddTransaction => 'Add transaction';
+
+  @override
+  String get commonYesterday => 'Yesterday';
+
+  @override
   String reviewBannerMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

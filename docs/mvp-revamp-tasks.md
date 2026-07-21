@@ -3,6 +3,7 @@
 Sequenced, actionable tasks only. Each task should be completable and verifiable before moving to the next.
 
 **Reference:** Full product plan in [mvp-revamp-prd.md](./mvp-revamp-prd.md)
+**Theme:** Visual design system (colors, typography, spacing, shapes, components) in [design-system.md](./design-system.md) — apply per-feature during this revamp
 
 ---
 

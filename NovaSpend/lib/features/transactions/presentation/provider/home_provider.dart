@@ -96,6 +96,36 @@ class HomeProvider extends ChangeNotifier {
     }
   }
 
+  DateTime get _periodStart {
+    switch (_period) {
+      case HomePeriod.thisMonth:
+        return _startOfMonth;
+      case HomePeriod.thisWeek:
+        return _startOfWeek;
+      case HomePeriod.today:
+        return _startOfToday;
+    }
+  }
+
+  /// Largest debit transaction within the selected period, or null if none.
+  TransactionEntity? get highestSpend => _extremeInPeriod(credit: false);
+
+  /// Largest credit transaction within the selected period, or null if none.
+  TransactionEntity? get highestReceive => _extremeInPeriod(credit: true);
+
+  TransactionEntity? _extremeInPeriod({required bool credit}) {
+    final start = _periodStart;
+    TransactionEntity? best;
+    for (final tx in _items) {
+      final isCredit = tx.type == 'credit';
+      if (isCredit != credit) continue;
+      final date = _parseDate(tx);
+      if (date == null || date.isBefore(start)) continue;
+      if (best == null || tx.amount > best.amount) best = tx;
+    }
+    return best;
+  }
+
   void start(String uid) {
     if (_uid == uid && _subscription != null) return;
     _uid = uid;

@@ -454,6 +454,66 @@ abstract class AppLocalizations {
   /// **'Open setup guide'**
   String get homeEmptySetupCta;
 
+  /// No description provided for @homeBrandName.
+  ///
+  /// In en, this message translates to:
+  /// **'NovaSpend'**
+  String get homeBrandName;
+
+  /// No description provided for @homeRecentTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Transactions'**
+  String get homeRecentTransactions;
+
+  /// No description provided for @homeViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View All'**
+  String get homeViewAll;
+
+  /// No description provided for @homeHighestSpend.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest spend'**
+  String get homeHighestSpend;
+
+  /// No description provided for @homeHighestReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest received'**
+  String get homeHighestReceived;
+
+  /// No description provided for @homeHighlightNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity yet'**
+  String get homeHighlightNone;
+
+  /// No description provided for @homeReceivedWithSign.
+  ///
+  /// In en, this message translates to:
+  /// **'+ {amount} received'**
+  String homeReceivedWithSign(String amount);
+
+  /// No description provided for @homeHighlightSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{merchant} • {day}'**
+  String homeHighlightSubtitle(String merchant, String day);
+
+  /// No description provided for @homeAddTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add transaction'**
+  String get homeAddTransaction;
+
+  /// No description provided for @commonYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get commonYesterday;
+
   /// No description provided for @reviewBannerMessage.
   ///
   /// In en, this message translates to:

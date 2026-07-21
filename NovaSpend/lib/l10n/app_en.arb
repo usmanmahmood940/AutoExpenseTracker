@@ -80,6 +80,27 @@
   "homeEmpty": "No transactions yet",
   "homeEmptyHint": "Set up the iOS Shortcut to start seeing your spending automatically.",
   "homeEmptySetupCta": "Open setup guide",
+  "homeBrandName": "NovaSpend",
+  "homeRecentTransactions": "Recent Transactions",
+  "homeViewAll": "View All",
+  "homeHighestSpend": "Highest spend",
+  "homeHighestReceived": "Highest received",
+  "homeHighlightNone": "No activity yet",
+  "homeReceivedWithSign": "+ {amount} received",
+  "@homeReceivedWithSign": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "homeHighlightSubtitle": "{merchant} • {day}",
+  "@homeHighlightSubtitle": {
+    "placeholders": {
+      "merchant": {"type": "String"},
+      "day": {"type": "String"}
+    }
+  },
+  "homeAddTransaction": "Add transaction",
+  "commonYesterday": "Yesterday",
   "reviewBannerMessage": "{count, plural, =1{1 item needs review} other{{count} items need review}}",
   "@reviewBannerMessage": {
     "placeholders": {

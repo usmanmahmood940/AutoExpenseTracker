@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
+import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/provider/merchant_provider.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
-import 'package:nova_spend/features/transactions/presentation/widgets/day_section_header.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/day_group_header.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
@@ -199,27 +201,46 @@ class _MerchantView extends StatelessWidget {
   ) {
     final widgets = <Widget>[];
     for (final day in days) {
-      widgets.add(DaySectionHeader(dateKey: day));
-      for (final tx in grouped[day]!) {
-        widgets.add(
+      final txs = grouped[day]!;
+      widgets
+        ..add(
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.xs,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md + AppSpacing.xs,
+              AppSpacing.lg,
+              AppSpacing.md + AppSpacing.xs,
+              AppSpacing.sm,
             ),
-            child: TransactionListTile(
-              transaction: tx,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TransactionDetailPage(transaction: tx),
+            child: DayGroupHeader(
+              label: relativeDayLabel(
+                day,
+                today: context.l10n.homePeriodToday,
+                yesterday: context.l10n.commonYesterday,
+              ),
+            ),
+          ),
+        )
+        ..add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: TransactionGroupCard(
+              children: [
+                for (final tx in txs)
+                  TransactionListTile(
+                    transaction: tx,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              TransactionDetailPage(transaction: tx),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+              ],
             ),
           ),
         );
-      }
     }
     if (provider.isLoadingMore) {
       widgets.add(
