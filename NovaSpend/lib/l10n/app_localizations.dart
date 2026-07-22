@@ -508,6 +508,12 @@ abstract class AppLocalizations {
   /// **'Add transaction'**
   String get homeAddTransaction;
 
+  /// No description provided for @homePeriodEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions in this period'**
+  String get homePeriodEmpty;
+
   /// No description provided for @commonYesterday.
   ///
   /// In en, this message translates to:

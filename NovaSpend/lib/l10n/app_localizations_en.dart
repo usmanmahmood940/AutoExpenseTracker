@@ -231,6 +231,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAddTransaction => 'Add transaction';
 
   @override
+  String get homePeriodEmpty => 'No transactions in this period';
+
+  @override
   String get commonYesterday => 'Yesterday';
 
   @override

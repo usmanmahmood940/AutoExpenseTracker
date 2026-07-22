@@ -8,7 +8,7 @@ import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/balance_header.dart';
-import 'package:nova_spend/core/widgets/glass_sliver_app_bar.dart';
+import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/stat_highlight_card.dart';
@@ -79,44 +79,53 @@ class _HomeView extends StatelessWidget {
     final home = context.watch<HomeProvider>();
 
     return AdaptiveScaffold(
+      applySafeArea: false,
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
-          RefreshIndicator(
-            onRefresh: home.refresh,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (n) {
-                if (n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
-                  home.loadMore();
-                }
-                return false;
-              },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  GlassSliverAppBar(
-                    title: Text(
-                      l10n.homeBrandName,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.025 * 24,
-                        color: AppColors.primaryStrong,
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
+          Positioned.fill(
+            child: RefreshIndicator(
+              onRefresh: home.refresh,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (n) {
+                  if (n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
+                    home.loadMore();
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
                         AppSpacing.md,
-                        AppSpacing.md,
+                        GlassHeaderBar.contentTopPadding(context),
                         AppSpacing.md,
                         AppSpacing.xxl + PrimaryFab.size,
                       ),
-                      child: _buildContent(context, l10n, home),
+                      sliver: SliverToBoxAdapter(
+                        child: _buildContent(context, l10n, home),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: GlassHeaderBar.totalHeight(context),
+            child: GlassHeaderBar(
+              title: Text(
+                l10n.homeBrandName,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.025 * 24,
+                  color: AppColors.primaryStrong,
+                ),
               ),
             ),
           ),
@@ -189,6 +198,26 @@ class _HomeView extends StatelessWidget {
       sections.add(_stateBox(context, Text(l10n.errorLoadFailed)));
     } else if (home.items.isEmpty) {
       sections.add(_emptyState(context, l10n));
+    } else if (home.periodItems.isEmpty) {
+      sections
+        ..add(_highlights(context, l10n, home, totals.currency))
+        ..add(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.lg),
+            child: Center(
+              child: Text(
+                l10n.homePeriodEmpty,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55),
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
     } else {
       sections
         ..add(_highlights(context, l10n, home, totals.currency))

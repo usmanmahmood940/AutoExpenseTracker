@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-/// Primary circular action button — emerald fill, soft shadow, white plus icon.
+/// Primary circular action button — emerald fill, circular Material elevation.
 ///
 /// Used on Home for adding a transaction; reusable anywhere a single primary
 /// floating action is needed.
@@ -21,44 +21,31 @@ class PrimaryFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fab = Material(
-      elevation: 0,
-      color: Colors.transparent,
+    final button = Material(
+      color: AppColors.primaryStrong,
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
         customBorder: const CircleBorder(),
-        child: Ink(
+        child: const SizedBox(
           width: size,
           height: size,
-          decoration: BoxDecoration(
-            color: AppColors.primaryStrong,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 15,
-                offset: const Offset(0, 10),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 6,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(
+          child: Icon(
             Icons.add,
             color: Colors.white,
-            size: 28,
+            size: 24,
           ),
         ),
       ),
     );
 
-    if (tooltip == null) return fab;
+    if (tooltip == null) return button;
     return Tooltip(
       message: tooltip!,
-      child: fab,
+      child: button,
     );
   }
 }

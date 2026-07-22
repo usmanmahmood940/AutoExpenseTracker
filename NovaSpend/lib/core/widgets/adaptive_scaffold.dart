@@ -9,6 +9,7 @@ class AdaptiveScaffold extends StatelessWidget {
     this.navigationBar,
     this.appBar,
     this.backgroundColor,
+    this.applySafeArea = true,
     super.key,
   });
 
@@ -18,11 +19,19 @@ class AdaptiveScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Color? backgroundColor;
 
+  /// When false, the body is not wrapped in [SafeArea] (e.g. full-bleed glass headers).
+  final bool applySafeArea;
+
   @override
   Widget build(BuildContext context) {
     final platform = Theme.of(context).platform;
+    final useCupertino = (platform == TargetPlatform.iOS ||
+            platform == TargetPlatform.macOS) &&
+        applySafeArea;
 
-    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
+    // Full-bleed layouts (custom glass headers) use Material [Scaffold] so
+    // CupertinoPageScaffold does not own chrome / hit-testing.
+    if (useCupertino) {
       return CupertinoPageScaffold(
         backgroundColor: backgroundColor,
         navigationBar: navigationBar ??

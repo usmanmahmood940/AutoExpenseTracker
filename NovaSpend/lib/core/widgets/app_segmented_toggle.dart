@@ -13,10 +13,10 @@ class AppSegment<T> {
   final String label;
 }
 
-/// Pill-shaped segmented control with a sliding emerald active state.
+/// Pill-shaped segmented control with an emerald active state (Figma).
 ///
-/// Generic over the value type so it can drive any small enum (period toggle,
-/// weekly/monthly/yearly, etc.). Hugs its content and centers within its parent.
+/// Uses [GestureDetector] with [HitTestBehavior.opaque] so taps are reliable
+/// inside scroll views (unlike nested [InkWell]/[Material] trees).
 class AppSegmentedToggle<T> extends StatelessWidget {
   const AppSegmentedToggle({
     required this.segments,
@@ -52,8 +52,13 @@ class AppSegmentedToggle<T> extends StatelessWidget {
             for (final segment in segments)
               _SegmentButton(
                 label: segment.label,
-                selected: segment.value == value,
-                onTap: () => onChanged(segment.value),
+                selected: identical(segment.value, value) ||
+                    segment.value == value,
+                onTap: () {
+                  if (segment.value != value) {
+                    onChanged(segment.value);
+                  }
+                },
               ),
           ],
         ),

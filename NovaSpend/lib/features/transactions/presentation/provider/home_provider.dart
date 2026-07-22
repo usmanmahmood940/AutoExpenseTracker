@@ -57,6 +57,16 @@ class HomeProvider extends ChangeNotifier {
   String? _uid;
 
   List<TransactionEntity> get items => _filtered(_items);
+
+  /// Transactions visible for the selected period (Today / This Week / This Month).
+  List<TransactionEntity> get periodItems {
+    final start = _periodStart;
+    return items.where((tx) {
+      final date = _parseDate(tx);
+      return date != null && !date.isBefore(start);
+    }).toList();
+  }
+
   TransactionFilter get filter => _filter;
   HomePeriod get period => _period;
   int get pendingReviewCount => _pendingReviewCount;
@@ -114,13 +124,10 @@ class HomeProvider extends ChangeNotifier {
   TransactionEntity? get highestReceive => _extremeInPeriod(credit: true);
 
   TransactionEntity? _extremeInPeriod({required bool credit}) {
-    final start = _periodStart;
     TransactionEntity? best;
-    for (final tx in _items) {
+    for (final tx in periodItems) {
       final isCredit = tx.type == 'credit';
       if (isCredit != credit) continue;
-      final date = _parseDate(tx);
-      if (date == null || date.isBefore(start)) continue;
       if (best == null || tx.amount > best.amount) best = tx;
     }
     return best;
@@ -208,10 +215,17 @@ class HomeProvider extends ChangeNotifier {
 
   Map<String, List<TransactionEntity>> groupByDay() {
     final map = <String, List<TransactionEntity>>{};
-    for (final t in items) {
+    for (final t in periodItems) {
       map.putIfAbsent(t.transactionDate, () => []).add(t);
     }
-    return map;
+    final keys = map.keys.toList()
+      ..sort((a, b) {
+        final da = DateTime.tryParse(a);
+        final db = DateTime.tryParse(b);
+        if (da == null || db == null) return b.compareTo(a);
+        return db.compareTo(da);
+      });
+    return {for (final k in keys) k: map[k]!};
   }
 
   void _listenTransactions(String uid) {
