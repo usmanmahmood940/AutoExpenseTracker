@@ -685,7 +685,7 @@ abstract class AppLocalizations {
   /// No description provided for @transactionDetail.
   ///
   /// In en, this message translates to:
-  /// **'Transaction'**
+  /// **'Transaction Detail'**
   String get transactionDetail;
 
   /// No description provided for @transactionEdit.
@@ -699,6 +699,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get transactionSave;
+
+  /// No description provided for @transactionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get transactionCancel;
 
   /// No description provided for @transactionMerchant.
   ///
@@ -753,6 +759,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Original SMS'**
   String get transactionRawSms;
+
+  /// No description provided for @transactionPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Method'**
+  String get transactionPaymentMethod;
+
+  /// No description provided for @transactionStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get transactionStatus;
+
+  /// No description provided for @transactionReferenceId.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference ID'**
+  String get transactionReferenceId;
+
+  /// No description provided for @transactionStatusCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get transactionStatusCleared;
+
+  /// No description provided for @transactionStatusDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted'**
+  String get transactionStatusDeleted;
+
+  /// No description provided for @transactionStatusNeedsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get transactionStatusNeedsReview;
+
+  /// No description provided for @transactionMetaLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {time} · {bankAccount}'**
+  String transactionMetaLine(String date, String time, String bankAccount);
+
+  /// No description provided for @transactionReportIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Report an issue with this transaction'**
+  String get transactionReportIssue;
+
+  /// No description provided for @transactionReportThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — reporting will be available soon.'**
+  String get transactionReportThanks;
 
   /// No description provided for @transactionSaved.
   ///

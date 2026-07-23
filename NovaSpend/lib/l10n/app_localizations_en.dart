@@ -334,13 +334,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get feedApplyFilters => 'Apply';
 
   @override
-  String get transactionDetail => 'Transaction';
+  String get transactionDetail => 'Transaction Detail';
 
   @override
   String get transactionEdit => 'Edit';
 
   @override
   String get transactionSave => 'Save';
+
+  @override
+  String get transactionCancel => 'Cancel';
 
   @override
   String get transactionMerchant => 'Merchant';
@@ -368,6 +371,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionRawSms => 'Original SMS';
+
+  @override
+  String get transactionPaymentMethod => 'Payment Method';
+
+  @override
+  String get transactionStatus => 'Status';
+
+  @override
+  String get transactionReferenceId => 'Reference ID';
+
+  @override
+  String get transactionStatusCleared => 'Cleared';
+
+  @override
+  String get transactionStatusDeleted => 'Deleted';
+
+  @override
+  String get transactionStatusNeedsReview => 'Needs review';
+
+  @override
+  String transactionMetaLine(String date, String time, String bankAccount) {
+    return '$date · $time · $bankAccount';
+  }
+
+  @override
+  String get transactionReportIssue => 'Report an issue with this transaction';
+
+  @override
+  String get transactionReportThanks =>
+      'Thanks — reporting will be available soon.';
 
   @override
   String get transactionSaved => 'Transaction updated';
