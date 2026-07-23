@@ -23,8 +23,7 @@ class GlassHeaderBar extends StatelessWidget {
   final List<Widget>? actions;
   final double barHeight;
 
-  /// Toolbar height below the status bar (Figma: 64px).
-  static const double defaultBarHeight = 64;
+  static const double defaultBarHeight = 50;
 
   /// Total height including status-bar inset.
   static double totalHeight(BuildContext context, {double barHeight = defaultBarHeight}) {

@@ -25,6 +25,8 @@ class StatHighlightCard extends StatelessWidget {
   /// Drives the icon color and its 10%-opacity badge background.
   final Color accentColor;
   final String amount;
+
+  /// Caption under the amount (e.g. merchant name).
   final String subtitle;
   final Color? amountColor;
   final VoidCallback? onTap;
@@ -54,7 +56,7 @@ class StatHighlightCard extends StatelessWidget {
                 child: Text(
                   label.toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.05 * 12,
                     color: theme.colorScheme.onSurface,
@@ -77,7 +79,7 @@ class StatHighlightCard extends StatelessWidget {
           Text(
             amount,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               letterSpacing: -0.01 * 18,
               color: amountColor ?? theme.colorScheme.onSurface,
@@ -89,7 +91,7 @@ class StatHighlightCard extends StatelessWidget {
           Text(
             subtitle,
             style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 13,
+              fontSize: 10,
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
             ),
             maxLines: 1,

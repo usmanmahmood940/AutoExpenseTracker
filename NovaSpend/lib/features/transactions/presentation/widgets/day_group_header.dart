@@ -27,7 +27,7 @@ class DayGroupHeader extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.bodyMedium?.copyWith(
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
               color: muted,
             ),
@@ -36,9 +36,9 @@ class DayGroupHeader extends StatelessWidget {
             Text(
               totalLabel!,
               style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 0.05 * 12,
+                letterSpacing: 0.05 * 11,
                 color: muted,
               ),
             ),

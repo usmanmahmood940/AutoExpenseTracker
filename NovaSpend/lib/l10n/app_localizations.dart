@@ -475,13 +475,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeHighestSpend.
   ///
   /// In en, this message translates to:
-  /// **'Highest spend'**
+  /// **'Highest \nspend'**
   String get homeHighestSpend;
 
   /// No description provided for @homeHighestReceived.
   ///
   /// In en, this message translates to:
-  /// **'Highest received'**
+  /// **'Highest \nreceived'**
   String get homeHighestReceived;
 
   /// No description provided for @homeHighlightNone.

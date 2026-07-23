@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
@@ -7,6 +8,7 @@ import '../utils/category_visuals.dart';
 /// Rounded-square icon tile representing a transaction category.
 ///
 /// Reusable across transaction lists, merchant pages and detail headers.
+/// Icons are Lucide SVGs — same stroke weight, tinted with [iconColor].
 class CategoryAvatar extends StatelessWidget {
   const CategoryAvatar({
     required this.category,
@@ -24,6 +26,8 @@ class CategoryAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final color = iconColor ?? AppColors.primaryStrong;
+    final iconSize = size * 0.42;
 
     return Container(
       width: size,
@@ -32,10 +36,12 @@ class CategoryAvatar extends StatelessWidget {
         color: backgroundColor ?? AppColors.neutralFill(brightness),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
-      child: Icon(
-        categoryIcon(category),
-        size: size * 0.42,
-        color: iconColor ?? AppColors.primaryStrong,
+      alignment: Alignment.center,
+      child: SvgPicture.asset(
+        categoryIconAsset(category),
+        width: iconSize,
+        height: iconSize,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       ),
     );
   }

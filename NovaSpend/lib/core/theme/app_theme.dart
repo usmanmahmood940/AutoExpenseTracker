@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 import 'app_radius.dart';
@@ -23,7 +24,9 @@ class AppTheme {
     );
 
     final textTheme = _textTheme(
-      isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
+      GoogleFonts.interTextTheme(
+        isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
+      ),
       colorScheme.onSurface,
     );
 
@@ -33,6 +36,7 @@ class AppTheme {
       scaffoldBackgroundColor:
           isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
       textTheme: textTheme,
+      fontFamily: GoogleFonts.inter().fontFamily,
       cardTheme: CardThemeData(
         color: isDark ? AppColors.cardDark : AppColors.cardLight,
         elevation: 0,

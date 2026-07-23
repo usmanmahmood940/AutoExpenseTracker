@@ -209,10 +209,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeViewAll => 'View All';
 
   @override
-  String get homeHighestSpend => 'Highest spend';
+  String get homeHighestSpend => 'Highest \nspend';
 
   @override
-  String get homeHighestReceived => 'Highest received';
+  String get homeHighestReceived => 'Highest \nreceived';
 
   @override
   String get homeHighlightNone => 'No activity yet';

@@ -37,7 +37,7 @@ class BalanceHeader extends StatelessWidget {
 
     final labelStyle = centered
         ? theme.textTheme.labelSmall?.copyWith(
-            fontSize: 12,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.05 * 12,
             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -47,8 +47,8 @@ class BalanceHeader extends StatelessWidget {
           );
 
     final heroStyle = theme.textTheme.displaySmall?.copyWith(
-      fontSize: 36,
-      fontWeight: FontWeight.w700,
+      fontSize: 25,
+      fontWeight: FontWeight.w900,
       letterSpacing: -0.02 * 36,
       color: theme.colorScheme.onSurface,
     );

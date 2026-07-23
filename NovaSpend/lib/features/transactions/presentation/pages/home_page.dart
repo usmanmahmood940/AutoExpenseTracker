@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
-import 'package:nova_spend/core/theme/app_motion.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/utils/money_format.dart';
@@ -72,11 +71,15 @@ class _HomeView extends StatelessWidget {
   final bool reviewBannerDismissed;
   final VoidCallback onDismissReviewBanner;
 
+  static const _sectionGap = AppSpacing.xl - AppSpacing.xs; // 28
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final home = context.watch<HomeProvider>();
+    final topPad = GlassHeaderBar.contentTopPadding(context);
+    // Prefer [read] here — shell chrome must not rebuild on every period change.
+    final home = context.read<HomeProvider>();
 
     return AdaptiveScaffold(
       applySafeArea: false,
@@ -99,12 +102,35 @@ class _HomeView extends StatelessWidget {
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                         AppSpacing.md,
-                        GlassHeaderBar.contentTopPadding(context),
+                        topPad,
+                        AppSpacing.md,
+                        0,
+                      ),
+                      sliver: const SliverToBoxAdapter(
+                        child: _PeriodToggle(),
+                      ),
+                    ),
+                    const SliverPadding(
+                      padding: EdgeInsets.only(top: _sectionGap),
+                      sliver: SliverToBoxAdapter(
+                        child: _PeriodBalance(),
+                      ),
+                    ),
+                    if (!reviewBannerDismissed)
+                      SliverToBoxAdapter(
+                        child: _ReviewBannerSlot(
+                          onDismiss: onDismissReviewBanner,
+                        ),
+                      ),
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        _sectionGap,
                         AppSpacing.md,
                         AppSpacing.xxl + PrimaryFab.size,
                       ),
-                      sliver: SliverToBoxAdapter(
-                        child: _buildContent(context, l10n, home),
+                      sliver: const SliverToBoxAdapter(
+                        child: _HomeBody(),
                       ),
                     ),
                   ],
@@ -121,7 +147,7 @@ class _HomeView extends StatelessWidget {
               title: Text(
                 l10n.homeBrandName,
                 style: theme.textTheme.headlineSmall?.copyWith(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.025 * 24,
                   color: AppColors.primaryStrong,
@@ -141,314 +167,346 @@ class _HomeView extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildContent(
-    BuildContext context,
-    AppLocalizations l10n,
-    HomeProvider home,
-  ) {
-    final totals = home.periodTotals;
+/// Only rebuilds when [HomeProvider.period] changes.
+class _PeriodToggle extends StatelessWidget {
+  const _PeriodToggle();
 
-    final sections = <Widget>[
-      AppSegmentedToggle<HomePeriod>(
-        value: home.period,
-        onChanged: home.setPeriod,
-        segments: [
-          AppSegment(value: HomePeriod.today, label: l10n.homePeriodToday),
-          AppSegment(value: HomePeriod.thisWeek, label: l10n.homePeriodThisWeek),
-          AppSegment(
-            value: HomePeriod.thisMonth,
-            label: l10n.homePeriodThisMonth,
-          ),
-        ],
-      ),
-      AnimatedSwitcher(
-        duration: AppMotion.normal,
-        switchInCurve: AppMotion.standard,
-        switchOutCurve: AppMotion.standard,
-        child: BalanceHeader(
-          key: ValueKey(home.period),
-          centered: true,
-          label: _periodLabel(l10n, home.period),
-          spentAmount: l10n.homeSpentSummary(
-            formatMoney(totals.spent, currency: totals.currency),
-          ),
-          receivedAmount: l10n.homeReceivedWithSign(
-            formatMoney(totals.received, currency: totals.currency),
-          ),
-        ),
-      ),
-    ];
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final period = context.select((HomeProvider p) => p.period);
 
-    if (!reviewBannerDismissed && home.pendingReviewCount > 0) {
-      sections.add(
-        ReviewBanner(
-          count: home.pendingReviewCount,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const ReviewPage()),
-          ),
-          onDismiss: onDismissReviewBanner,
-        ),
-      );
-    }
-
-    if (home.isLoading && home.items.isEmpty) {
-      sections.add(_stateBox(context, Text(l10n.commonLoading)));
-    } else if (home.error != null && home.items.isEmpty) {
-      sections.add(_stateBox(context, Text(l10n.errorLoadFailed)));
-    } else if (home.items.isEmpty) {
-      sections.add(_emptyState(context, l10n));
-    } else if (home.periodItems.isEmpty) {
-      sections
-        ..add(_highlights(context, l10n, home, totals.currency))
-        ..add(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.lg),
-            child: Center(
-              child: Text(
-                l10n.homePeriodEmpty,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.55),
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        );
-    } else {
-      sections
-        ..add(_highlights(context, l10n, home, totals.currency))
-        ..add(
-          SectionHeader(
-            title: l10n.homeRecentTransactions,
-            actionLabel: l10n.homeViewAll,
-            onActionTap: () => MainShellScope.selectSearchTab(context),
-          ),
-        )
-        ..addAll(_dayGroups(context, l10n, home, totals.currency));
-      if (home.isLoadingMore) {
-        sections.add(
-          const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.md),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        );
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: _withGaps(sections),
-    );
-  }
-
-  /// Inserts section-level vertical spacing between top-level blocks.
-  List<Widget> _withGaps(List<Widget> children) {
-    final out = <Widget>[];
-    for (var i = 0; i < children.length; i++) {
-      out.add(children[i]);
-      if (i != children.length - 1) {
-        out.add(const SizedBox(height: AppSpacing.xl - AppSpacing.xs));
-      }
-    }
-    return out;
-  }
-
-  Widget _highlights(
-    BuildContext context,
-    AppLocalizations l10n,
-    HomeProvider home,
-    String currency,
-  ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: _highlightCard(
-            context,
-            l10n,
-            tx: home.highestSpend,
-            label: l10n.homeHighestSpend,
-            icon: Icons.arrow_upward_rounded,
-            accentColor: AppColors.spend,
-            amountColor: Theme.of(context).colorScheme.onSurface,
-            currency: currency,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: _highlightCard(
-            context,
-            l10n,
-            tx: home.highestReceive,
-            label: l10n.homeHighestReceived,
-            icon: Icons.arrow_downward_rounded,
-            accentColor: AppColors.primaryStrong,
-            amountColor: AppColors.primaryStrong,
-            currency: currency,
-          ),
+    return AppSegmentedToggle<HomePeriod>(
+      value: period,
+      onChanged: context.read<HomeProvider>().setPeriod,
+      segments: [
+        AppSegment(value: HomePeriod.today, label: l10n.homePeriodToday),
+        AppSegment(value: HomePeriod.thisWeek, label: l10n.homePeriodThisWeek),
+        AppSegment(
+          value: HomePeriod.thisMonth,
+          label: l10n.homePeriodThisMonth,
         ),
       ],
     );
   }
+}
 
-  Widget _highlightCard(
-    BuildContext context,
-    AppLocalizations l10n, {
-    required TransactionEntity? tx,
-    required String label,
-    required IconData icon,
-    required Color accentColor,
-    required Color amountColor,
-    required String currency,
-  }) {
-    if (tx == null) {
-      return StatHighlightCard(
-        label: label,
-        icon: icon,
-        accentColor: accentColor,
-        amount: '—',
-        subtitle: l10n.homeHighlightNone,
-      );
-    }
+/// Balance header — rebuilds only when period totals change.
+class _PeriodBalance extends StatelessWidget {
+  const _PeriodBalance();
 
-    final merchant =
-        tx.merchant.isEmpty ? tx.category : tx.merchant;
-    final day = relativeDayLabel(
-      tx.transactionDate,
-      today: l10n.homePeriodToday,
-      yesterday: l10n.commonYesterday,
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final snapshot = context.select(
+      (HomeProvider p) => (
+        p.period,
+        p.periodTotals.spent,
+        p.periodTotals.received,
+        p.periodTotals.currency,
+      ),
     );
+    final (period, spent, received, currency) = snapshot;
 
-    return StatHighlightCard(
-      label: label,
-      icon: icon,
-      accentColor: accentColor,
-      amount: formatMoney(tx.amount, currency: currency),
-      amountColor: amountColor,
-      subtitle: l10n.homeHighlightSubtitle(merchant, day),
-      onTap: tx.merchant.isEmpty
-          ? null
-          : () => _openMerchant(context, tx),
+    return BalanceHeader(
+      centered: true,
+      label: _periodLabel(l10n, period),
+      spentAmount: l10n.homeSpentSummary(
+        formatMoney(spent, currency: currency),
+      ),
+      receivedAmount: l10n.homeReceivedWithSign(
+        formatMoney(received, currency: currency),
+      ),
     );
   }
+}
 
-  List<Widget> _dayGroups(
-    BuildContext context,
-    AppLocalizations l10n,
-    HomeProvider home,
-    String currency,
-  ) {
-    final grouped = home.groupByDay();
-    final days = grouped.keys.toList();
-    final widgets = <Widget>[];
+class _ReviewBannerSlot extends StatelessWidget {
+  const _ReviewBannerSlot({required this.onDismiss});
 
-    for (var i = 0; i < days.length; i++) {
-      final day = days[i];
-      final txs = grouped[day]!;
-      final spent = txs
-          .where((t) => t.type != 'credit')
-          .fold<double>(0, (sum, t) => sum + t.amount);
+  final VoidCallback onDismiss;
 
-      widgets.add(
-        Padding(
-          padding: EdgeInsets.only(top: i == 0 ? 0 : AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DayGroupHeader(
-                label: relativeDayLabel(
-                  day,
-                  today: l10n.homePeriodToday,
-                  yesterday: l10n.commonYesterday,
-                ),
-                totalLabel: spent > 0
-                    ? formatMoney(spent, currency: currency)
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TransactionGroupCard(
-                children: [
-                  for (final tx in txs)
-                    TransactionListTile(
-                      transaction: tx,
-                      onTap: () => _openDetail(context, tx),
-                      onMerchantTap: tx.merchant.isEmpty
-                          ? null
-                          : () => _openMerchant(context, tx),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    return widgets;
-  }
+  static const _sectionGap = AppSpacing.xl - AppSpacing.xs;
 
-  Widget _emptyState(BuildContext context, AppLocalizations l10n) {
-    final theme = Theme.of(context);
+  @override
+  Widget build(BuildContext context) {
+    final count = context.select((HomeProvider p) => p.pendingReviewCount);
+    if (count <= 0) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xxl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        _sectionGap,
+        AppSpacing.md,
+        0,
+      ),
+      child: ReviewBanner(
+        count: count,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const ReviewPage()),
+        ),
+        onDismiss: onDismiss,
+      ),
+    );
+  }
+}
+
+/// Highlights + transaction list for the selected period.
+class _HomeBody extends StatelessWidget {
+  const _HomeBody();
+
+  static const _sectionGap = AppSpacing.xl - AppSpacing.xs;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final home = context.watch<HomeProvider>();
+    final currency = home.periodTotals.currency;
+
+    if (home.isLoading && home.items.isEmpty) {
+      return _stateBox(context, Text(l10n.commonLoading));
+    }
+    if (home.error != null && home.items.isEmpty) {
+      return _stateBox(context, Text(l10n.errorLoadFailed));
+    }
+    if (home.items.isEmpty) {
+      return _emptyState(context, l10n);
+    }
+    if (home.periodItems.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l10n.homeEmpty, style: theme.textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            l10n.homeEmptyHint,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          _Highlights(home: home, currency: currency),
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: Text(
+              l10n.homePeriodEmpty,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.55),
+                  ),
+              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton.tonal(
-            onPressed: () => MainShellScope.selectSettingsTab(context),
-            child: Text(l10n.homeEmptySetupCta),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Highlights(home: home, currency: currency),
+        const SizedBox(height: _sectionGap),
+        SectionHeader(
+          title: l10n.homeRecentTransactions,
+          actionLabel: l10n.homeViewAll,
+          onActionTap: () => MainShellScope.selectSearchTab(context),
+        ),
+        const SizedBox(height: _sectionGap),
+        ..._dayGroups(context, l10n, home, currency),
+        if (home.isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.only(top: AppSpacing.md),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+      ],
+    );
+  }
+}
+
+class _Highlights extends StatelessWidget {
+  const _Highlights({required this.home, required this.currency});
+
+  final HomeProvider home;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _highlightCard(
+              context,
+              l10n,
+              tx: home.highestSpend,
+              label: l10n.homeHighestSpend,
+              icon: Icons.arrow_upward_rounded,
+              accentColor: AppColors.spend,
+              amountColor: Theme.of(context).colorScheme.onSurface,
+              currency: currency,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: _highlightCard(
+              context,
+              l10n,
+              tx: home.highestReceive,
+              label: l10n.homeHighestReceived,
+              icon: Icons.arrow_downward_rounded,
+              accentColor: AppColors.primaryStrong,
+              amountColor: AppColors.primaryStrong,
+              currency: currency,
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _stateBox(BuildContext context, Widget child) {
-    return Padding(
-      padding: EdgeInsets.only(
-        top: MediaQuery.sizeOf(context).height * 0.2,
-      ),
-      child: Center(child: child),
+Widget _highlightCard(
+  BuildContext context,
+  AppLocalizations l10n, {
+  required TransactionEntity? tx,
+  required String label,
+  required IconData icon,
+  required Color accentColor,
+  required Color amountColor,
+  required String currency,
+}) {
+  if (tx == null) {
+    return StatHighlightCard(
+      label: label,
+      icon: icon,
+      accentColor: accentColor,
+      amount: '—',
+      subtitle: l10n.homeHighlightNone,
     );
   }
 
-  void _openDetail(BuildContext context, TransactionEntity tx) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TransactionDetailPage(transaction: tx),
-      ),
-    );
-  }
+  final merchant = tx.merchant.isEmpty ? tx.category : tx.merchant;
 
-  void _openMerchant(BuildContext context, TransactionEntity tx) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MerchantPage(
-          merchantNormalized: tx.resolvedMerchantKey,
-          displayName: tx.merchant,
+  return StatHighlightCard(
+    label: label,
+    icon: icon,
+    accentColor: accentColor,
+    amount: formatMoney(tx.amount, currency: currency),
+    amountColor: amountColor,
+    subtitle: merchant,
+    onTap: tx.merchant.isEmpty ? null : () => _openMerchant(context, tx),
+  );
+}
+
+List<Widget> _dayGroups(
+  BuildContext context,
+  AppLocalizations l10n,
+  HomeProvider home,
+  String currency,
+) {
+  final grouped = home.groupByDay();
+  final days = grouped.keys.toList();
+  final widgets = <Widget>[];
+
+  for (var i = 0; i < days.length; i++) {
+    final day = days[i];
+    final txs = grouped[day]!;
+    final spent = txs
+        .where((t) => t.type != 'credit')
+        .fold<double>(0, (sum, t) => sum + t.amount);
+
+    widgets.add(
+      Padding(
+        padding: EdgeInsets.only(top: i == 0 ? 0 : AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DayGroupHeader(
+              label: relativeDayLabel(
+                day,
+                today: l10n.homePeriodToday,
+                yesterday: l10n.commonYesterday,
+              ),
+              totalLabel:
+                  spent > 0 ? formatMoney(spent, currency: currency) : null,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TransactionGroupCard(
+              children: [
+                for (final tx in txs)
+                  TransactionListTile(
+                    transaction: tx,
+                    onTap: () => _openDetail(context, tx),
+                    onMerchantTap: tx.merchant.isEmpty
+                        ? null
+                        : () => _openMerchant(context, tx),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
+  return widgets;
+}
 
-  String _periodLabel(AppLocalizations l10n, HomePeriod period) {
-    return switch (period) {
-      HomePeriod.today => l10n.homePeriodToday,
-      HomePeriod.thisWeek => l10n.homePeriodThisWeek,
-      HomePeriod.thisMonth => l10n.homePeriodThisMonth,
-    };
-  }
+Widget _emptyState(BuildContext context, AppLocalizations l10n) {
+  final theme = Theme.of(context);
+  return Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.xxl),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(l10n.homeEmpty, style: theme.textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          l10n.homeEmptyHint,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FilledButton.tonal(
+          onPressed: () => MainShellScope.selectSettingsTab(context),
+          child: Text(l10n.homeEmptySetupCta),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _stateBox(BuildContext context, Widget child) {
+  return Padding(
+    padding: EdgeInsets.only(
+      top: MediaQuery.sizeOf(context).height * 0.2,
+    ),
+    child: Center(child: child),
+  );
+}
+
+void _openDetail(BuildContext context, TransactionEntity tx) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => TransactionDetailPage(transaction: tx),
+    ),
+  );
+}
+
+void _openMerchant(BuildContext context, TransactionEntity tx) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => MerchantPage(
+        merchantNormalized: tx.resolvedMerchantKey,
+        displayName: tx.merchant,
+      ),
+    ),
+  );
+}
+
+String _periodLabel(AppLocalizations l10n, HomePeriod period) {
+  return switch (period) {
+    HomePeriod.today => l10n.homePeriodToday,
+    HomePeriod.thisWeek => l10n.homePeriodThisWeek,
+    HomePeriod.thisMonth => l10n.homePeriodThisMonth,
+  };
 }

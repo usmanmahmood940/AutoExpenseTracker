@@ -83,8 +83,8 @@
   "homeBrandName": "NovaSpend",
   "homeRecentTransactions": "Recent Transactions",
   "homeViewAll": "View All",
-  "homeHighestSpend": "Highest spend",
-  "homeHighestReceived": "Highest received",
+  "homeHighestSpend": "Highest \nspend",
+  "homeHighestReceived": "Highest \nreceived",
   "homeHighlightNone": "No activity yet",
   "homeReceivedWithSign": "+ {amount} received",
   "@homeReceivedWithSign": {

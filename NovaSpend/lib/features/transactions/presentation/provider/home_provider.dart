@@ -56,15 +56,26 @@ class HomeProvider extends ChangeNotifier {
   String? _error;
   String? _uid;
 
+  List<TransactionEntity>? _periodItemsCache;
+
   List<TransactionEntity> get items => _filtered(_items);
 
   /// Transactions visible for the selected period (Today / This Week / This Month).
   List<TransactionEntity> get periodItems {
+    final cached = _periodItemsCache;
+    if (cached != null) return cached;
+
     final start = _periodStart;
-    return items.where((tx) {
+    final result = items.where((tx) {
       final date = _parseDate(tx);
       return date != null && !date.isBefore(start);
     }).toList();
+    _periodItemsCache = result;
+    return result;
+  }
+
+  void _invalidatePeriodCache() {
+    _periodItemsCache = null;
   }
 
   TransactionFilter get filter => _filter;
@@ -144,6 +155,7 @@ class HomeProvider extends ChangeNotifier {
   void setPeriod(HomePeriod period) {
     if (_period == period) return;
     _period = period;
+    _invalidatePeriodCache();
     notifyListeners();
   }
 
@@ -159,6 +171,7 @@ class HomeProvider extends ChangeNotifier {
         filter: _filter.hasActiveFilters ? _filter : null,
       );
       _items = page;
+      _invalidatePeriodCache();
       _hasMore = page.length >= 100;
       _error = null;
     } catch (e) {
@@ -186,6 +199,7 @@ class HomeProvider extends ChangeNotifier {
       } else {
         final existingIds = _items.map((e) => e.id).toSet();
         _items = [..._items, ...more.where((t) => !existingIds.contains(t.id))];
+        _invalidatePeriodCache();
         _hasMore = more.length >= 50;
       }
     } catch (e) {
@@ -198,11 +212,13 @@ class HomeProvider extends ChangeNotifier {
 
   void setFilter(TransactionFilter filter) {
     _filter = filter;
+    _invalidatePeriodCache();
     notifyListeners();
   }
 
   void clearFilter() {
     _filter = TransactionFilter.empty;
+    _invalidatePeriodCache();
     notifyListeners();
   }
 
@@ -210,6 +226,7 @@ class HomeProvider extends ChangeNotifier {
     _filter = accountIdMasked == null || accountIdMasked.isEmpty
         ? _filter.copyWith(clearAccountIdMasked: true)
         : _filter.copyWith(accountIdMasked: accountIdMasked);
+    _invalidatePeriodCache();
     notifyListeners();
   }
 
@@ -237,6 +254,7 @@ class HomeProvider extends ChangeNotifier {
     _subscription = _watchTransactions(uid, limit: 100).listen(
       (list) {
         _items = list;
+        _invalidatePeriodCache();
         _isLoading = false;
         _hasMore = list.length >= 100;
         notifyListeners();

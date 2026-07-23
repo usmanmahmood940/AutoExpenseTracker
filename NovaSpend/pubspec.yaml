@@ -56,6 +56,8 @@ dependencies:
   sign_in_with_apple: ^8.1.0
   firebase_app_check: ^0.3.2+10
   crypto: ^3.0.7
+  flutter_svg: ^2.3.0
+  google_fonts: ^8.2.0
 
 dev_dependencies:
   flutter_test:
