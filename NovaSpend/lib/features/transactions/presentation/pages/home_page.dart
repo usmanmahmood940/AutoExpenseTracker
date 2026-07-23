@@ -71,7 +71,7 @@ class _HomeView extends StatelessWidget {
   final bool reviewBannerDismissed;
   final VoidCallback onDismissReviewBanner;
 
-  static const _sectionGap = AppSpacing.xl - AppSpacing.xs; // 28
+  static const _sectionGap = AppSpacing.md - AppSpacing.sm; // 28
 
   @override
   Widget build(BuildContext context) {
@@ -384,6 +384,12 @@ Widget _highlightCard(
   }
 
   final merchant = tx.merchant.isEmpty ? tx.category : tx.merchant;
+  final day = relativeDayLabel(
+    tx.transactionDate,
+    today: l10n.homePeriodToday,
+    yesterday: l10n.commonYesterday,
+    includeYear: false,
+  );
 
   return StatHighlightCard(
     label: label,
@@ -391,9 +397,15 @@ Widget _highlightCard(
     accentColor: accentColor,
     amount: formatMoney(tx.amount, currency: currency),
     amountColor: amountColor,
-    subtitle: merchant,
+    subtitle: l10n.homeHighlightSubtitle(_ellipsis(merchant, 10), day),
     onTap: tx.merchant.isEmpty ? null : () => _openMerchant(context, tx),
   );
+}
+
+String _ellipsis(String value, int maxChars) {
+  final trimmed = value.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  return '${trimmed.substring(0, maxChars)}…';
 }
 
 List<Widget> _dayGroups(

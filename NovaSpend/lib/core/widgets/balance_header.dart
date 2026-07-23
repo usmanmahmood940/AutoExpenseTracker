@@ -67,14 +67,14 @@ class BalanceHeader extends StatelessWidget {
             style: labelStyle,
             textAlign: centered ? TextAlign.center : TextAlign.start,
           ),
-          SizedBox(height: centered ? AppSpacing.sm + 2 : AppSpacing.sm),
+          SizedBox(height: centered ? AppSpacing.xs + 2 : AppSpacing.xs),
           if (showDualTotals) ...[
             Text(
               spentAmount!,
               style: heroStyle,
               textAlign: centered ? TextAlign.center : TextAlign.start,
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: 2),
             Text(
               receivedAmount!,
               style: centered

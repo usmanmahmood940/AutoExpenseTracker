@@ -39,7 +39,7 @@ class TransactionListTile extends StatelessWidget {
     final time = showTime ? formatClockTime(transaction.transactionTime) : '';
 
     final merchantStyle = theme.textTheme.titleMedium?.copyWith(
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: FontWeight.w600,
       letterSpacing: -0.01 * 15,
     );
@@ -84,7 +84,7 @@ class TransactionListTile extends StatelessWidget {
                           ? transaction.bank
                           : transaction.category,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant
                             .withValues(alpha: 0.85),
                       ),
@@ -102,7 +102,7 @@ class TransactionListTile extends StatelessWidget {
                   Text(
                     '$sign${formatMoney(transaction.amount, currency: transaction.currency)}',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.01 * 15,
                       color: amountColor,
@@ -113,7 +113,7 @@ class TransactionListTile extends StatelessWidget {
                     Text(
                       time,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: theme.colorScheme.onSurfaceVariant
                             .withValues(alpha: 0.4),
                       ),
