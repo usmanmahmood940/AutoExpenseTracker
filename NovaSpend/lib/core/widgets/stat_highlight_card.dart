@@ -95,7 +95,7 @@ class StatHighlightCard extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.clip,
           ),
         ],
       ),

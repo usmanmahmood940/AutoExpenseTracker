@@ -397,15 +397,15 @@ Widget _highlightCard(
     accentColor: accentColor,
     amount: formatMoney(tx.amount, currency: currency),
     amountColor: amountColor,
-    subtitle: l10n.homeHighlightSubtitle(_ellipsis(merchant, 10), day),
+    subtitle: l10n.homeHighlightSubtitle(_truncate(merchant, 10), day),
     onTap: tx.merchant.isEmpty ? null : () => _openMerchant(context, tx),
   );
 }
 
-String _ellipsis(String value, int maxChars) {
+String _truncate(String value, int maxChars) {
   final trimmed = value.trim();
   if (trimmed.length <= maxChars) return trimmed;
-  return '${trimmed.substring(0, maxChars)}…';
+  return trimmed.substring(0, maxChars);
 }
 
 List<Widget> _dayGroups(

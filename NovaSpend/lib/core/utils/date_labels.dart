@@ -33,7 +33,10 @@ String formatClockTime(String raw) {
   if (value.isEmpty) return '';
 
   final iso = DateTime.tryParse(value);
-  if (iso != null) return DateFormat('hh:mm a').format(iso);
+  if (iso != null) {
+    final localTime = iso.isUtc ? iso.toLocal() : iso;
+    return DateFormat('hh:mm a').format(localTime);
+  }
 
   final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(value);
   if (match != null) {
