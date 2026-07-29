@@ -11,7 +11,8 @@
     "test": "npm run build && node --test lib",
     "test:ingest": "node scripts/test-ingest.mjs",
     "seed:categories": "npm run build && node scripts/seed-categories.mjs",
-    "backfill:merchant-normalized": "npm run build && node scripts/backfill-merchant-normalized.mjs"
+    "backfill:merchant-normalized": "npm run build && node scripts/backfill-merchant-normalized.mjs",
+    "seed:user-transactions": "npm run build && node scripts/seed-user-transactions.mjs"
   },
   "engines": {
     "node": "22"
