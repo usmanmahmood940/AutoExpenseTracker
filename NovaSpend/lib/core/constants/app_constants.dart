@@ -12,6 +12,10 @@ class AppConstants {
   static const String productionSiteUrl =
       'https://auto-expense-tracker-2026.firebaseapp.com';
 
+  /// Web OAuth client ID from Firebase (required as serverClientId for Google Sign-In on Android/iOS).
+  static const String googleServerClientId =
+      '598409230916-h3dapo9iq87opnii7rgc6a64j80v92ll.apps.googleusercontent.com';
+
   static const String termsUrl =
       'https://auto-expense-tracker-2026.firebaseapp.com/terms';
   static const String privacyUrl =

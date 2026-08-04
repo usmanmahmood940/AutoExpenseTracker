@@ -23,7 +23,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Auth OTP / rate-limit collections — Admin SDK only
+    // Auth ephemeral state — Admin SDK only
+    match /authTemp/{document=**} {
+      allow read, write: if false;
+    }
+    match /authRateLimits/{document=**} {
+      allow read, write: if false;
+    }
+    // Legacy auth collections (drained by monthly cleanup) — Admin SDK only
     match /emailVerificationOtps/{document=**} {
       allow read, write: if false;
     }
@@ -31,9 +38,6 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /passwordResetSessions/{document=**} {
-      allow read, write: if false;
-    }
-    match /authRateLimits/{document=**} {
       allow read, write: if false;
     }
 

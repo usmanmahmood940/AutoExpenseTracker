@@ -459,9 +459,8 @@ export const COLLECTIONS = {
   aiSummaries: 'aiSummaries',
   recurringPatterns: 'recurringPatterns',
   meta: 'meta',
-  emailVerificationOtps: 'emailVerificationOtps',
-  passwordResetOtps: 'passwordResetOtps',
-  passwordResetSessions: 'passwordResetSessions',
+  /** Short-lived OTPs + password-reset sessions (`type`: otp | reset_session). */
+  authTemp: 'authTemp',
   authRateLimits: 'authRateLimits',
 } as const;
 

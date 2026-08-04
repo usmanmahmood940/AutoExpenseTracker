@@ -1,6 +1,10 @@
 /**
  * Auth OTP flows: email signup verification + password reset.
  * Public HTTP endpoints (CORS enabled) consumed by NovaSpend via CloudFunctionsHttpClient.
+ *
+ * Ephemeral state lives in:
+ * - authTemp — OTPs + password-reset sessions (deleted on success / expiry)
+ * - authRateLimits — send/verify rate windows
  */
 
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
@@ -61,6 +65,11 @@ function rateDocId(kind: string, key: string): string {
   return `${kind}_${Buffer.from(key).toString('base64url').slice(0, 200)}`;
 }
 
+/** OTP docs share authTemp; purpose prefix avoids signup/reset collisions. */
+function otpDocId(purpose: OtpPurpose, email: string): string {
+  return `otp_${purpose}_${email}`;
+}
+
 async function assertRateLimit(
   kind: 'send_email' | 'send_ip' | 'verify_email',
   key: string,
@@ -96,6 +105,7 @@ async function assertRateLimit(
         key,
         windowStartMs: windowStart,
         count: count + 1,
+        expiresAtMs: windowStart + RATE_WINDOW_MS,
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
@@ -147,12 +157,10 @@ async function storeAndSendOtp(params: {
   const code = generateOtp();
   const codeHash = hashOtp(code);
   const now = Date.now();
-  const collection =
-    params.purpose === 'email_verification'
-      ? COLLECTIONS.emailVerificationOtps
-      : COLLECTIONS.passwordResetOtps;
 
-  await db.collection(collection).doc(email).set({
+  await db.collection(COLLECTIONS.authTemp).doc(otpDocId(params.purpose, email)).set({
+    type: 'otp',
+    purpose: params.purpose,
     email,
     codeHash,
     attempts: 0,
@@ -171,7 +179,7 @@ async function storeAndSendOtp(params: {
 async function verifyOtpDocument(params: {
   email: string;
   code: string;
-  collection: string;
+  purpose: OtpPurpose;
 }): Promise<void> {
   const email = normalizeEmail(params.email);
   const code = params.code.trim();
@@ -182,7 +190,7 @@ async function verifyOtpDocument(params: {
 
   await assertRateLimit('verify_email', email, VERIFY_LIMIT_PER_EMAIL);
 
-  const ref = db.collection(params.collection).doc(email);
+  const ref = db.collection(COLLECTIONS.authTemp).doc(otpDocId(params.purpose, email));
   const codeHash = hashOtp(code);
 
   await db.runTransaction(async (tx) => {
@@ -294,7 +302,7 @@ export const completeEmailOtpSignup = onCall(authSecrets, async (request) => {
   await verifyOtpDocument({
     email,
     code,
-    collection: COLLECTIONS.emailVerificationOtps,
+    purpose: 'email_verification',
   });
 
   let user;
@@ -358,7 +366,7 @@ export const verifyPasswordResetOtp = onCall(authSecrets, async (request) => {
   await verifyOtpDocument({
     email,
     code,
-    collection: COLLECTIONS.passwordResetOtps,
+    purpose: 'password_reset',
   });
 
   let user;
@@ -371,7 +379,8 @@ export const verifyPasswordResetOtp = onCall(authSecrets, async (request) => {
   const resetToken = randomBytes(32).toString('hex');
   const now = Date.now();
 
-  await db.collection(COLLECTIONS.passwordResetSessions).doc(resetToken).set({
+  await db.collection(COLLECTIONS.authTemp).doc(resetToken).set({
+    type: 'reset_session',
     email,
     uid: user.uid,
     createdAtMs: now,
@@ -393,7 +402,7 @@ export const completePasswordReset = onCall(authSecrets, async (request) => {
     throw new HttpsError('invalid-argument', 'Password must be at least 6 characters.');
   }
 
-  const ref = db.collection(COLLECTIONS.passwordResetSessions).doc(resetToken);
+  const ref = db.collection(COLLECTIONS.authTemp).doc(resetToken);
   const snap = await ref.get();
   if (!snap.exists) {
     throw new HttpsError('not-found', 'Reset session expired. Start again.');
@@ -401,6 +410,10 @@ export const completePasswordReset = onCall(authSecrets, async (request) => {
 
   const data = snap.data()!;
   const now = Date.now();
+  if (data.type !== 'reset_session') {
+    await ref.delete();
+    throw new HttpsError('not-found', 'Reset session expired. Start again.');
+  }
   if (typeof data.expiresAtMs !== 'number' || data.expiresAtMs < now) {
     await ref.delete();
     throw new HttpsError('deadline-exceeded', 'Reset session expired. Start again.');

@@ -53,7 +53,9 @@ class AuthService {
 
     final google = _googleSignIn ?? GoogleSignIn.instance;
     if (!_googleInitialized && _googleSignIn == null) {
-      await google.initialize();
+      await google.initialize(
+        serverClientId: AppConstants.googleServerClientId,
+      );
       _googleInitialized = true;
     }
 

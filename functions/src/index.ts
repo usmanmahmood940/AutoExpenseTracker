@@ -21,3 +21,4 @@ export {
   completePasswordReset,
   ensureUserProfile,
 } from './auth';
+export { cleanupExpiredAuthDocs } from './auth_cleanup';
