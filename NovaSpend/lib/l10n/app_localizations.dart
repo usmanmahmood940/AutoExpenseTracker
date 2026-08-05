@@ -790,6 +790,36 @@ abstract class AppLocalizations {
   /// **'Payment Method'**
   String get transactionPaymentMethod;
 
+  /// No description provided for @transactionBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'Branch'**
+  String get transactionBranch;
+
+  /// No description provided for @transactionMerchantDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Merchant details'**
+  String get transactionMerchantDetails;
+
+  /// No description provided for @transactionSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get transactionSource;
+
+  /// No description provided for @transactionSourceSms.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS'**
+  String get transactionSourceSms;
+
+  /// No description provided for @transactionSourceManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual entry'**
+  String get transactionSourceManual;
+
   /// No description provided for @transactionStatus.
   ///
   /// In en, this message translates to:
@@ -820,11 +850,59 @@ abstract class AppLocalizations {
   /// **'Needs review'**
   String get transactionStatusNeedsReview;
 
+  /// No description provided for @transactionEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get transactionEdited;
+
+  /// No description provided for @transactionDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate'**
+  String get transactionDuplicate;
+
+  /// No description provided for @transactionRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get transactionRecurring;
+
   /// No description provided for @transactionMetaLine.
   ///
   /// In en, this message translates to:
   /// **'{date} · {time}'**
   String transactionMetaLine(String date, String time);
+
+  /// No description provided for @transactionConfidenceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}%'**
+  String transactionConfidenceValue(String percent);
+
+  /// No description provided for @transactionReferenceCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference copied'**
+  String get transactionReferenceCopied;
+
+  /// No description provided for @transactionDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete transaction?'**
+  String get transactionDeleteConfirmTitle;
+
+  /// No description provided for @transactionDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the transaction from your history.'**
+  String get transactionDeleteConfirmBody;
+
+  /// No description provided for @transactionDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction deleted'**
+  String get transactionDeleted;
 
   /// No description provided for @transactionReportIssue.
   ///

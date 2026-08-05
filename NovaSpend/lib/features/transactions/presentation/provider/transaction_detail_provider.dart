@@ -183,6 +183,22 @@ class TransactionDetailProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteTransaction() async {
+    isSaving = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _repository.softDelete(uid, _transaction.id);
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
   static String? _dayNameFromDate(String isoDate) {
     final parsed = DateTime.tryParse(isoDate.trim());
     if (parsed == null) return null;

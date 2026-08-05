@@ -10,16 +10,6 @@ import 'package:nova_spend/features/transactions/presentation/provider/transacti
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
-/// Figma Edit Transaction Bottom Sheet (node 2126:3).
-abstract final class _SheetColors {
-  static const Color sheetBg = Color(0xFFF9F9F9);
-  static const Color ink = Color(0xFF1A1C1C);
-  static const Color muted = Color(0xFF3C4A42);
-  static const Color handle = Color(0xFFBBCABF);
-  static const Color fieldFill = Color(0xFFEEEEEE);
-  static const Color closeFill = Color(0xFFEEEEEE);
-}
-
 class EditTransactionSheet extends StatefulWidget {
   const EditTransactionSheet({required this.categories, super.key});
 
@@ -150,17 +140,14 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final provider = context.watch<TransactionDetailProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg = isDark ? AppColors.surfaceDark : _SheetColors.sheetBg;
-    final ink = isDark
-        ? Theme.of(context).colorScheme.onSurface
-        : _SheetColors.ink;
-    final muted = isDark
-        ? Theme.of(context).colorScheme.onSurfaceVariant
-        : _SheetColors.muted;
-    final fieldFill = isDark
-        ? AppColors.neutralFillDark
-        : _SheetColors.fieldFill;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final colorScheme = theme.colorScheme;
+    final sheetBg = AppColors.surface(brightness);
+    final ink = colorScheme.onSurface;
+    final muted = colorScheme.onSurfaceVariant;
+    final fieldFill = AppColors.neutralFill(brightness);
+    final border = AppColors.border(brightness);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final screenH = MediaQuery.sizeOf(context).height;
     final sheetHeight = (screenH * 0.94 - bottomInset).clamp(280.0, screenH);
@@ -182,7 +169,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
-              const _DragHandle(),
+              _DragHandle(color: border),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
@@ -192,6 +179,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                     _SheetHeader(
                       title: l10n.transactionEditSheetTitle,
                       ink: ink,
+                      closeFill: fieldFill,
                       onClose: () => Navigator.of(context).maybePop(false),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -200,6 +188,8 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                       controller: _amount,
                       currency: provider.transaction.currency,
                       muted: muted,
+                      fieldFill: fieldFill,
+                      border: border,
                       onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -210,6 +200,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         controller: _merchant,
                         fill: fieldFill,
                         ink: ink,
+                        border: border,
                         textStyle: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -229,6 +220,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         fill: fieldFill,
                         ink: ink,
                         muted: muted,
+                        border: border,
                         onChanged: provider.setCategory,
                       ),
                     ),
@@ -240,6 +232,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         value: provider.type,
                         fill: fieldFill,
                         muted: muted,
+                        border: border,
                         debitLabel: l10n.feedFilterTypeDebit,
                         creditLabel: l10n.feedFilterTypeCredit,
                         onChanged: provider.setType,
@@ -253,6 +246,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         controller: _bank,
                         fill: fieldFill,
                         ink: ink,
+                        border: border,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -263,6 +257,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         controller: _account,
                         fill: fieldFill,
                         ink: ink,
+                        border: border,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -273,6 +268,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         controller: _paymentMethod,
                         fill: fieldFill,
                         ink: ink,
+                        border: border,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -284,6 +280,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         fill: fieldFill,
                         ink: ink,
                         muted: muted,
+                        border: border,
                         icon: Icons.calendar_today_outlined,
                         onTap: _pickDate,
                       ),
@@ -299,6 +296,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         fill: fieldFill,
                         ink: ink,
                         muted: muted,
+                        border: border,
                         icon: Icons.schedule_outlined,
                         onTap: _pickTime,
                       ),
@@ -312,6 +310,8 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                       ),
                       ink: ink,
                       muted: muted,
+                      iconFill: fieldFill,
+                      border: border,
                       onChanged: provider.setRememberForMerchant,
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -379,7 +379,9 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
 }
 
 class _DragHandle extends StatelessWidget {
-  const _DragHandle();
+  const _DragHandle({required this.color});
+
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -390,7 +392,7 @@ class _DragHandle extends StatelessWidget {
           width: 48,
           height: 6,
           decoration: BoxDecoration(
-            color: _SheetColors.handle,
+            color: color,
             borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
         ),
@@ -403,11 +405,13 @@ class _SheetHeader extends StatelessWidget {
   const _SheetHeader({
     required this.title,
     required this.ink,
+    required this.closeFill,
     required this.onClose,
   });
 
   final String title;
   final Color ink;
+  final Color closeFill;
   final VoidCallback onClose;
 
   @override
@@ -427,7 +431,7 @@ class _SheetHeader extends StatelessWidget {
           ),
         ),
         Material(
-          color: _SheetColors.closeFill,
+          color: closeFill,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
@@ -485,6 +489,8 @@ class _AmountField extends StatelessWidget {
     required this.controller,
     required this.currency,
     required this.muted,
+    required this.fieldFill,
+    required this.border,
     required this.onChanged,
   });
 
@@ -492,15 +498,13 @@ class _AmountField extends StatelessWidget {
   final TextEditingController controller;
   final String currency;
   final Color muted;
+  final Color fieldFill;
+  final Color border;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final symbol = currency.toUpperCase() == 'PKR' ? 'Rs.' : currency;
-    final fieldFill = isDark
-        ? AppColors.neutralFillDark
-        : _SheetColors.fieldFill;
 
     return Column(
       children: [
@@ -521,7 +525,7 @@ class _AmountField extends StatelessWidget {
           decoration: BoxDecoration(
             color: fieldFill,
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: border),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -585,6 +589,7 @@ class _FilledTextField extends StatelessWidget {
     required this.controller,
     required this.fill,
     required this.ink,
+    required this.border,
     this.textStyle,
     this.onChanged,
   });
@@ -592,6 +597,7 @@ class _FilledTextField extends StatelessWidget {
   final TextEditingController controller;
   final Color fill;
   final Color ink;
+  final Color border;
   final TextStyle? textStyle;
   final ValueChanged<String>? onChanged;
 
@@ -619,19 +625,22 @@ class _FilledTextField extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sm),
           ),
-          borderSide: BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sm),
           ),
-          borderSide: BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sm),
           ),
-          borderSide: BorderSide(color: AppColors.primaryStrong, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.primaryStrong,
+            width: 1.5,
+          ),
         ),
       ),
     );
@@ -645,6 +654,7 @@ class _CategoryDropdown extends StatelessWidget {
     required this.fill,
     required this.ink,
     required this.muted,
+    required this.border,
     required this.onChanged,
   });
 
@@ -653,6 +663,7 @@ class _CategoryDropdown extends StatelessWidget {
   final Color fill;
   final Color ink;
   final Color muted;
+  final Color border;
   final ValueChanged<String> onChanged;
 
   @override
@@ -675,19 +686,22 @@ class _CategoryDropdown extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sm),
           ),
-          borderSide: BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sm),
           ),
-          borderSide: BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sm),
           ),
-          borderSide: BorderSide(color: AppColors.primaryStrong, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.primaryStrong,
+            width: 1.5,
+          ),
         ),
       ),
       items: items
@@ -719,6 +733,7 @@ class _TypeSegmentedControl extends StatelessWidget {
     required this.value,
     required this.fill,
     required this.muted,
+    required this.border,
     required this.debitLabel,
     required this.creditLabel,
     required this.onChanged,
@@ -727,6 +742,7 @@ class _TypeSegmentedControl extends StatelessWidget {
   final String value;
   final Color fill;
   final Color muted;
+  final Color border;
   final String debitLabel;
   final String creditLabel;
   final ValueChanged<String> onChanged;
@@ -738,7 +754,7 @@ class _TypeSegmentedControl extends StatelessWidget {
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: border),
       ),
       child: Row(
         children: [
@@ -825,6 +841,7 @@ class _PickerField extends StatelessWidget {
     required this.fill,
     required this.ink,
     required this.muted,
+    required this.border,
     required this.icon,
     required this.onTap,
   });
@@ -833,6 +850,7 @@ class _PickerField extends StatelessWidget {
   final Color fill;
   final Color ink;
   final Color muted;
+  final Color border;
   final IconData icon;
   final VoidCallback onTap;
 
@@ -844,7 +862,7 @@ class _PickerField extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppRadius.sm),
         ),
-        side: BorderSide(color: AppColors.borderLight),
+        side: BorderSide(color: border),
       ),
       child: InkWell(
         onTap: onTap,
@@ -882,6 +900,8 @@ class _RememberToggle extends StatelessWidget {
     required this.subtitle,
     required this.ink,
     required this.muted,
+    required this.iconFill,
+    required this.border,
     required this.onChanged,
   });
 
@@ -890,6 +910,8 @@ class _RememberToggle extends StatelessWidget {
   final String subtitle;
   final Color ink;
   final Color muted;
+  final Color iconFill;
+  final Color border;
   final ValueChanged<bool> onChanged;
 
   @override
@@ -897,15 +919,15 @@ class _RememberToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.borderLight)),
+        border: Border(top: BorderSide(color: border)),
       ),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
-              color: _SheetColors.fieldFill,
+            decoration: BoxDecoration(
+              color: iconFill,
               shape: BoxShape.circle,
             ),
             child: const Icon(

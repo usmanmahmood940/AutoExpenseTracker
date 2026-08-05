@@ -169,11 +169,19 @@
   "transactionConfidence": "Parse confidence",
   "transactionRawSms": "Original SMS",
   "transactionPaymentMethod": "Payment Method",
+  "transactionBranch": "Branch",
+  "transactionMerchantDetails": "Merchant details",
+  "transactionSource": "Source",
+  "transactionSourceSms": "SMS",
+  "transactionSourceManual": "Manual entry",
   "transactionStatus": "Status",
   "transactionReferenceId": "Reference ID",
   "transactionStatusCleared": "Cleared",
   "transactionStatusDeleted": "Deleted",
   "transactionStatusNeedsReview": "Needs review",
+  "transactionEdited": "Edited",
+  "transactionDuplicate": "Possible duplicate",
+  "transactionRecurring": "Recurring",
   "transactionMetaLine": "{date} · {time}",
   "@transactionMetaLine": {
     "placeholders": {
@@ -181,6 +189,16 @@
       "time": {"type": "String"}
     }
   },
+  "transactionConfidenceValue": "{percent}%",
+  "@transactionConfidenceValue": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "transactionReferenceCopied": "Reference copied",
+  "transactionDeleteConfirmTitle": "Delete transaction?",
+  "transactionDeleteConfirmBody": "This removes the transaction from your history.",
+  "transactionDeleted": "Transaction deleted",
   "transactionReportIssue": "Report an issue with this transaction",
   "transactionReportThanks": "Thanks — reporting will be available soon.",
   "transactionSaved": "Transaction updated",

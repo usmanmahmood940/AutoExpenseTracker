@@ -33,6 +33,14 @@ abstract final class AppColors {
   static const Color borderLight = Color(0xFFBBCABF);
   static const Color borderDark = Color(0xFF3A3A3C);
 
+  /// Warning / needs-review chip (light).
+  static const Color warningFgLight = Color(0xFF9A6700);
+  static const Color warningBgLight = Color(0xFFFFF4CE);
+
+  /// Warning / needs-review chip (dark).
+  static const Color warningFgDark = Color(0xFFFFD666);
+  static const Color warningBgDark = Color(0xFF3D2E00);
+
   /// Glass overlay fill (~80% opacity surface, per design "Subtle Glass").
   static Color glassFill(Brightness brightness) {
     return brightness == Brightness.light
@@ -46,8 +54,31 @@ abstract final class AppColors {
         : borderDark.withValues(alpha: 0.6);
   }
 
+  /// Page / scaffold surface for the current brightness.
+  static Color surface(Brightness brightness) {
+    return brightness == Brightness.light ? surfaceLight : surfaceDark;
+  }
+
+  /// Raised card surface for the current brightness.
+  static Color card(Brightness brightness) {
+    return brightness == Brightness.light ? cardLight : cardDark;
+  }
+
+  /// Hairline / field border for the current brightness.
+  static Color border(Brightness brightness) {
+    return brightness == Brightness.light ? borderLight : borderDark;
+  }
+
   /// Neutral avatar/icon fill for the current brightness.
   static Color neutralFill(Brightness brightness) {
     return brightness == Brightness.light ? neutralFillLight : neutralFillDark;
+  }
+
+  static Color warningForeground(Brightness brightness) {
+    return brightness == Brightness.light ? warningFgLight : warningFgDark;
+  }
+
+  static Color warningBackground(Brightness brightness) {
+    return brightness == Brightness.light ? warningBgLight : warningBgDark;
   }
 }

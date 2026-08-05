@@ -388,6 +388,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionPaymentMethod => 'Payment Method';
 
   @override
+  String get transactionBranch => 'Branch';
+
+  @override
+  String get transactionMerchantDetails => 'Merchant details';
+
+  @override
+  String get transactionSource => 'Source';
+
+  @override
+  String get transactionSourceSms => 'SMS';
+
+  @override
+  String get transactionSourceManual => 'Manual entry';
+
+  @override
   String get transactionStatus => 'Status';
 
   @override
@@ -403,9 +418,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionStatusNeedsReview => 'Needs review';
 
   @override
+  String get transactionEdited => 'Edited';
+
+  @override
+  String get transactionDuplicate => 'Possible duplicate';
+
+  @override
+  String get transactionRecurring => 'Recurring';
+
+  @override
   String transactionMetaLine(String date, String time) {
     return '$date · $time';
   }
+
+  @override
+  String transactionConfidenceValue(String percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get transactionReferenceCopied => 'Reference copied';
+
+  @override
+  String get transactionDeleteConfirmTitle => 'Delete transaction?';
+
+  @override
+  String get transactionDeleteConfirmBody =>
+      'This removes the transaction from your history.';
+
+  @override
+  String get transactionDeleted => 'Transaction deleted';
 
   @override
   String get transactionReportIssue => 'Report an issue with this transaction';

@@ -1,5 +1,5 @@
 ---
-description: NovaSpend UI/UX design system — minimal, glass accents, native feel
+description: NovaSpend UI/UX — minimal design, theme tokens, light/dark support
 globs: NovaSpend/lib/**/*.dart
 alwaysApply: false
 ---
@@ -23,11 +23,41 @@ alwaysApply: false
 | Token | Location | Values |
 |-------|----------|--------|
 | Accent | `AppColors.accent` | Single green `#10B981` — only accent hue in the app |
+| Surfaces | `AppColors.surface/card/neutralFill/border(brightness)` | Light/dark pairs — never hardcode one mode |
 | Radius | `AppRadius` | `md` 16, `lg` 20, `xl` 24 |
 | Spacing | `AppSpacing` | `xs` 4 … `xxl` 48 — charts/lists need `lg`+ padding |
 | Motion | `AppMotion` | 200–350 ms, `Curves.easeOutCubic` |
 
 Import from `lib/core/theme/`.
+
+## Theme & dark mode (required)
+
+Every screen/widget must work in **light and dark**. Resolve colors from theme tokens — never ship feature-local palettes or light-only hex.
+
+```dart
+final theme = Theme.of(context);
+final brightness = theme.brightness;
+final cs = theme.colorScheme;
+
+// Text
+color: cs.onSurface           // ink
+color: cs.onSurfaceVariant    // muted labels
+
+// Surfaces / chrome
+color: AppColors.surface(brightness)
+color: AppColors.card(brightness)
+color: AppColors.neutralFill(brightness)
+color: AppColors.border(brightness)   // fields, dividers, handles
+```
+
+**Rules:**
+
+- Prefer `Theme.of(context).colorScheme` for text/icons; `AppColors.*(brightness)` for surfaces, fills, borders.
+- Use brightness helpers (`surface`, `card`, `border`, `neutralFill`, `warningForeground` / `warningBackground`) — do **not** scatter `isDark ? AppColors.xLight : AppColors.xDark` when a helper exists.
+- Do **not** add private `_SheetColors` / `_FooColors` with `Color(0xFF…)` in feature files. New semantic colors go in `lib/core/theme/app_colors.dart`.
+- Do **not** use only `borderLight` / `neutralFillLight` / `surfaceLight` — always pick via brightness so dark mode is correct.
+- `Colors.white` / `Colors.black` only as **on-primary** (glyph on `primaryStrong`/`accent` fills), shadows, or system overlays — never as page/sheet text or backgrounds.
+- Status chips (warning/review): use `AppColors.warningForeground/Background(brightness)`, not inline amber hex.
 
 ## Icons
 
@@ -60,9 +90,9 @@ padding: 16 all sides
 
 - Label: 16 sp / w600 / height 1.5, muted, **single line** (`softWrap: false`).
 - Value: 16 sp / w500 / height 1.5, ink; ellipsis if needed.
-- Dividers between rows: 1 px at `AppColors.borderLight` ~30% opacity.
+- Dividers between rows: 1 px at `AppColors.border(brightness)` ~30–35% opacity.
 - Hide the whole row when the value is empty — don’t show placeholders.
-- IDs/refs: monospace badge (muted fill, 4 px radius, horizontal padding 8).
+- IDs/refs: monospace badge (muted fill via `AppColors.neutralFill(brightness)`, 4 px radius, horizontal padding 8).
 
 ### Primary pill CTA
 
@@ -90,8 +120,9 @@ Primary actions (e.g. Edit Transaction):
 ## Color rules
 
 - **One accent** (`AppColors.accent`) for CTAs, active nav, positive trends, chart primary series.
-- Neutrals for text (`primary`, `secondary`, `tertiary` from theme).
-- Semantic colors (error red, warning amber) only for status — not decoration.
+- Neutrals for text: `colorScheme.onSurface` / `onSurfaceVariant` (not hardcoded ink hex).
+- Semantic colors (`AppColors.spend`, warning helpers) only for status — not decoration.
+- Brand fills (`primaryStrong`, `accent`) are shared across themes; pair with white on-fill text.
 
 ## Do / Don't
 
@@ -104,7 +135,9 @@ Primary actions (e.g. Edit Transaction):
 | `primaryStrong` pill CTA for primary edits | Outlined/spend-colored primary actions |
 | Shared widgets in `core/widgets/` | Duplicate card styles per feature |
 | Glass on ≤1 surface per screen | Full glassmorphism theme |
-| Theme tokens | Inline `Color(0xFF…)` in features |
+| `AppColors.*(brightness)` + `colorScheme` | Inline `Color(0xFF…)` or private `_SheetColors` in features |
+| Borders/fills via `border`/`neutralFill` helpers | Light-only `borderLight` / `fieldFill` hex |
+| New semantic colors in `app_colors.dart` | Feature-local light/dark hex pairs |
 
 ## File placement
 
