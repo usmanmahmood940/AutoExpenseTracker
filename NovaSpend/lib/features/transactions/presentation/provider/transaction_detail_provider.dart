@@ -123,12 +123,14 @@ class TransactionDetailProvider extends ChangeNotifier {
 
       final day = _dayNameFromDate(transactionDate) ?? _transaction.day;
 
+      final resolvedBank = bank.trim().isEmpty ? 'Unknown' : bank.trim();
+
       final fields = <String, dynamic>{
         'merchant': merchant.trim(),
         'amount': amount,
         'category': category,
         'type': type,
-        'bank': bank.trim(),
+        'bank': resolvedBank,
         'accountIdMasked': accountIdMasked.trim(),
         'paymentMethod': paymentMethod.trim(),
         'transactionDate': transactionDate.trim(),
@@ -160,7 +162,7 @@ class TransactionDetailProvider extends ChangeNotifier {
         amount: amount,
         category: category,
         type: type,
-        bank: bank.trim(),
+        bank: resolvedBank,
         accountIdMasked: accountIdMasked.trim(),
         paymentMethod: paymentMethod.trim(),
         transactionDate: transactionDate.trim(),
