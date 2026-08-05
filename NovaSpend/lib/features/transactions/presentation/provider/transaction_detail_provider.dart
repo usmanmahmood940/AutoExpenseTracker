@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
@@ -17,7 +18,12 @@ class TransactionDetailProvider extends ChangeNotifier {
         merchant = transaction.merchant,
         amount = transaction.amount,
         category = transaction.category,
-        type = transaction.type;
+        type = transaction.type,
+        bank = transaction.bank,
+        accountIdMasked = transaction.accountIdMasked,
+        paymentMethod = transaction.paymentMethod,
+        transactionDate = transaction.transactionDate,
+        transactionTime = transaction.transactionTime;
 
   final String uid;
   final UpdateTransaction _updateTransaction;
@@ -28,6 +34,11 @@ class TransactionDetailProvider extends ChangeNotifier {
   double amount;
   String category;
   String type;
+  String bank;
+  String accountIdMasked;
+  String paymentMethod;
+  String transactionDate;
+  String transactionTime;
   bool rememberForMerchant = false;
   bool isSaving = false;
   String? error;
@@ -55,8 +66,47 @@ class TransactionDetailProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setBank(String value) {
+    bank = value;
+    notifyListeners();
+  }
+
+  void setAccountIdMasked(String value) {
+    accountIdMasked = value;
+    notifyListeners();
+  }
+
+  void setPaymentMethod(String value) {
+    paymentMethod = value;
+    notifyListeners();
+  }
+
+  void setTransactionDate(String value) {
+    transactionDate = value;
+    notifyListeners();
+  }
+
+  void setTransactionTime(String value) {
+    transactionTime = value;
+    notifyListeners();
+  }
+
   void setRememberForMerchant(bool value) {
     rememberForMerchant = value;
+    notifyListeners();
+  }
+
+  void resetDraftFromTransaction() {
+    merchant = _transaction.merchant;
+    amount = _transaction.amount;
+    category = _transaction.category;
+    type = _transaction.type;
+    bank = _transaction.bank;
+    accountIdMasked = _transaction.accountIdMasked;
+    paymentMethod = _transaction.paymentMethod;
+    transactionDate = _transaction.transactionDate;
+    transactionTime = _transaction.transactionTime;
+    rememberForMerchant = false;
     notifyListeners();
   }
 
@@ -71,11 +121,19 @@ class TransactionDetailProvider extends ChangeNotifier {
           _transaction.parseConfidence < AppConstants.confidenceReviewThreshold &&
               _transaction.reviewedAt == null;
 
+      final day = _dayNameFromDate(transactionDate) ?? _transaction.day;
+
       final fields = <String, dynamic>{
         'merchant': merchant.trim(),
         'amount': amount,
         'category': category,
         'type': type,
+        'bank': bank.trim(),
+        'accountIdMasked': accountIdMasked.trim(),
+        'paymentMethod': paymentMethod.trim(),
+        'transactionDate': transactionDate.trim(),
+        'transactionTime': transactionTime.trim(),
+        'day': day,
         'isEdited': true,
         'categorySource': 'user',
         'updatedAt': FieldValue.serverTimestamp(),
@@ -102,11 +160,18 @@ class TransactionDetailProvider extends ChangeNotifier {
         amount: amount,
         category: category,
         type: type,
+        bank: bank.trim(),
+        accountIdMasked: accountIdMasked.trim(),
+        paymentMethod: paymentMethod.trim(),
+        transactionDate: transactionDate.trim(),
+        transactionTime: transactionTime.trim(),
+        day: day,
         categorySource: 'user',
         isEdited: true,
         status: needsReview ? 'active' : _transaction.status,
         reviewedAt: needsReview ? DateTime.now() : _transaction.reviewedAt,
       );
+      rememberForMerchant = false;
       saved = true;
       return true;
     } catch (e) {
@@ -116,5 +181,11 @@ class TransactionDetailProvider extends ChangeNotifier {
       isSaving = false;
       notifyListeners();
     }
+  }
+
+  static String? _dayNameFromDate(String isoDate) {
+    final parsed = DateTime.tryParse(isoDate.trim());
+    if (parsed == null) return null;
+    return DateFormat('EEEE').format(parsed);
   }
 }

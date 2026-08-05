@@ -340,6 +340,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionEdit => 'Edit';
 
   @override
+  String get transactionEditTransaction => 'Edit Transaction';
+
+  @override
+  String get transactionEditSheetTitle => 'Edit transaction';
+
+  @override
   String get transactionSave => 'Save';
 
   @override
@@ -350,6 +356,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionAmount => 'Amount';
+
+  @override
+  String get transactionAmountLabel => 'Transaction Amount';
 
   @override
   String get transactionCategory => 'Category';
@@ -365,6 +374,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionDate => 'Date';
+
+  @override
+  String get transactionTime => 'Time';
 
   @override
   String get transactionConfidence => 'Parse confidence';
@@ -391,8 +403,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionStatusNeedsReview => 'Needs review';
 
   @override
-  String transactionMetaLine(String date, String time, String bankAccount) {
-    return '$date · $time · $bankAccount';
+  String transactionMetaLine(String date, String time) {
+    return '$date · $time';
   }
 
   @override
@@ -407,6 +419,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionAlsoOverride => 'Remember category for this merchant';
+
+  @override
+  String get transactionRememberMerchant => 'Remember for this merchant';
+
+  @override
+  String transactionAutoCategorizeHint(String merchant) {
+    return 'Auto-categorize future $merchant orders';
+  }
 
   @override
   String get reviewTitle => 'Review';

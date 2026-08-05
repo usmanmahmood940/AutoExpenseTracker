@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
@@ -14,6 +15,7 @@ import 'package:nova_spend/features/transactions/domain/entities/transaction_ent
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/transaction_detail_provider.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/edit_transaction_sheet.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
@@ -62,19 +64,13 @@ class _DetailView extends StatefulWidget {
 }
 
 class _DetailViewState extends State<_DetailView> {
-  late final TextEditingController _merchant;
-  late final TextEditingController _amount;
   List<String> _categories = const [];
-  bool _editing = false;
 
   static const double _barHeight = 48;
 
   @override
   void initState() {
     super.initState();
-    final tx = context.read<TransactionDetailProvider>().transaction;
-    _merchant = TextEditingController(text: tx.merchant);
-    _amount = TextEditingController(text: formatAmount(tx.amount));
     _loadCategories();
   }
 
@@ -94,50 +90,16 @@ class _DetailViewState extends State<_DetailView> {
     setState(() => _categories = names);
   }
 
-  @override
-  void dispose() {
-    _merchant.dispose();
-    _amount.dispose();
-    super.dispose();
-  }
-
-  void _enterEdit() {
-    final tx = context.read<TransactionDetailProvider>().transaction;
-    _merchant.text = tx.merchant;
-    _amount.text = formatAmount(tx.amount);
-    setState(() => _editing = true);
-  }
-
-  void _cancelEdit() {
-    final provider = context.read<TransactionDetailProvider>();
-    final tx = provider.transaction;
-    _merchant.text = tx.merchant;
-    _amount.text = formatAmount(tx.amount);
-    provider.setMerchant(tx.merchant);
-    provider.setAmount(tx.amount);
-    provider.setCategory(tx.category);
-    provider.setType(tx.type);
-    provider.setRememberForMerchant(false);
-    setState(() => _editing = false);
-  }
-
-  Future<void> _save() async {
+  Future<void> _openEditSheet() async {
     final l10n = context.l10n;
-    final provider = context.read<TransactionDetailProvider>();
-    provider.setMerchant(_merchant.text);
-    provider.setAmount(double.tryParse(_amount.text) ?? provider.amount);
-    final ok = await provider.save();
-    if (!mounted) return;
-    if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.transactionSaved)),
-      );
-      setState(() => _editing = false);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorGeneric)),
-      );
-    }
+    final saved = await EditTransactionSheet.show(
+      context,
+      categories: _categories,
+    );
+    if (!mounted || saved != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.transactionSaved)),
+    );
   }
 
   double _headerHeight(BuildContext context) {
@@ -147,10 +109,10 @@ class _DetailViewState extends State<_DetailView> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final provider = context.watch<TransactionDetailProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = isDark ? AppColors.surfaceDark : _DetailColors.pageBg;
     final headerH = _headerHeight(context);
+    final provider = context.watch<TransactionDetailProvider>();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -161,9 +123,7 @@ class _DetailViewState extends State<_DetailView> {
         body: Stack(
           children: [
             Positioned.fill(
-              child: _editing
-                  ? _buildEditForm(provider, headerH)
-                  : _buildDetailView(provider, headerH),
+              child: _buildDetailView(provider, headerH),
             ),
             Positioned(
               top: 0,
@@ -173,27 +133,6 @@ class _DetailViewState extends State<_DetailView> {
                 title: l10n.transactionDetail,
                 height: headerH,
                 barHeight: _barHeight,
-                actions: _editing
-                    ? [
-                        TextButton(
-                          onPressed: provider.isSaving ? null : _cancelEdit,
-                          style: TextButton.styleFrom(
-                            foregroundColor: _DetailColors.ink,
-                          ),
-                          child: Text(l10n.transactionCancel),
-                        ),
-                        TextButton(
-                          onPressed: provider.isSaving ? null : _save,
-                          style: TextButton.styleFrom(
-                            foregroundColor: _DetailColors.ink,
-                            textStyle: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: Text(l10n.transactionSave),
-                        ),
-                      ]
-                    : null,
               ),
             ),
           ],
@@ -269,40 +208,69 @@ class _DetailViewState extends State<_DetailView> {
               _CategoryChip(label: tx.category, muted: muted),
             ],
             const SizedBox(height: AppSpacing.md),
-            Opacity(
-              opacity: 0.7,
-              child: Text(
-                _metaLine(tx),
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  height: 1.35,
-                  color: muted,
-                ),
+            Text(
+              _metaLine(tx),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                height: 1.35,
+                fontWeight: FontWeight.w500,
+                color: ink.withValues(alpha: 0.72),
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xl),
         Center(
-          child: OutlinedButton.icon(
-            onPressed: _enterEdit,
-            icon: const Icon(Icons.edit_outlined, size: 14),
-            label: Text(l10n.transactionEdit),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.spend,
-              backgroundColor: Colors.transparent,
-              side: const BorderSide(color: AppColors.spend, width: 1.5),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
+                  spreadRadius: -2,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  offset: const Offset(0, 4),
+                  blurRadius: 6,
+                  spreadRadius: -1,
+                ),
+              ],
+            ),
+            child: FilledButton.icon(
+              onPressed: _openEditSheet,
+              icon: SvgPicture.asset(
+                'assets/icons/icon_edit.svg',
+                width: 15,
+                height: 15,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                height: 1.3,
+              label: Text(l10n.transactionEditTransaction),
+              style: FilledButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primaryStrong,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 12,
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
               ),
             ),
           ),
@@ -351,107 +319,15 @@ class _DetailViewState extends State<_DetailView> {
     );
   }
 
-  Widget _buildEditForm(
-    TransactionDetailProvider provider,
-    double headerH,
-  ) {
-    final l10n = context.l10n;
-    final tx = provider.transaction;
-
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        headerH + AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.xxl,
-      ),
-      children: [
-        TextField(
-          controller: _merchant,
-          decoration: InputDecoration(labelText: l10n.transactionMerchant),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextField(
-          controller: _amount,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: l10n.transactionAmount),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        DropdownButtonFormField<String>(
-          initialValue: _categories.contains(provider.category)
-              ? provider.category
-              : null,
-          decoration: InputDecoration(labelText: l10n.transactionCategory),
-          items: [
-            if (!_categories.contains(provider.category))
-              DropdownMenuItem(
-                value: provider.category,
-                child: Text(provider.category),
-              ),
-            ..._categories.map(
-              (c) => DropdownMenuItem(value: c, child: Text(c)),
-            ),
-          ],
-          onChanged: (v) {
-            if (v != null) provider.setCategory(v);
-          },
-        ),
-        const SizedBox(height: AppSpacing.md),
-        DropdownButtonFormField<String>(
-          initialValue: provider.type,
-          decoration: InputDecoration(labelText: l10n.transactionType),
-          items: [
-            DropdownMenuItem(
-              value: 'debit',
-              child: Text(l10n.feedFilterTypeDebit),
-            ),
-            DropdownMenuItem(
-              value: 'credit',
-              child: Text(l10n.feedFilterTypeCredit),
-            ),
-          ],
-          onChanged: (v) {
-            if (v != null) provider.setType(v);
-          },
-        ),
-        const SizedBox(height: AppSpacing.md),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.transactionAlsoOverride),
-          value: provider.rememberForMerchant,
-          onChanged: provider.setRememberForMerchant,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        _MetaRow(label: l10n.transactionBank, value: tx.bank),
-        _MetaRow(label: l10n.transactionAccount, value: tx.accountIdMasked),
-        _MetaRow(label: l10n.transactionDate, value: tx.transactionDate),
-        _MetaRow(
-          label: l10n.transactionConfidence,
-          value: '${(tx.parseConfidence * 100).round()}%',
-        ),
-      ],
-    );
-  }
-
   String _metaLine(TransactionEntity tx) {
     final l10n = context.l10n;
     final date = _formatShortDate(tx.transactionDate);
     final time = formatClockTime(tx.transactionTime);
-    final bankAccount = [
-      if (tx.bank.isNotEmpty) tx.bank,
-      if (tx.accountIdMasked.isNotEmpty) tx.accountIdMasked,
-    ].join(' ');
-
-    final parts = <String>[
-      if (date.isNotEmpty) date,
-      if (time.isNotEmpty) time,
-      if (bankAccount.isNotEmpty) bankAccount,
-    ];
-    if (parts.isEmpty) return '';
-    if (parts.length == 3) {
-      return l10n.transactionMetaLine(parts[0], parts[1], parts[2]);
+    if (date.isEmpty && time.isEmpty) return '';
+    if (date.isNotEmpty && time.isNotEmpty) {
+      return l10n.transactionMetaLine(date, time);
     }
-    return parts.join(' · ');
+    return date.isNotEmpty ? date : time;
   }
 
   String _formatShortDate(String raw) {
@@ -467,13 +343,11 @@ class _GreenHeader extends StatelessWidget {
     required this.title,
     required this.height,
     required this.barHeight,
-    this.actions,
   });
 
   final String title;
   final double height;
   final double barHeight;
-  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +387,6 @@ class _GreenHeader extends StatelessWidget {
                         ),
                       ),
                     ),
-                    ...?actions,
                   ],
                 ),
               ),
@@ -653,23 +526,54 @@ class _InfoCard extends StatelessWidget {
     final l10n = context.l10n;
     final rows = <Widget>[];
 
-    final payment = transaction.paymentMethod.trim();
-    if (payment.isNotEmpty) {
+    if (transaction.bank.isNotEmpty) {
       rows.add(
         _InfoRow(
-          label: l10n.transactionPaymentMethod,
+          iconAsset: 'assets/icons/icon_bank.svg',
+          label: l10n.transactionBank,
           muted: muted,
-          value: Text(payment, style: _valueStyle(ink)),
+          value: Text(
+            transaction.bank,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: _valueStyle(ink),
+          ),
         ),
       );
     }
 
-    if (transaction.bank.isNotEmpty) {
+    final account = transaction.accountIdMasked.trim();
+    if (account.isNotEmpty) {
       rows.add(
         _InfoRow(
-          label: l10n.transactionBank,
+          iconAsset: 'assets/icons/icon_account.svg',
+          label: l10n.transactionAccount,
           muted: muted,
-          value: Text(transaction.bank, style: _valueStyle(ink)),
+          value: Text(
+            account,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: _valueStyle(ink),
+          ),
+        ),
+      );
+    }
+
+    final payment = transaction.paymentMethod.trim();
+    if (payment.isNotEmpty) {
+      rows.add(
+        _InfoRow(
+          iconAsset: 'assets/icons/icon_payment_method.svg',
+          iconWidth: 20,
+          iconHeight: 16,
+          label: l10n.transactionPaymentMethod,
+          muted: muted,
+          value: Text(
+            payment,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: _valueStyle(ink),
+          ),
         ),
       );
     }
@@ -678,6 +582,7 @@ class _InfoCard extends StatelessWidget {
     if (reference != null) {
       rows.add(
         _InfoRow(
+          iconAsset: 'assets/icons/icon_reference_id.svg',
           label: l10n.transactionReferenceId,
           muted: muted,
           value: _ReferenceBadge(value: reference, ink: ink),
@@ -706,9 +611,9 @@ class _InfoCard extends StatelessWidget {
 
   TextStyle _valueStyle(Color ink) {
     return TextStyle(
-      fontSize: 13,
+      fontSize: 16,
       fontWeight: FontWeight.w500,
-      height: 1.3,
+      height: 1.5,
       color: ink,
     );
   }
@@ -728,33 +633,47 @@ class _InfoCard extends StatelessWidget {
 
 class _InfoRow extends StatelessWidget {
   const _InfoRow({
+    required this.iconAsset,
     required this.label,
     required this.value,
     required this.muted,
+    this.iconWidth = 20,
+    this.iconHeight = 20,
   });
 
+  final String iconAsset;
   final String label;
   final Widget value;
   final Color muted;
+  final double iconWidth;
+  final double iconHeight;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                height: 1.3,
-                color: muted,
-              ),
+          SvgPicture.asset(
+            iconAsset,
+            width: iconWidth,
+            height: iconHeight,
+            colorFilter: ColorFilter.mode(muted, BlendMode.srcIn),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              height: 1.5,
+              color: muted,
             ),
           ),
-          Flexible(
+          const SizedBox(width: 12),
+          Expanded(
             child: Align(
               alignment: Alignment.centerRight,
               child: value,
@@ -777,7 +696,7 @@ class _ReferenceBadge extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isDark ? AppColors.neutralFillDark : _DetailColors.avatarFill,
         borderRadius: BorderRadius.circular(4),
@@ -785,43 +704,12 @@ class _ReferenceBadge extends StatelessWidget {
       child: Text(
         value,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 16,
           fontFamily: 'monospace',
           fontWeight: FontWeight.w400,
-          height: 1.3,
+          height: 1.5,
           color: ink,
         ),
-      ),
-    );
-  }
-}
-
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    if (value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.55),
-                  ),
-            ),
-          ),
-          Text(value),
-        ],
       ),
     );
   }

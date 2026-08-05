@@ -29,6 +29,14 @@ alwaysApply: false
 
 Import from `lib/core/theme/`.
 
+## Icons
+
+- Prefer custom SVGs in `assets/icons/` over Material/Cupertino icons for product UI (rows, CTAs, nav).
+- Load with `SvgPicture.asset` + `ColorFilter.mode(color, BlendMode.srcIn)` so icons tint with theme/muted ink.
+- Default size **20×20**; keep intrinsic aspect when the asset isn’t square (e.g. payment card 20×16).
+- Register new assets under `flutter.assets` in `pubspec.yaml`.
+- Categories stay in `assets/icons/categories/`; UI chrome icons use `icon_<name>.svg`.
+
 ## Layout patterns
 
 ### Large balance at top
@@ -40,6 +48,31 @@ Import from `lib/core/theme/`.
 
 - Use `AppCard` for list items and grouped content: white/dark surface, `AppRadius.lg`, soft shadow or 1 px border — no glass on standard cards.
 - One concept per card; 16 px internal padding minimum.
+
+### Detail info rows (label + value)
+
+Use for metadata lists (bank, account, payment method, reference, etc.):
+
+```
+[icon 20] —12px— [label] —12px— [Expanded → value right-aligned]
+padding: 16 all sides
+```
+
+- Label: 16 sp / w600 / height 1.5, muted, **single line** (`softWrap: false`).
+- Value: 16 sp / w500 / height 1.5, ink; ellipsis if needed.
+- Dividers between rows: 1 px at `AppColors.borderLight` ~30% opacity.
+- Hide the whole row when the value is empty — don’t show placeholders.
+- IDs/refs: monospace badge (muted fill, 4 px radius, horizontal padding 8).
+
+### Primary pill CTA
+
+Primary actions (e.g. Edit Transaction):
+
+- `FilledButton.icon` — bg `AppColors.primaryStrong`, fg white, `AppRadius.pill`.
+- SVG leading icon (~15 px), white tint; label 16 / w600 / 1.5.
+- Padding ~horizontal 40 / vertical 12; `elevation: 0` on the button.
+- Soft dual shadow on a wrapping `DecoratedBox` (black 10%: `0,2` blur 4 / `0,4` blur 6).
+- Do not use outlined/spend-colored variants for this primary action.
 
 ### Charts
 
@@ -66,6 +99,9 @@ Import from `lib/core/theme/`.
 |----|-------|
 | Whitespace between sections (`AppSpacing.lg`+) | Dense stacked cards |
 | `context.l10n` for all copy | Hardcoded labels |
+| Custom SVG icons + theme tint | Ad-hoc Material icons for product chrome |
+| Icon + label + value info rows as above | Text-only meta rows or wrapping labels |
+| `primaryStrong` pill CTA for primary edits | Outlined/spend-colored primary actions |
 | Shared widgets in `core/widgets/` | Duplicate card styles per feature |
 | Glass on ≤1 surface per screen | Full glassmorphism theme |
 | Theme tokens | Inline `Color(0xFF…)` in features |
@@ -74,4 +110,5 @@ Import from `lib/core/theme/`.
 
 - Design tokens: `lib/core/theme/`
 - Reusable UI: `lib/core/widgets/` (`AppCard`, `GlassSurface`, `BalanceHeader`, `AdaptiveScaffold`)
+- Product icons: `assets/icons/icon_*.svg` (categories under `assets/icons/categories/`)
 - Feature-specific layouts: `features/<feature>/presentation/widgets/`

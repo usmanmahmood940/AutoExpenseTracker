@@ -694,6 +694,18 @@ abstract class AppLocalizations {
   /// **'Edit'**
   String get transactionEdit;
 
+  /// No description provided for @transactionEditTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Transaction'**
+  String get transactionEditTransaction;
+
+  /// No description provided for @transactionEditSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit transaction'**
+  String get transactionEditSheetTitle;
+
   /// No description provided for @transactionSave.
   ///
   /// In en, this message translates to:
@@ -717,6 +729,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Amount'**
   String get transactionAmount;
+
+  /// No description provided for @transactionAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction Amount'**
+  String get transactionAmountLabel;
 
   /// No description provided for @transactionCategory.
   ///
@@ -747,6 +765,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Date'**
   String get transactionDate;
+
+  /// No description provided for @transactionTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get transactionTime;
 
   /// No description provided for @transactionConfidence.
   ///
@@ -799,8 +823,8 @@ abstract class AppLocalizations {
   /// No description provided for @transactionMetaLine.
   ///
   /// In en, this message translates to:
-  /// **'{date} · {time} · {bankAccount}'**
-  String transactionMetaLine(String date, String time, String bankAccount);
+  /// **'{date} · {time}'**
+  String transactionMetaLine(String date, String time);
 
   /// No description provided for @transactionReportIssue.
   ///
@@ -825,6 +849,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remember category for this merchant'**
   String get transactionAlsoOverride;
+
+  /// No description provided for @transactionRememberMerchant.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember for this merchant'**
+  String get transactionRememberMerchant;
+
+  /// No description provided for @transactionAutoCategorizeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-categorize future {merchant} orders'**
+  String transactionAutoCategorizeHint(String merchant);
 
   /// No description provided for @reviewTitle.
   ///

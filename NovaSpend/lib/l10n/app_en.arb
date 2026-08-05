@@ -153,15 +153,19 @@
   "feedApplyFilters": "Apply",
   "transactionDetail": "Transaction Detail",
   "transactionEdit": "Edit",
+  "transactionEditTransaction": "Edit Transaction",
+  "transactionEditSheetTitle": "Edit transaction",
   "transactionSave": "Save",
   "transactionCancel": "Cancel",
   "transactionMerchant": "Merchant",
   "transactionAmount": "Amount",
+  "transactionAmountLabel": "Transaction Amount",
   "transactionCategory": "Category",
   "transactionType": "Type",
   "transactionBank": "Bank",
   "transactionAccount": "Account",
   "transactionDate": "Date",
+  "transactionTime": "Time",
   "transactionConfidence": "Parse confidence",
   "transactionRawSms": "Original SMS",
   "transactionPaymentMethod": "Payment Method",
@@ -170,18 +174,24 @@
   "transactionStatusCleared": "Cleared",
   "transactionStatusDeleted": "Deleted",
   "transactionStatusNeedsReview": "Needs review",
-  "transactionMetaLine": "{date} · {time} · {bankAccount}",
+  "transactionMetaLine": "{date} · {time}",
   "@transactionMetaLine": {
     "placeholders": {
       "date": {"type": "String"},
-      "time": {"type": "String"},
-      "bankAccount": {"type": "String"}
+      "time": {"type": "String"}
     }
   },
   "transactionReportIssue": "Report an issue with this transaction",
   "transactionReportThanks": "Thanks — reporting will be available soon.",
   "transactionSaved": "Transaction updated",
   "transactionAlsoOverride": "Remember category for this merchant",
+  "transactionRememberMerchant": "Remember for this merchant",
+  "transactionAutoCategorizeHint": "Auto-categorize future {merchant} orders",
+  "@transactionAutoCategorizeHint": {
+    "placeholders": {
+      "merchant": {"type": "String"}
+    }
+  },
   "reviewTitle": "Review",
   "reviewConfidenceSection": "Low confidence",
   "reviewParseSection": "Needs parse",
