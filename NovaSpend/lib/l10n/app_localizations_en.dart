@@ -388,6 +388,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionPaymentMethod => 'Payment Method';
 
   @override
+  String get transactionCurrency => 'Currency';
+
+  @override
+  String get paymentMethodDebitCard => 'Debit card';
+
+  @override
+  String get paymentMethodCreditCard => 'Credit card';
+
+  @override
+  String get paymentMethodBankTransfer => 'Bank transfer';
+
+  @override
+  String get paymentMethodWallet => 'Wallet';
+
+  @override
+  String get paymentMethodCash => 'Cash';
+
+  @override
+  String get paymentMethodCheque => 'Cheque';
+
+  @override
+  String get paymentMethodAtmWithdrawal => 'ATM withdrawal';
+
+  @override
+  String get paymentMethodQr => 'QR payment';
+
+  @override
+  String get paymentMethodOther => 'Other';
+
+  @override
+  String get paymentMethodUnknown => 'Unknown';
+
+  @override
   String get transactionBranch => 'Branch';
 
   @override

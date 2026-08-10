@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:nova_spend/core/constants/currencies.dart';
+import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
@@ -20,9 +22,11 @@ class EditTransactionSheet extends StatefulWidget {
   static Future<bool?> show(
     BuildContext context, {
     required List<String> categories,
-  }) {
+  }) async {
     final provider = context.read<TransactionDetailProvider>();
     provider.resetDraftFromTransaction();
+    await provider.loadMerchantRememberState();
+    if (!context.mounted) return null;
 
     return showModalBottomSheet<bool>(
       context: context,
@@ -44,29 +48,29 @@ class EditTransactionSheet extends StatefulWidget {
 
 class _EditTransactionSheetState extends State<EditTransactionSheet> {
   late final TextEditingController _merchant;
+  late final TextEditingController _merchantDetails;
   late final TextEditingController _amount;
   late final TextEditingController _bank;
   late final TextEditingController _account;
-  late final TextEditingController _paymentMethod;
 
   @override
   void initState() {
     super.initState();
     final provider = context.read<TransactionDetailProvider>();
     _merchant = TextEditingController(text: provider.merchant);
+    _merchantDetails = TextEditingController(text: provider.merchantDetails);
     _amount = TextEditingController(text: formatAmount(provider.amount));
     _bank = TextEditingController(text: provider.bank);
     _account = TextEditingController(text: provider.accountIdMasked);
-    _paymentMethod = TextEditingController(text: provider.paymentMethod);
   }
 
   @override
   void dispose() {
     _merchant.dispose();
+    _merchantDetails.dispose();
     _amount.dispose();
     _bank.dispose();
     _account.dispose();
-    _paymentMethod.dispose();
     super.dispose();
   }
 
@@ -120,10 +124,10 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
     final l10n = context.l10n;
     final provider = context.read<TransactionDetailProvider>();
     provider.setMerchant(_merchant.text);
+    provider.setMerchantDetails(_merchantDetails.text);
     provider.setAmount(double.tryParse(_amount.text) ?? provider.amount);
     provider.setBank(_bank.text);
     provider.setAccountIdMasked(_account.text);
-    provider.setPaymentMethod(_paymentMethod.text);
 
     final ok = await provider.save();
     if (!mounted) return;
@@ -186,7 +190,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                     _AmountField(
                       label: l10n.transactionAmountLabel,
                       controller: _amount,
-                      currency: provider.transaction.currency,
+                      currency: provider.currency,
                       muted: muted,
                       fieldFill: fieldFill,
                       border: border,
@@ -240,6 +244,62 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     _LabeledField(
+                      label: l10n.transactionDate,
+                      muted: muted,
+                      child: _PickerField(
+                        value: _formatDateDisplay(provider.transactionDate),
+                        fill: fieldFill,
+                        ink: ink,
+                        muted: muted,
+                        border: border,
+                        icon: Icons.calendar_today_outlined,
+                        onTap: _pickDate,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _LabeledField(
+                      label: l10n.transactionPaymentMethod,
+                      muted: muted,
+                      child: _PaymentMethodDropdown(
+                        value: provider.paymentMethod,
+                        fill: fieldFill,
+                        ink: ink,
+                        muted: muted,
+                        border: border,
+                        onChanged: provider.setPaymentMethod,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _LabeledField(
+                      label: l10n.transactionCurrency,
+                      muted: muted,
+                      child: _CurrencyDropdown(
+                        value: provider.currency,
+                        fill: fieldFill,
+                        ink: ink,
+                        muted: muted,
+                        border: border,
+                        onChanged: provider.setCurrency,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _LabeledField(
+                      label: l10n.transactionTime,
+                      muted: muted,
+                      child: _PickerField(
+                        value: formatClockTime(provider.transactionTime).isEmpty
+                            ? provider.transactionTime
+                            : formatClockTime(provider.transactionTime),
+                        fill: fieldFill,
+                        ink: ink,
+                        muted: muted,
+                        border: border,
+                        icon: Icons.schedule_outlined,
+                        onTap: _pickTime,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _LabeledField(
                       label: l10n.transactionBank,
                       muted: muted,
                       child: _FilledTextField(
@@ -262,43 +322,13 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     _LabeledField(
-                      label: l10n.transactionPaymentMethod,
+                      label: l10n.transactionMerchantDetails,
                       muted: muted,
                       child: _FilledTextField(
-                        controller: _paymentMethod,
+                        controller: _merchantDetails,
                         fill: fieldFill,
                         ink: ink,
                         border: border,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _LabeledField(
-                      label: l10n.transactionDate,
-                      muted: muted,
-                      child: _PickerField(
-                        value: _formatDateDisplay(provider.transactionDate),
-                        fill: fieldFill,
-                        ink: ink,
-                        muted: muted,
-                        border: border,
-                        icon: Icons.calendar_today_outlined,
-                        onTap: _pickDate,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _LabeledField(
-                      label: l10n.transactionTime,
-                      muted: muted,
-                      child: _PickerField(
-                        value: formatClockTime(provider.transactionTime).isEmpty
-                            ? provider.transactionTime
-                            : formatClockTime(provider.transactionTime),
-                        fill: fieldFill,
-                        ink: ink,
-                        muted: muted,
-                        border: border,
-                        icon: Icons.schedule_outlined,
-                        onTap: _pickTime,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -710,6 +740,165 @@ class _CategoryDropdown extends StatelessWidget {
               value: c,
               child: Text(
                 c,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  height: 1.5,
+                  color: ink,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+    );
+  }
+}
+
+class _PaymentMethodDropdown extends StatelessWidget {
+  const _PaymentMethodDropdown({
+    required this.value,
+    required this.fill,
+    required this.ink,
+    required this.muted,
+    required this.border,
+    required this.onChanged,
+  });
+
+  final String value;
+  final Color fill;
+  final Color ink;
+  final Color muted;
+  final Color border;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final selected = normalizePaymentMethod(value);
+
+    return DropdownButtonFormField<String>(
+      initialValue: selected,
+      isExpanded: true,
+      menuMaxHeight: 280,
+      icon: Icon(Icons.unfold_more, size: 18, color: muted),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: fill,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sm),
+          ),
+          borderSide: BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sm),
+          ),
+          borderSide: BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sm),
+          ),
+          borderSide: const BorderSide(
+            color: AppColors.primaryStrong,
+            width: 1.5,
+          ),
+        ),
+      ),
+      items: kPaymentMethods
+          .map(
+            (method) => DropdownMenuItem(
+              value: method,
+              child: Text(
+                paymentMethodLabel(l10n, method),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  height: 1.5,
+                  color: ink,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+    );
+  }
+}
+
+class _CurrencyDropdown extends StatelessWidget {
+  const _CurrencyDropdown({
+    required this.value,
+    required this.fill,
+    required this.ink,
+    required this.muted,
+    required this.border,
+    required this.onChanged,
+  });
+
+  final String value;
+  final Color fill;
+  final Color ink;
+  final Color muted;
+  final Color border;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = normalizeCurrency(value);
+
+    return DropdownButtonFormField<String>(
+      initialValue: selected,
+      isExpanded: true,
+      menuMaxHeight: 280,
+      icon: Icon(Icons.unfold_more, size: 18, color: muted),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: fill,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sm),
+          ),
+          borderSide: BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sm),
+          ),
+          borderSide: BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sm),
+          ),
+          borderSide: const BorderSide(
+            color: AppColors.primaryStrong,
+            width: 1.5,
+          ),
+        ),
+      ),
+      items: kCurrencies
+          .map(
+            (code) => DropdownMenuItem(
+              value: code,
+              child: Text(
+                code,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 16,

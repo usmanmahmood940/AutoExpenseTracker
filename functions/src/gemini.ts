@@ -6,6 +6,16 @@ import {
 
 import { resolveAllowedCategory } from './categories';
 import {
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  normalizeCurrency,
+} from './currencies';
+import {
+  DEFAULT_PAYMENT_METHOD,
+  normalizePaymentMethod,
+  PAYMENT_METHODS,
+} from './payment_methods';
+import {
   FALLBACK_CATEGORY_NAME,
   type ParsedTransaction,
 } from './schema';
@@ -33,7 +43,10 @@ function buildParsedTransactionSchema(
       },
       currency: {
         type: SchemaType.STRING,
-        description: 'ISO currency code, usually PKR',
+        format: 'enum',
+        enum: [...CURRENCIES],
+        description:
+          'ISO currency code — must be exactly one value from the allowed list',
       },
       type: {
         type: SchemaType.STRING,
@@ -57,7 +70,10 @@ function buildParsedTransactionSchema(
       },
       paymentMethod: {
         type: SchemaType.STRING,
-        description: 'card, account, wallet, or Unknown',
+        format: 'enum',
+        enum: [...PAYMENT_METHODS],
+        description:
+          'Payment rail — must be exactly one value from the allowed list',
       },
       bank: {
         type: SchemaType.STRING,
@@ -146,12 +162,16 @@ function buildSystemPrompt(
 
 Rules:
 - Amounts must be numbers without commas (e.g. 5990.00 not "5,990.00").
-- Currency is usually PKR unless clearly stated otherwise.
+- currency: MUST be exactly one of: [${CURRENCIES.join(', ')}]. Usually ${DEFAULT_CURRENCY} for Pakistani bank SMS; use another code only when clearly stated.
 - type must be lowercase "debit" or "credit". Infer from wording when needed (spent/paid/charged → debit; received/salary/credited → credit).
 - Dates must use ISO format: transactionDate as YYYY-MM-DD, transactionTime as ISO 8601 with +05:00 for Pakistan.
 - If the input is a manual/natural-language entry and does not specify a date or time, use exactly this current date/time supplied by the application: transactionDate=${currentDate}, transactionTime=${currentDateTime}. Never invent another "today" and never use placeholders.
 - If a bank message includes a date/time, prefer those values from the message.
-- Use "Unknown" for missing merchantDetails, branch, bank, paymentMethod, or accountId when not inferable.
+- Use "Unknown" for missing merchantDetails, branch, bank, or accountId when not inferable.
+- paymentMethod: MUST be exactly one of: [${PAYMENT_METHODS.join(', ')}].
+  Map specifics to these generics (e.g. card used → debit_card, credit card → credit_card,
+  Raast/IBFT/account transfer → bank_transfer, JazzCash/EasyPaisa → wallet, ATM cash → atm_withdrawal).
+  If not inferable, use ${DEFAULT_PAYMENT_METHOD}.
 - accountId should preserve masking from bank messages (e.g. xxx1215).
 - externalIdType: use tid for TID, ref for reference numbers, stan for STAN, unknown otherwise (typical for manual entries).
 - category: MUST be exactly one of these values: [${categoryList}].
@@ -162,10 +182,10 @@ Rules:
 Examples:
 
 Input: PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522
-Output: {"amount":5990,"currency":"PKR","type":"debit","merchant":"PSO RANGERS","merchantDetails":"LAH","category":"Fuel","paymentMethod":"card","bank":"Unknown","accountId":"xxx1215","branch":"DHA PHASE VIII BR LHR","transactionTime":"2026-07-06T11:27:00+05:00","transactionDate":"2026-07-06","externalId":"387522","externalIdType":"tid","parseConfidence":0.95}
+Output: {"amount":5990,"currency":"PKR","type":"debit","merchant":"PSO RANGERS","merchantDetails":"LAH","category":"Fuel","paymentMethod":"debit_card","bank":"Unknown","accountId":"xxx1215","branch":"DHA PHASE VIII BR LHR","transactionTime":"2026-07-06T11:27:00+05:00","transactionDate":"2026-07-06","externalId":"387522","externalIdType":"tid","parseConfidence":0.95}
 
 Input: spent 200 at KFC
-Output: {"amount":200,"currency":"PKR","type":"debit","merchant":"KFC","merchantDetails":null,"category":"Food & Dining","paymentMethod":"Unknown","bank":"Unknown","accountId":"Unknown","branch":null,"transactionTime":"${currentDateTime}","transactionDate":"${currentDate}","externalId":null,"externalIdType":"unknown","parseConfidence":0.9}`;
+Output: {"amount":200,"currency":"PKR","type":"debit","merchant":"KFC","merchantDetails":null,"category":"Food & Dining","paymentMethod":"${DEFAULT_PAYMENT_METHOD}","bank":"Unknown","accountId":"Unknown","branch":null,"transactionTime":"${currentDateTime}","transactionDate":"${currentDate}","externalId":null,"externalIdType":"unknown","parseConfidence":0.9}`;
 }
 
 export type ParseResult =
@@ -178,7 +198,7 @@ function normalizeParsed(
 ): ParsedTransaction {
   return {
     amount: Number(raw.amount),
-    currency: String(raw.currency ?? 'PKR').toUpperCase(),
+    currency: normalizeCurrency(String(raw.currency ?? DEFAULT_CURRENCY)),
     type: String(raw.type ?? 'debit').toLowerCase() as ParsedTransaction['type'],
     merchant: String(raw.merchant ?? 'Unknown'),
     merchantDetails:
@@ -189,7 +209,9 @@ function normalizeParsed(
       String(raw.category ?? FALLBACK_CATEGORY_NAME),
       allowedCategories,
     ),
-    paymentMethod: String(raw.paymentMethod ?? 'Unknown').toLowerCase(),
+    paymentMethod: normalizePaymentMethod(
+      String(raw.paymentMethod ?? DEFAULT_PAYMENT_METHOD),
+    ),
     bank: String(raw.bank ?? 'Unknown'),
     accountId: String(raw.accountId ?? 'Unknown'),
     branch:

@@ -147,7 +147,7 @@ class FirestoreTransactionDatasource {
         'currency': 'PKR',
         'merchantDetails': null,
         'categorySource': 'user',
-        'paymentMethod': '',
+        'paymentMethod': 'unknown',
         'bank': '',
         'accountId': '',
         'accountIdMasked': '',
@@ -215,6 +215,7 @@ class FirestoreTransactionDatasource {
   }) async {
     try {
       final key = normalizeMerchantKey(merchantKey);
+      if (key.isEmpty) return;
       final ref = _overrides(uid).doc(key);
       final existing = await ref.get();
       final now = FieldValue.serverTimestamp();
@@ -227,6 +228,36 @@ class FirestoreTransactionDatasource {
       }, SetOptions(merge: true));
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to save merchant override');
+    }
+  }
+
+  Future<String?> getMerchantCategoryOverride({
+    required String uid,
+    required String merchantKey,
+  }) async {
+    try {
+      final key = normalizeMerchantKey(merchantKey);
+      if (key.isEmpty) return null;
+      final snap = await _overrides(uid).doc(key).get();
+      if (!snap.exists) return null;
+      final category = snap.data()?['category'] as String?;
+      if (category == null || category.trim().isEmpty) return null;
+      return category;
+    } on FirebaseException catch (e) {
+      throw ServerException(e.message ?? 'Failed to load merchant override');
+    }
+  }
+
+  Future<void> deleteMerchantCategoryOverride({
+    required String uid,
+    required String merchantKey,
+  }) async {
+    try {
+      final key = normalizeMerchantKey(merchantKey);
+      if (key.isEmpty) return;
+      await _overrides(uid).doc(key).delete();
+    } on FirebaseException catch (e) {
+      throw ServerException(e.message ?? 'Failed to delete merchant override');
     }
   }
 

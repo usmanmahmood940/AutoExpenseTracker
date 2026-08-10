@@ -37,12 +37,16 @@ class TransactionDetailPage extends StatelessWidget {
     }
 
     return ChangeNotifierProvider(
-      create: (_) => TransactionDetailProvider(
-        uid: uid,
-        transaction: transaction,
-        updateTransaction: sl<UpdateTransaction>(),
-        repository: sl<TransactionRepository>(),
-      ),
+      create: (_) {
+        final provider = TransactionDetailProvider(
+          uid: uid,
+          transaction: transaction,
+          updateTransaction: sl<UpdateTransaction>(),
+          repository: sl<TransactionRepository>(),
+        );
+        provider.loadMerchantRememberState();
+        return provider;
+      },
       child: const _DetailView(),
     );
   }
@@ -264,7 +268,7 @@ class _DetailViewState extends State<_DetailView> {
     add(l10n.transactionAccount, tx.accountIdMasked, icon: Icons.wallet_outlined);
     add(
       l10n.transactionPaymentMethod,
-      tx.paymentMethod,
+      paymentMethodLabel(l10n, tx.paymentMethod),
       icon: Icons.credit_card_outlined,
     );
 

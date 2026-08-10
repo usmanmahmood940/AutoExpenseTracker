@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
+import 'package:nova_spend/core/constants/currencies.dart';
+import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
@@ -16,12 +18,14 @@ class TransactionDetailProvider extends ChangeNotifier {
         _updateTransaction = updateTransaction,
         _repository = repository,
         merchant = transaction.merchant,
+        merchantDetails = transaction.merchantDetails ?? '',
         amount = transaction.amount,
+        currency = normalizeCurrency(transaction.currency),
         category = transaction.category,
         type = transaction.type,
         bank = transaction.bank,
         accountIdMasked = transaction.accountIdMasked,
-        paymentMethod = transaction.paymentMethod,
+        paymentMethod = normalizePaymentMethod(transaction.paymentMethod),
         transactionDate = transaction.transactionDate,
         transactionTime = transaction.transactionTime;
 
@@ -31,7 +35,9 @@ class TransactionDetailProvider extends ChangeNotifier {
 
   TransactionEntity _transaction;
   String merchant;
+  String merchantDetails;
   double amount;
+  String currency;
   String category;
   String type;
   String bank;
@@ -40,19 +46,59 @@ class TransactionDetailProvider extends ChangeNotifier {
   String transactionDate;
   String transactionTime;
   bool rememberForMerchant = false;
+  bool isLoadingRememberState = false;
   bool isSaving = false;
   String? error;
   bool saved = false;
 
+  /// Normalized merchant key of an existing override, if any.
+  String? _activeOverrideKey;
+
   TransactionEntity get transaction => _transaction;
+
+  Future<void> loadMerchantRememberState() async {
+    isLoadingRememberState = true;
+    notifyListeners();
+    try {
+      final key = normalizeMerchantKey(merchant);
+      if (key.isEmpty) {
+        rememberForMerchant = false;
+        _activeOverrideKey = null;
+        return;
+      }
+      final category = await _repository.getMerchantCategoryOverride(
+        uid: uid,
+        merchantKey: merchant,
+      );
+      rememberForMerchant = category != null;
+      _activeOverrideKey = category != null ? key : null;
+    } catch (e) {
+      debugPrint('loadMerchantRememberState failed: $e');
+      rememberForMerchant = false;
+      _activeOverrideKey = null;
+    } finally {
+      isLoadingRememberState = false;
+      notifyListeners();
+    }
+  }
 
   void setMerchant(String value) {
     merchant = value;
     notifyListeners();
   }
 
+  void setMerchantDetails(String value) {
+    merchantDetails = value;
+    notifyListeners();
+  }
+
   void setAmount(double value) {
     amount = value;
+    notifyListeners();
+  }
+
+  void setCurrency(String value) {
+    currency = normalizeCurrency(value);
     notifyListeners();
   }
 
@@ -77,7 +123,7 @@ class TransactionDetailProvider extends ChangeNotifier {
   }
 
   void setPaymentMethod(String value) {
-    paymentMethod = value;
+    paymentMethod = normalizePaymentMethod(value);
     notifyListeners();
   }
 
@@ -98,15 +144,17 @@ class TransactionDetailProvider extends ChangeNotifier {
 
   void resetDraftFromTransaction() {
     merchant = _transaction.merchant;
+    merchantDetails = _transaction.merchantDetails ?? '';
     amount = _transaction.amount;
+    currency = normalizeCurrency(_transaction.currency);
     category = _transaction.category;
     type = _transaction.type;
     bank = _transaction.bank;
     accountIdMasked = _transaction.accountIdMasked;
-    paymentMethod = _transaction.paymentMethod;
+    paymentMethod = normalizePaymentMethod(_transaction.paymentMethod);
     transactionDate = _transaction.transactionDate;
     transactionTime = _transaction.transactionTime;
-    rememberForMerchant = false;
+    rememberForMerchant = _activeOverrideKey != null;
     notifyListeners();
   }
 
@@ -124,15 +172,22 @@ class TransactionDetailProvider extends ChangeNotifier {
       final day = _dayNameFromDate(transactionDate) ?? _transaction.day;
 
       final resolvedBank = bank.trim().isEmpty ? 'Unknown' : bank.trim();
+      final trimmedMerchant = merchant.trim();
+      final trimmedDetails = merchantDetails.trim();
+      final currentKey = normalizeMerchantKey(trimmedMerchant);
+      final resolvedPaymentMethod = normalizePaymentMethod(paymentMethod);
+      final resolvedCurrency = normalizeCurrency(currency);
 
       final fields = <String, dynamic>{
-        'merchant': merchant.trim(),
+        'merchant': trimmedMerchant,
+        'merchantDetails': trimmedDetails.isEmpty ? null : trimmedDetails,
         'amount': amount,
+        'currency': resolvedCurrency,
         'category': category,
         'type': type,
         'bank': resolvedBank,
         'accountIdMasked': accountIdMasked.trim(),
-        'paymentMethod': paymentMethod.trim(),
+        'paymentMethod': resolvedPaymentMethod,
         'transactionDate': transactionDate.trim(),
         'transactionTime': transactionTime.trim(),
         'day': day,
@@ -148,23 +203,40 @@ class TransactionDetailProvider extends ChangeNotifier {
 
       await _updateTransaction(uid, _transaction.id, fields);
 
-      if (rememberForMerchant && merchant.trim().isNotEmpty) {
+      if (rememberForMerchant && currentKey.isNotEmpty) {
         await _repository.upsertMerchantCategoryOverride(
           uid: uid,
-          merchantKey: merchant,
-          displayName: merchant.trim(),
+          merchantKey: trimmedMerchant,
+          displayName: trimmedMerchant,
           category: category,
         );
+        if (_activeOverrideKey != null &&
+            _activeOverrideKey != currentKey) {
+          await _repository.deleteMerchantCategoryOverride(
+            uid: uid,
+            merchantKey: _activeOverrideKey!,
+          );
+        }
+        _activeOverrideKey = currentKey;
+      } else if (!rememberForMerchant && _activeOverrideKey != null) {
+        await _repository.deleteMerchantCategoryOverride(
+          uid: uid,
+          merchantKey: _activeOverrideKey!,
+        );
+        _activeOverrideKey = null;
       }
 
       _transaction = _transaction.copyWith(
-        merchant: merchant.trim(),
+        merchant: trimmedMerchant,
+        merchantDetails: trimmedDetails.isEmpty ? null : trimmedDetails,
+        clearMerchantDetails: trimmedDetails.isEmpty,
         amount: amount,
+        currency: resolvedCurrency,
         category: category,
         type: type,
         bank: resolvedBank,
         accountIdMasked: accountIdMasked.trim(),
-        paymentMethod: paymentMethod.trim(),
+        paymentMethod: resolvedPaymentMethod,
         transactionDate: transactionDate.trim(),
         transactionTime: transactionTime.trim(),
         day: day,
@@ -173,7 +245,7 @@ class TransactionDetailProvider extends ChangeNotifier {
         status: needsReview ? 'active' : _transaction.status,
         reviewedAt: needsReview ? DateTime.now() : _transaction.reviewedAt,
       );
-      rememberForMerchant = false;
+      rememberForMerchant = _activeOverrideKey != null;
       saved = true;
       return true;
     } catch (e) {

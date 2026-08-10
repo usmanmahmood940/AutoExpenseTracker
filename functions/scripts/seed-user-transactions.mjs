@@ -77,7 +77,18 @@ const INCOME_MERCHANTS = [
 
 const BANKS = ['HBL', 'UBL', 'Meezan', 'Alfalah', 'Standard Chartered'];
 
-const PAYMENT_METHODS = ['debit_card', 'bank_transfer', 'wallet'];
+const PAYMENT_METHODS = [
+  'debit_card',
+  'credit_card',
+  'bank_transfer',
+  'wallet',
+  'cash',
+  'cheque',
+  'atm_withdrawal',
+  'qr',
+  'other',
+  'unknown',
+];
 
 function parseArgs(argv) {
   const result = {};

@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nova_spend/core/constants/currencies.dart';
+import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 
@@ -25,7 +27,7 @@ class TransactionModel {
       id: id,
       userId: data['userId'] as String? ?? '',
       amount: (data['amount'] as num?)?.toDouble() ?? 0,
-      currency: data['currency'] as String? ?? 'PKR',
+      currency: normalizeCurrency(data['currency'] as String? ?? 'PKR'),
       type: data['type'] as String? ?? 'debit',
       merchant: data['merchant'] as String? ?? '',
       merchantDetails: data['merchantDetails'] as String?,
@@ -34,7 +36,9 @@ class TransactionModel {
       recurringGroupId: data['recurringGroupId'] as String?,
       category: data['category'] as String? ?? 'Uncategorized',
       categorySource: data['categorySource'] as String? ?? 'rule',
-      paymentMethod: data['paymentMethod'] as String? ?? '',
+      paymentMethod: normalizePaymentMethod(
+        data['paymentMethod'] as String? ?? '',
+      ),
       bank: data['bank'] as String? ?? '',
       accountId: data['accountId'] as String? ?? '',
       accountIdMasked: data['accountIdMasked'] as String? ?? '',

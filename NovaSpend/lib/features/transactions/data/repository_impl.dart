@@ -115,4 +115,34 @@ class TransactionRepositoryImpl implements TransactionRepository {
       throw ServerFailure(e.message);
     }
   }
+
+  @override
+  Future<String?> getMerchantCategoryOverride({
+    required String uid,
+    required String merchantKey,
+  }) async {
+    try {
+      return await _datasource.getMerchantCategoryOverride(
+        uid: uid,
+        merchantKey: merchantKey,
+      );
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<void> deleteMerchantCategoryOverride({
+    required String uid,
+    required String merchantKey,
+  }) async {
+    try {
+      await _datasource.deleteMerchantCategoryOverride(
+        uid: uid,
+        merchantKey: merchantKey,
+      );
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
 }

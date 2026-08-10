@@ -41,4 +41,15 @@ abstract class TransactionRepository {
     required String displayName,
     required String category,
   });
+
+  /// Returns the remembered category for [merchantKey], or null if none.
+  Future<String?> getMerchantCategoryOverride({
+    required String uid,
+    required String merchantKey,
+  });
+
+  Future<void> deleteMerchantCategoryOverride({
+    required String uid,
+    required String merchantKey,
+  });
 }

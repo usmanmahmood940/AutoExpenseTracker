@@ -23,6 +23,24 @@ export type ExternalIdType = 'tid' | 'ref' | 'stan' | 'unknown';
 
 export type CategoryType = 'expense' | 'income' | 'other';
 
+export type {
+  PaymentMethod,
+} from './payment_methods';
+
+export {
+  DEFAULT_PAYMENT_METHOD,
+  PAYMENT_METHODS,
+  normalizePaymentMethod,
+} from './payment_methods';
+
+export type { CurrencyCode } from './currencies';
+
+export {
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  normalizeCurrency,
+} from './currencies';
+
 /**
  * Firestore: categories/{categoryId} (global defaults)
  * Firestore: users/{userId}/categories/{categoryId} (user-created)
@@ -270,6 +288,7 @@ export interface Transaction {
   recurringGroupId?: string;
   category: string;
   categorySource: CategorySource;
+  /** Canonical payment rail — see PAYMENT_METHODS */
   paymentMethod: string;
   bank: string;
   accountId: string;

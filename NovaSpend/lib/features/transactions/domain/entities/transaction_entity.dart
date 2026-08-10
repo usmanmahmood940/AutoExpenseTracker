@@ -103,11 +103,14 @@ class TransactionEntity extends Equatable {
 
   TransactionEntity copyWith({
     String? merchant,
+    String? merchantDetails,
+    bool clearMerchantDetails = false,
     double? amount,
     String? category,
     String? type,
     String? categorySource,
     String? paymentMethod,
+    String? currency,
     String? bank,
     String? accountIdMasked,
     String? transactionTime,
@@ -122,10 +125,12 @@ class TransactionEntity extends Equatable {
       id: id,
       userId: userId,
       amount: amount ?? this.amount,
-      currency: currency,
+      currency: currency ?? this.currency,
       type: type ?? this.type,
       merchant: merchant ?? this.merchant,
-      merchantDetails: merchantDetails,
+      merchantDetails: clearMerchantDetails
+          ? null
+          : (merchantDetails ?? this.merchantDetails),
       merchantNormalized: merchantNormalized,
       isRecurring: isRecurring,
       recurringGroupId: recurringGroupId,

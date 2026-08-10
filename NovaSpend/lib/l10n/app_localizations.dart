@@ -790,6 +790,72 @@ abstract class AppLocalizations {
   /// **'Payment Method'**
   String get transactionPaymentMethod;
 
+  /// No description provided for @transactionCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get transactionCurrency;
+
+  /// No description provided for @paymentMethodDebitCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Debit card'**
+  String get paymentMethodDebitCard;
+
+  /// No description provided for @paymentMethodCreditCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit card'**
+  String get paymentMethodCreditCard;
+
+  /// No description provided for @paymentMethodBankTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get paymentMethodBankTransfer;
+
+  /// No description provided for @paymentMethodWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get paymentMethodWallet;
+
+  /// No description provided for @paymentMethodCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get paymentMethodCash;
+
+  /// No description provided for @paymentMethodCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque'**
+  String get paymentMethodCheque;
+
+  /// No description provided for @paymentMethodAtmWithdrawal.
+  ///
+  /// In en, this message translates to:
+  /// **'ATM withdrawal'**
+  String get paymentMethodAtmWithdrawal;
+
+  /// No description provided for @paymentMethodQr.
+  ///
+  /// In en, this message translates to:
+  /// **'QR payment'**
+  String get paymentMethodQr;
+
+  /// No description provided for @paymentMethodOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get paymentMethodOther;
+
+  /// No description provided for @paymentMethodUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get paymentMethodUnknown;
+
   /// No description provided for @transactionBranch.
   ///
   /// In en, this message translates to:

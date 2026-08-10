@@ -34,6 +34,45 @@ export type ExternalIdType = 'tid' | 'ref' | 'stan' | 'unknown';
 export type CategoryType = 'expense' | 'income' | 'other';
 
 /**
+ * Canonical payment rails. Keep in sync with functions/src/payment_methods.ts
+ * and NovaSpend/lib/core/constants/payment_methods.dart
+ */
+export const PAYMENT_METHODS = [
+  'debit_card',
+  'credit_card',
+  'bank_transfer',
+  'wallet',
+  'cash',
+  'cheque',
+  'atm_withdrawal',
+  'qr',
+  'other',
+  'unknown',
+] as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * Supported currencies. Keep in sync with functions/src/currencies.ts
+ * and NovaSpend/lib/core/constants/currencies.dart
+ */
+export const CURRENCIES = [
+  'PKR',
+  'USD',
+  'EUR',
+  'GBP',
+  'AED',
+  'SAR',
+  'INR',
+  'CAD',
+  'AUD',
+  'CHF',
+  'JPY',
+] as const;
+
+export type CurrencyCode = (typeof CURRENCIES)[number];
+
+/**
  * Firestore: categories/{categoryId} (global defaults)
  * Firestore: users/{userId}/categories/{categoryId} (user-created)
  */
@@ -280,6 +319,7 @@ export interface Transaction {
   recurringGroupId?: string;
   category: string;
   categorySource: CategorySource;
+  /** Canonical payment rail — see PAYMENT_METHODS */
   paymentMethod: string;
   bank: string;
   accountId: string;
