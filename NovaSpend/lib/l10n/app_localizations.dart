@@ -274,6 +274,24 @@ abstract class AppLocalizations {
   /// **'English'**
   String get settingsLanguageEnglish;
 
+  /// No description provided for @settingsCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get settingsCurrency;
+
+  /// No description provided for @settingsShowDecimals.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Decimals'**
+  String get settingsShowDecimals;
+
+  /// No description provided for @settingsShowDecimalsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Display values with decimal places'**
+  String get settingsShowDecimalsHint;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:
@@ -423,6 +441,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This month'**
   String get homePeriodThisMonth;
+
+  /// No description provided for @homeOverviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{period} overview'**
+  String homeOverviewTitle(String period);
+
+  /// No description provided for @homeOverviewSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent'**
+  String get homeOverviewSpent;
+
+  /// No description provided for @homeOverviewReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get homeOverviewReceived;
+
+  /// No description provided for @homeOverviewNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get homeOverviewNet;
+
+  /// No description provided for @homeOverviewVsYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'vs yesterday'**
+  String get homeOverviewVsYesterday;
+
+  /// No description provided for @homeOverviewVsLastWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last week'**
+  String get homeOverviewVsLastWeek;
+
+  /// No description provided for @homeOverviewVsLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last month'**
+  String get homeOverviewVsLastMonth;
 
   /// No description provided for @homeSpentSummary.
   ///

@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 /// links, active states); [primaryStrong] is the deeper "primary" green used
 /// for on-light glyphs (wordmark, category icons, FAB).
 abstract final class AppColors {
-  static const Color accent = Color(0xFF10B981);
+  static const Color accent = Color(0xFF006C49);
   static const Color accentMuted = Color(0x3310B981);
 
   /// Deeper "primary" green — for icons/wordmark on light surfaces.

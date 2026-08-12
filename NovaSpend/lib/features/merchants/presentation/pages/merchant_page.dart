@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
-import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
@@ -63,7 +63,7 @@ class _MerchantView extends StatelessWidget {
     final provider = context.watch<MerchantProvider>();
     final summary = provider.summary;
     final title = summary?.displayName ?? fallbackTitle;
-    final currency = summary?.currency ?? 'PKR';
+    final money = AppCurrencyScope.of(context);
     final grouped = _groupByDay(provider.items);
     final days = grouped.keys.toList();
 
@@ -110,10 +110,7 @@ class _MerchantView extends StatelessWidget {
                               if (summary != null) ...[
                                 Text(
                                   l10n.merchantTotalVisits(
-                                    formatMoney(
-                                      summary.totalSpent,
-                                      currency: currency,
-                                    ),
+                                    money.formatMoney(summary.totalSpent),
                                     '${summary.visitCount}',
                                   ),
                                   style: Theme.of(context).textTheme.titleMedium,
@@ -121,10 +118,7 @@ class _MerchantView extends StatelessWidget {
                                 const SizedBox(height: AppSpacing.xs),
                                 Text(
                                   l10n.merchantAverage(
-                                    formatMoney(
-                                      summary.averageSpent,
-                                      currency: currency,
-                                    ),
+                                    money.formatMoney(summary.averageSpent),
                                   ),
                                   style: Theme.of(context)
                                       .textTheme
@@ -148,10 +142,7 @@ class _MerchantView extends StatelessWidget {
                             child: AppCard(
                               child: Text(
                                 l10n.merchantThisMonth(
-                                  formatMoney(
-                                    summary.thisMonthSpent,
-                                    currency: currency,
-                                  ),
+                                  money.formatMoney(summary.thisMonthSpent),
                                   '${summary.thisMonthVisits}',
                                 ),
                                 style: Theme.of(context).textTheme.bodyLarge,

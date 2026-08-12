@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/currency/app_currency_controller.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
-import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
-import 'package:nova_spend/core/widgets/balance_header.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
+import 'package:nova_spend/core/widgets/period_overview_card.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/stat_highlight_card.dart';
@@ -97,6 +98,7 @@ class _HomeView extends StatelessWidget {
                   return false;
                 },
                 child: CustomScrollView(
+                  clipBehavior: Clip.none,
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverPadding(
@@ -193,34 +195,70 @@ class _PeriodToggle extends StatelessWidget {
   }
 }
 
-/// Balance header — rebuilds only when period totals change.
+/// Period overview card — rebuilds when period totals or comparison change.
 class _PeriodBalance extends StatelessWidget {
   const _PeriodBalance();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final money = AppCurrencyScope.of(context);
     final snapshot = context.select(
       (HomeProvider p) => (
         p.period,
         p.periodTotals.spent,
         p.periodTotals.received,
-        p.periodTotals.currency,
+        p.periodComparison.spentChangePercent,
+        p.periodComparison.receivedChangePercent,
+        p.periodComparison.netChangePercent,
       ),
     );
-    final (period, spent, received, currency) = snapshot;
+    final (
+      period,
+      spent,
+      received,
+      spentChange,
+      receivedChange,
+      netChange,
+    ) = snapshot;
+    final net = received - spent;
+    final showTrends = period != HomePeriod.today;
 
-    return BalanceHeader(
-      centered: true,
-      label: _periodLabel(l10n, period),
-      spentAmount: l10n.homeSpentSummary(
-        formatMoney(spent, currency: currency),
-      ),
-      receivedAmount: l10n.homeReceivedWithSign(
-        formatMoney(received, currency: currency),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: PeriodOverviewCard(
+        title: l10n.homeOverviewTitle(_periodLabel(l10n, period)),
+        spentLabel: l10n.homeOverviewSpent,
+        spentAmount: money.formatMoney(spent),
+        receivedLabel: l10n.homeOverviewReceived,
+        receivedAmount: money.formatMoney(received),
+        netLabel: l10n.homeOverviewNet,
+        netAmount: _formatNet(money, net),
+        spentChangePercent: showTrends && spent != 0 ? spentChange : null,
+        receivedChangePercent: showTrends && received != 0 ? receivedChange : null,
+        netChangePercent: showTrends && net != 0 ? netChange : null,
+        trendSuffix: showTrends ? _trendSuffix(l10n, period) : null,
+        spentIsZero: spent == 0,
+        receivedIsZero: received == 0,
+        netIsZero: net == 0,
       ),
     );
   }
+}
+
+String _formatNet(AppCurrencyController money, double net) {
+  final formatted = money.formatMoney(net.abs());
+  if (net > 0) return '+$formatted';
+  if (net < 0) return '-$formatted';
+  return formatted;
+}
+
+String _trendSuffix(AppLocalizations l10n, HomePeriod period) {
+  return switch (period) {
+    HomePeriod.thisWeek => l10n.homeOverviewVsLastWeek,
+    HomePeriod.thisMonth => l10n.homeOverviewVsLastMonth,
+    HomePeriod.today => '',
+  };
 }
 
 class _ReviewBannerSlot extends StatelessWidget {
@@ -263,7 +301,6 @@ class _HomeBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final home = context.watch<HomeProvider>();
-    final currency = home.periodTotals.currency;
 
     if (home.isLoading && home.items.isEmpty) {
       return _stateBox(context, Text(l10n.commonLoading));
@@ -278,7 +315,7 @@ class _HomeBody extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Highlights(home: home, currency: currency),
+          _Highlights(home: home),
           const SizedBox(height: AppSpacing.lg),
           Center(
             child: Text(
@@ -299,7 +336,7 @@ class _HomeBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Highlights(home: home, currency: currency),
+        _Highlights(home: home),
         const SizedBox(height: _sectionGap),
         SectionHeader(
           title: l10n.homeRecentTransactions,
@@ -307,7 +344,7 @@ class _HomeBody extends StatelessWidget {
           onActionTap: () => MainShellScope.selectSearchTab(context),
         ),
         const SizedBox(height: _sectionGap),
-        ..._dayGroups(context, l10n, home, currency),
+        ..._dayGroups(context, l10n, home),
         if (home.isLoadingMore)
           const Padding(
             padding: EdgeInsets.only(top: AppSpacing.md),
@@ -319,10 +356,9 @@ class _HomeBody extends StatelessWidget {
 }
 
 class _Highlights extends StatelessWidget {
-  const _Highlights({required this.home, required this.currency});
+  const _Highlights({required this.home});
 
   final HomeProvider home;
-  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -341,7 +377,6 @@ class _Highlights extends StatelessWidget {
               icon: Icons.arrow_upward_rounded,
               accentColor: AppColors.spend,
               amountColor: Theme.of(context).colorScheme.onSurface,
-              currency: currency,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -354,7 +389,6 @@ class _Highlights extends StatelessWidget {
               icon: Icons.arrow_downward_rounded,
               accentColor: AppColors.primaryStrong,
               amountColor: AppColors.primaryStrong,
-              currency: currency,
             ),
           ),
         ],
@@ -371,7 +405,6 @@ Widget _highlightCard(
   required IconData icon,
   required Color accentColor,
   required Color amountColor,
-  required String currency,
 }) {
   if (tx == null) {
     return StatHighlightCard(
@@ -395,7 +428,7 @@ Widget _highlightCard(
     label: label,
     icon: icon,
     accentColor: accentColor,
-    amount: formatMoney(tx.amount, currency: currency),
+    amount: AppCurrencyScope.of(context).formatMoney(tx.amount),
     amountColor: amountColor,
     subtitle: l10n.homeHighlightSubtitle(_truncate(merchant, 10), day),
     onTap: tx.merchant.isEmpty ? null : () => _openMerchant(context, tx),
@@ -412,7 +445,6 @@ List<Widget> _dayGroups(
   BuildContext context,
   AppLocalizations l10n,
   HomeProvider home,
-  String currency,
 ) {
   final grouped = home.groupByDay();
   final days = grouped.keys.toList();
@@ -437,8 +469,9 @@ List<Widget> _dayGroups(
                 today: l10n.homePeriodToday,
                 yesterday: l10n.commonYesterday,
               ),
-              totalLabel:
-                  spent > 0 ? formatMoney(spent, currency: currency) : null,
+              totalLabel: spent > 0
+                  ? AppCurrencyScope.of(context).formatMoney(spent)
+                  : null,
             ),
             const SizedBox(height: AppSpacing.sm),
             TransactionGroupCard(

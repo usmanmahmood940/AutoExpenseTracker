@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 
 /// A single option in an [AppSegmentedToggle].
@@ -57,30 +58,40 @@ class _AppSegmentedToggleState<T> extends State<AppSegmentedToggle<T>> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = _displayed;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : const Color(0xFFEEEEEE),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+    return Padding(
+      // Room for the outer shadow so the scroll view does not clip it.
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: AppShadows.card(Theme.of(context).brightness),
         ),
-      ),
-      child: Row(
-        children: [
-          for (final segment in widget.segments)
-            Expanded(
-              child: _SegmentButton(
-                key: ValueKey(segment.value),
-                label: segment.label,
-                selected: segment.value == selected,
-                onTap: () => _select(segment.value),
-              ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : AppColors.cardLight,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
             ),
-        ],
+          ),
+          child: Row(
+            children: [
+              for (final segment in widget.segments)
+                Expanded(
+                  child: _SegmentButton(
+                    key: ValueKey(segment.value),
+                    label: segment.label,
+                    selected: segment.value == selected,
+                    onTap: () => _select(segment.value),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -136,7 +147,7 @@ class _SegmentButton extends StatelessWidget {
             fontSize: 12,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             color: selected
-                ? AppColors.onAccent
+                ? Colors.white
                 : theme.colorScheme.onSurfaceVariant,
           ),
         ),

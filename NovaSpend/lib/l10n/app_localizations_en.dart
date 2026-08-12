@@ -104,6 +104,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageEnglish => 'English';
 
   @override
+  String get settingsCurrency => 'Currency';
+
+  @override
+  String get settingsShowDecimals => 'Show Decimals';
+
+  @override
+  String get settingsShowDecimalsHint => 'Display values with decimal places';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override
@@ -178,6 +187,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homePeriodThisMonth => 'This month';
+
+  @override
+  String homeOverviewTitle(String period) {
+    return '$period overview';
+  }
+
+  @override
+  String get homeOverviewSpent => 'Spent';
+
+  @override
+  String get homeOverviewReceived => 'Received';
+
+  @override
+  String get homeOverviewNet => 'Net';
+
+  @override
+  String get homeOverviewVsYesterday => 'vs yesterday';
+
+  @override
+  String get homeOverviewVsLastWeek => 'vs last week';
+
+  @override
+  String get homeOverviewVsLastMonth => 'vs last month';
 
   @override
   String homeSpentSummary(String amount) {

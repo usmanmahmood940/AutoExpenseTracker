@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nova_spend/app.dart';
 import 'package:nova_spend/core/di/injection.dart';
+import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/locale/app_locale_controller.dart';
 import 'package:nova_spend/core/services/notification_service.dart';
 import 'package:nova_spend/core/services/push_notification_service.dart';
@@ -27,10 +28,15 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   final localeController = AppLocaleController(prefs);
   await localeController.load();
+  final currencyController = AppCurrencyController(prefs);
+  await currencyController.load();
 
   await configureDependencies(prefs: prefs);
   await sl<NotificationService>().init();
   await sl<PushNotificationService>().init();
 
-  runApp(NovaSpendApp(localeController: localeController));
+  runApp(NovaSpendApp(
+    localeController: localeController,
+    currencyController: currencyController,
+  ));
 }

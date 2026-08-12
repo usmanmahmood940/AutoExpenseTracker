@@ -7,12 +7,15 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/di/injection.dart';
+import 'package:nova_spend/core/constants/currencies.dart';
+import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/locale/app_locale_scope.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/settings/presentation/pages/currency_selection_page.dart';
 import 'package:nova_spend/features/settings/presentation/pages/language_selection_page.dart';
 import 'package:nova_spend/features/settings/presentation/pages/review_page.dart';
 import 'package:nova_spend/features/settings/presentation/provider/settings_provider.dart';
@@ -57,6 +60,7 @@ class _SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final provider = context.watch<SettingsProvider>();
+    final currencyController = context.watch<AppCurrencyController>();
     final sync = provider.syncMeta;
     final email = FirebaseAuth.instance.currentUser?.email;
 
@@ -242,6 +246,33 @@ class _SettingsView extends StatelessWidget {
                     await AppLocaleScope.of(context).setLocale(Locale(code));
                   }
                 },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.settingsCurrency),
+                subtitle: Text(
+                  currencyDisplayLabel(currencyController.currency),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final code = await Navigator.of(context).push<String>(
+                    MaterialPageRoute(
+                      builder: (_) => CurrencySelectionPage(
+                        selected: currencyController.currency,
+                      ),
+                    ),
+                  );
+                  if (code != null && context.mounted) {
+                    await currencyController.setCurrency(code);
+                  }
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.settingsShowDecimals),
+                subtitle: Text(l10n.settingsShowDecimalsHint),
+                value: currencyController.showDecimals,
+                onChanged: currencyController.setShowDecimals,
               ),
               const SizedBox(height: AppSpacing.sm),
               FilledButton(

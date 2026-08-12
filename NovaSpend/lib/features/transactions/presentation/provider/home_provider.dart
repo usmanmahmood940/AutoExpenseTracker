@@ -22,6 +22,20 @@ class PeriodTotals {
   final double spent;
   final double received;
   final String currency;
+
+  double get net => received - spent;
+}
+
+class PeriodComparison {
+  const PeriodComparison({
+    this.spentChangePercent,
+    this.receivedChangePercent,
+    this.netChangePercent,
+  });
+
+  final double? spentChangePercent;
+  final double? receivedChangePercent;
+  final double? netChangePercent;
 }
 
 class HomeProvider extends ChangeNotifier {
@@ -114,6 +128,55 @@ class HomeProvider extends ChangeNotifier {
         return _aggregateFrom(_startOfWeek, currency);
       case HomePeriod.today:
         return _aggregateFrom(_startOfToday, currency);
+    }
+  }
+
+  PeriodComparison get periodComparison {
+    final current = _currentComparisonTotals;
+    final previous = _previousComparisonTotals;
+
+    return PeriodComparison(
+      spentChangePercent:
+          _percentChange(previous.spent, current.spent),
+      receivedChangePercent:
+          _percentChange(previous.received, current.received),
+      netChangePercent: _percentChange(previous.net, current.net),
+    );
+  }
+
+  PeriodTotals get _currentComparisonTotals {
+    final currency = periodTotals.currency;
+    switch (_period) {
+      case HomePeriod.today:
+        return _aggregateBetween(_startOfToday, _startOfToday, currency);
+      case HomePeriod.thisWeek:
+        return _aggregateBetween(_startOfWeek, _startOfToday, currency);
+      case HomePeriod.thisMonth:
+        return _aggregateBetween(_startOfMonth, _startOfToday, currency);
+    }
+  }
+
+  PeriodTotals get _previousComparisonTotals {
+    final currency = periodTotals.currency;
+    switch (_period) {
+      case HomePeriod.today:
+        final yesterday = _startOfToday.subtract(const Duration(days: 1));
+        return _aggregateBetween(yesterday, yesterday, currency);
+      case HomePeriod.thisWeek:
+        final weekStart = _startOfWeek;
+        final daysElapsed = _startOfToday.difference(weekStart).inDays;
+        final prevWeekStart = weekStart.subtract(const Duration(days: 7));
+        final prevWeekEnd = prevWeekStart.add(Duration(days: daysElapsed));
+        return _aggregateBetween(prevWeekStart, prevWeekEnd, currency);
+      case HomePeriod.thisMonth:
+        final now = DateTime.now();
+        final prevMonthStart = DateTime(now.year, now.month - 1, 1);
+        final lastDayPrevMonth = DateTime(now.year, now.month, 0);
+        final sameDayPrevMonth = DateTime(now.year, now.month - 1, now.day);
+        final prevMonthEnd = sameDayPrevMonth.isAfter(lastDayPrevMonth)
+            ? lastDayPrevMonth
+            : sameDayPrevMonth;
+        return _aggregateBetween(prevMonthStart, prevMonthEnd, currency);
     }
   }
 
@@ -327,6 +390,36 @@ class HomeProvider extends ChangeNotifier {
     }
 
     return PeriodTotals(spent: spent, received: received, currency: currency);
+  }
+
+  PeriodTotals _aggregateBetween(
+    DateTime startInclusive,
+    DateTime endInclusive,
+    String currency,
+  ) {
+    var spent = 0.0;
+    var received = 0.0;
+
+    for (final tx in _items) {
+      final date = _parseDate(tx);
+      if (date == null) continue;
+      if (date.isBefore(startInclusive) || date.isAfter(endInclusive)) continue;
+      if (tx.type == 'credit') {
+        received += tx.amount;
+      } else {
+        spent += tx.amount;
+      }
+    }
+
+    return PeriodTotals(spent: spent, received: received, currency: currency);
+  }
+
+  double? _percentChange(double previous, double current) {
+    if (previous == 0) {
+      if (current == 0) return 0;
+      return 100;
+    }
+    return ((current - previous) / previous.abs()) * 100;
   }
 
   DateTime get _startOfToday {

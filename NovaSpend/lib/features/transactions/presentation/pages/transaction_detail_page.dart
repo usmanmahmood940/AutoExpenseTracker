@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
-import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/category_avatar.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
@@ -486,8 +486,9 @@ class _HeroCard extends StatelessWidget {
         tx.merchant.isEmpty ? l10n.transactionMerchant : tx.merchant;
     final amountColor = isCredit ? AppColors.accent : AppColors.spend;
     final sign = isCredit ? '+ ' : '− ';
+    final currency = AppCurrencyScope.of(context);
     final amountText =
-        '$sign${formatMoney(tx.amount, currency: tx.currency)}';
+        '$sign${currency.formatMoney(tx.amount)}';
     final canOpenMerchant = tx.merchant.trim().isNotEmpty;
     final meta = _metaLine(context, tx);
 

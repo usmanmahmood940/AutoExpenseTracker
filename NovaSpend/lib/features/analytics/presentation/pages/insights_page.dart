@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
-import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/balance_header.dart';
@@ -46,7 +46,7 @@ class _InsightsView extends StatelessWidget {
     final l10n = context.l10n;
     final provider = context.watch<InsightsProvider>();
     final summary = provider.summary;
-    final currency = summary?.currency ?? 'PKR';
+    final money = AppCurrencyScope.of(context);
 
     return AdaptiveScaffold(
       title: l10n.insightsTitle,
@@ -80,7 +80,7 @@ class _InsightsView extends StatelessWidget {
                   children: [
                     BalanceHeader(
                       label: l10n.insightsNet,
-                      amount: formatMoney(summary.net, currency: currency),
+                      amount: money.formatMoney(summary.net),
                       subtitle: l10n.insightsThisMonth,
                     ),
                     Padding(
@@ -92,20 +92,14 @@ class _InsightsView extends StatelessWidget {
                           Expanded(
                             child: _StatCard(
                               label: l10n.insightsSpent,
-                              value: formatMoney(
-                                summary.totalDebit,
-                                currency: currency,
-                              ),
+                              value: money.formatMoney(summary.totalDebit),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _StatCard(
                               label: l10n.insightsIncome,
-                              value: formatMoney(
-                                summary.totalCredit,
-                                currency: currency,
-                              ),
+                              value: money.formatMoney(summary.totalCredit),
                             ),
                           ),
                         ],
@@ -120,7 +114,6 @@ class _InsightsView extends StatelessWidget {
                       child: AppCard(
                         child: _HorizontalCategoryBars(
                           byCategory: summary.byCategory,
-                          currency: currency,
                         ),
                       ),
                     ),
@@ -138,7 +131,7 @@ class _InsightsView extends StatelessWidget {
                                   contentPadding: EdgeInsets.zero,
                                   title: Text(e.key),
                                   trailing: Text(
-                                    formatMoney(e.value, currency: currency),
+                                    money.formatMoney(e.value),
                                   ),
                                   onTap: () {
                                     Navigator.of(context).push(
@@ -218,13 +211,9 @@ class _StatCard extends StatelessWidget {
 }
 
 class _HorizontalCategoryBars extends StatelessWidget {
-  const _HorizontalCategoryBars({
-    required this.byCategory,
-    required this.currency,
-  });
+  const _HorizontalCategoryBars({required this.byCategory});
 
   final Map<String, double> byCategory;
-  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +235,7 @@ class _HorizontalCategoryBars extends StatelessWidget {
         for (final entry in top) ...[
           _CategoryBarRow(
             label: entry.key,
-            amount: formatMoney(entry.value, currency: currency),
+            amount: AppCurrencyScope.of(context).formatMoney(entry.value),
             fraction: maxValue > 0 ? entry.value / maxValue : 0,
           ),
           if (entry != top.last) const SizedBox(height: AppSpacing.sm),

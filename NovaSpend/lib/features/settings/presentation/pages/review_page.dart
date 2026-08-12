@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
-import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
@@ -107,6 +107,7 @@ class _ConfidenceCard extends StatelessWidget {
     final l10n = context.l10n;
     final provider = context.read<ReviewProvider>();
     final percent = (transaction.parseConfidence * 100).round().toString();
+    final money = AppCurrencyScope.of(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -116,12 +117,7 @@ class _ConfidenceCard extends StatelessWidget {
           children: [
             Text(transaction.merchant, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              formatMoney(
-                transaction.amount,
-                currency: transaction.currency,
-              ),
-            ),
+            Text(money.formatMoney(transaction.amount)),
             Text(l10n.reviewConfidence(percent)),
             const SizedBox(height: AppSpacing.sm),
             Row(
@@ -240,6 +236,7 @@ class _IngestionCard extends StatelessWidget {
       final now = DateTime.now();
       final date =
           '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final currency = AppCurrencyScope.of(context).currency;
       await context.read<ReviewProvider>().completeManually(
             ingestionId: ingestion.id,
             fields: {
@@ -248,7 +245,7 @@ class _IngestionCard extends StatelessWidget {
               'type': type,
               'category': category.trim().isEmpty ? 'Uncategorized' : category.trim(),
               'transactionDate': date,
-              'currency': 'PKR',
+              'currency': currency,
             },
           );
     }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:nova_spend/core/constants/currencies.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
@@ -190,7 +190,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                     _AmountField(
                       label: l10n.transactionAmountLabel,
                       controller: _amount,
-                      currency: provider.currency,
+                      currency: AppCurrencyScope.of(context).currency,
                       muted: muted,
                       fieldFill: fieldFill,
                       border: border,
@@ -267,19 +267,6 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         muted: muted,
                         border: border,
                         onChanged: provider.setPaymentMethod,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _LabeledField(
-                      label: l10n.transactionCurrency,
-                      muted: muted,
-                      child: _CurrencyDropdown(
-                        value: provider.currency,
-                        fill: fieldFill,
-                        ink: ink,
-                        muted: muted,
-                        border: border,
-                        onChanged: provider.setCurrency,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -820,85 +807,6 @@ class _PaymentMethodDropdown extends StatelessWidget {
               value: method,
               child: Text(
                 paymentMethodLabel(l10n, method),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  height: 1.5,
-                  color: ink,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-      onChanged: (v) {
-        if (v != null) onChanged(v);
-      },
-    );
-  }
-}
-
-class _CurrencyDropdown extends StatelessWidget {
-  const _CurrencyDropdown({
-    required this.value,
-    required this.fill,
-    required this.ink,
-    required this.muted,
-    required this.border,
-    required this.onChanged,
-  });
-
-  final String value;
-  final Color fill;
-  final Color ink;
-  final Color muted;
-  final Color border;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = normalizeCurrency(value);
-
-    return DropdownButtonFormField<String>(
-      initialValue: selected,
-      isExpanded: true,
-      menuMaxHeight: 280,
-      icon: Icon(Icons.unfold_more, size: 18, color: muted),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: fill,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sm),
-          ),
-          borderSide: BorderSide(color: border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sm),
-          ),
-          borderSide: BorderSide(color: border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sm),
-          ),
-          borderSide: const BorderSide(
-            color: AppColors.primaryStrong,
-            width: 1.5,
-          ),
-        ),
-      ),
-      items: kCurrencies
-          .map(
-            (code) => DropdownMenuItem(
-              value: code,
-              child: Text(
-                code,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 16,

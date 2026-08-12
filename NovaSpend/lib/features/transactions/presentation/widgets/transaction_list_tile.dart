@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
-import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/category_avatar.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -29,6 +29,7 @@ class TransactionListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final money = AppCurrencyScope.of(context);
     final isCredit = transaction.type == 'credit';
     final amountColor =
         isCredit ? AppColors.accent : theme.colorScheme.onSurface;
@@ -100,7 +101,7 @@ class TransactionListTile extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$sign${formatMoney(transaction.amount, currency: transaction.currency)}',
+                    '$sign${money.formatMoney(transaction.amount)}',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

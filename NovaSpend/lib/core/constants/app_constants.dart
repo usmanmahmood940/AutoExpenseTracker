@@ -41,6 +41,8 @@ class AppConstants {
 
   static const String prefBiometricLock = 'biometric_lock_enabled';
   static const String localePreferenceKey = 'app_locale';
+  static const String currencyPreferenceKey = 'app_currency';
+  static const String showDecimalsPreferenceKey = 'show_decimals';
 }
 
 String normalizeMerchantKey(String merchant) {

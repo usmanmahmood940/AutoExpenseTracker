@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/constants/currencies.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
@@ -20,7 +19,6 @@ class TransactionDetailProvider extends ChangeNotifier {
         merchant = transaction.merchant,
         merchantDetails = transaction.merchantDetails ?? '',
         amount = transaction.amount,
-        currency = normalizeCurrency(transaction.currency),
         category = transaction.category,
         type = transaction.type,
         bank = transaction.bank,
@@ -37,7 +35,6 @@ class TransactionDetailProvider extends ChangeNotifier {
   String merchant;
   String merchantDetails;
   double amount;
-  String currency;
   String category;
   String type;
   String bank;
@@ -97,11 +94,6 @@ class TransactionDetailProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCurrency(String value) {
-    currency = normalizeCurrency(value);
-    notifyListeners();
-  }
-
   void setCategory(String value) {
     category = value;
     notifyListeners();
@@ -146,7 +138,6 @@ class TransactionDetailProvider extends ChangeNotifier {
     merchant = _transaction.merchant;
     merchantDetails = _transaction.merchantDetails ?? '';
     amount = _transaction.amount;
-    currency = normalizeCurrency(_transaction.currency);
     category = _transaction.category;
     type = _transaction.type;
     bank = _transaction.bank;
@@ -176,13 +167,11 @@ class TransactionDetailProvider extends ChangeNotifier {
       final trimmedDetails = merchantDetails.trim();
       final currentKey = normalizeMerchantKey(trimmedMerchant);
       final resolvedPaymentMethod = normalizePaymentMethod(paymentMethod);
-      final resolvedCurrency = normalizeCurrency(currency);
 
       final fields = <String, dynamic>{
         'merchant': trimmedMerchant,
         'merchantDetails': trimmedDetails.isEmpty ? null : trimmedDetails,
         'amount': amount,
-        'currency': resolvedCurrency,
         'category': category,
         'type': type,
         'bank': resolvedBank,
@@ -231,7 +220,6 @@ class TransactionDetailProvider extends ChangeNotifier {
         merchantDetails: trimmedDetails.isEmpty ? null : trimmedDetails,
         clearMerchantDetails: trimmedDetails.isEmpty,
         amount: amount,
-        currency: resolvedCurrency,
         category: category,
         type: type,
         bank: resolvedBank,

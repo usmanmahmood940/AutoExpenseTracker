@@ -1,9 +1,15 @@
 import 'package:intl/intl.dart';
 
-String formatMoney(num amount, {String currency = 'PKR'}) {
+import '../constants/currencies.dart';
+
+String formatMoney(
+  num amount, {
+  String currency = kDefaultCurrency,
+  bool showDecimals = true,
+}) {
   return NumberFormat.currency(
     symbol: '$currency ',
-    decimalDigits: 2,
+    decimalDigits: showDecimals ? 2 : 0,
   ).format(amount);
 }
 

@@ -40,6 +40,9 @@
   },
   "settingsLanguage": "Language",
   "settingsLanguageEnglish": "English",
+  "settingsCurrency": "Currency",
+  "settingsShowDecimals": "Show Decimals",
+  "settingsShowDecimalsHint": "Display values with decimal places",
   "settingsTitle": "Settings",
   "settingsUserId": "Your user ID",
   "settingsUserIdHint": "Use this UID in iOS Shortcuts (X-User-Id)",
@@ -65,6 +68,18 @@
   "homePeriodToday": "Today",
   "homePeriodThisWeek": "This week",
   "homePeriodThisMonth": "This month",
+  "homeOverviewTitle": "{period} overview",
+  "@homeOverviewTitle": {
+    "placeholders": {
+      "period": {"type": "String"}
+    }
+  },
+  "homeOverviewSpent": "Spent",
+  "homeOverviewReceived": "Received",
+  "homeOverviewNet": "Net",
+  "homeOverviewVsYesterday": "vs yesterday",
+  "homeOverviewVsLastWeek": "vs last week",
+  "homeOverviewVsLastMonth": "vs last month",
   "homeSpentSummary": "{amount} spent",
   "@homeSpentSummary": {
     "placeholders": {
