@@ -41,7 +41,7 @@ async function main() {
     `Seeded ${DEFAULT_CATEGORIES.length} categories into ${COLLECTIONS.categories}/`,
   );
   for (const c of DEFAULT_CATEGORIES) {
-    console.log(`  ${c.id}: ${c.name} (${c.type})`);
+    console.log(`  ${c.id}: ${c.name} (${c.type}) ${c.color}`);
   }
 }
 

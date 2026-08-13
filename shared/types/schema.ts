@@ -33,44 +33,23 @@ export type ExternalIdType = 'tid' | 'ref' | 'stan' | 'unknown';
 
 export type CategoryType = 'expense' | 'income' | 'other';
 
-/**
- * Canonical payment rails. Keep in sync with functions/src/payment_methods.ts
- * and NovaSpend/lib/core/constants/payment_methods.dart
- */
-export const PAYMENT_METHODS = [
-  'debit_card',
-  'credit_card',
-  'bank_transfer',
-  'wallet',
-  'cash',
-  'cheque',
-  'atm_withdrawal',
-  'qr',
-  'other',
-  'unknown',
-] as const;
+export type {
+  PaymentMethod,
+} from './payment_methods';
 
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export {
+  DEFAULT_PAYMENT_METHOD,
+  PAYMENT_METHODS,
+  normalizePaymentMethod,
+} from './payment_methods';
 
-/**
- * Supported currencies. Keep in sync with functions/src/currencies.ts
- * and NovaSpend/lib/core/constants/currencies.dart
- */
-export const CURRENCIES = [
-  'PKR',
-  'USD',
-  'EUR',
-  'GBP',
-  'AED',
-  'SAR',
-  'INR',
-  'CAD',
-  'AUD',
-  'CHF',
-  'JPY',
-] as const;
+export type { CurrencyCode } from './currencies';
 
-export type CurrencyCode = (typeof CURRENCIES)[number];
+export {
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  normalizeCurrency,
+} from './currencies';
 
 /**
  * Firestore: categories/{categoryId} (global defaults)
@@ -80,6 +59,11 @@ export interface Category {
   name: string;
   type: CategoryType;
   icon: string;
+  /**
+   * Psychology-based hex (`#RRGGBB`) for category icons in the client.
+   * Icon glyph uses this color; icon background uses the same hue at 20% alpha.
+   */
+  color: string;
   sortOrder: number;
   /** true for docs under top-level `categories/` */
   isDefault: boolean;
@@ -93,6 +77,8 @@ export interface CategorySeed {
   name: string;
   type: CategoryType;
   icon: string;
+  /** Psychology-based hex (`#RRGGBB`) — see Category.color. */
+  color: string;
   sortOrder: number;
   isDefault: boolean;
 }
@@ -103,6 +89,11 @@ export const FALLBACK_CATEGORY_NAME = 'Uncategorized';
 /**
  * Default categories stored in Firestore `categories/{id}`.
  * Webhook / Gemini categorization must use only these names.
+ *
+ * `color` is a psychology-based hex used by NovaSpend for the category
+ * icon glyph (full opacity) and icon background (same hue, 20% alpha):
+ * warm oranges for appetite/energy, greens for growth/freshness, blues
+ * for movement, purple for leisure, reds for care/caution, etc.
  */
 export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
   {
@@ -110,6 +101,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Food & Dining',
     type: 'expense',
     icon: 'restaurant',
+    color: '#F57C00', // appetite, warmth, social dining
     sortOrder: 1,
     isDefault: true,
   },
@@ -118,6 +110,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Groceries',
     type: 'expense',
     icon: 'cart',
+    color: '#43A047', // freshness, nature, produce
     sortOrder: 2,
     isDefault: true,
   },
@@ -126,6 +119,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Fuel',
     type: 'expense',
     icon: 'local_gas_station',
+    color: '#BF360C', // heat, energy, petroleum
     sortOrder: 3,
     isDefault: true,
   },
@@ -134,6 +128,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Transport',
     type: 'expense',
     icon: 'directions_car',
+    color: '#1E88E5', // movement, reliability, transit
     sortOrder: 4,
     isDefault: true,
   },
@@ -142,6 +137,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Shopping',
     type: 'expense',
     icon: 'shopping_bag',
+    color: '#D81B60', // desire, retail, impulse
     sortOrder: 5,
     isDefault: true,
   },
@@ -150,6 +146,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Entertainment',
     type: 'expense',
     icon: 'movie',
+    color: '#8E24AA', // fun, creativity, leisure
     sortOrder: 6,
     isDefault: true,
   },
@@ -158,6 +155,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Bills & Utilities',
     type: 'expense',
     icon: 'bolt',
+    color: '#FB8C00', // energy, electricity, essential services
     sortOrder: 7,
     isDefault: true,
   },
@@ -166,6 +164,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Healthcare',
     type: 'expense',
     icon: 'medical_services',
+    color: '#E53935', // care, urgency, medical
     sortOrder: 8,
     isDefault: true,
   },
@@ -174,6 +173,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Education',
     type: 'expense',
     icon: 'school',
+    color: '#3949AB', // knowledge, wisdom, trust
     sortOrder: 9,
     isDefault: true,
   },
@@ -182,6 +182,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Travel',
     type: 'expense',
     icon: 'flight',
+    color: '#00838F', // horizon, adventure, sky/sea
     sortOrder: 10,
     isDefault: true,
   },
@@ -190,6 +191,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Personal Care',
     type: 'expense',
     icon: 'spa',
+    color: '#EC407A', // self-care, beauty
     sortOrder: 11,
     isDefault: true,
   },
@@ -198,6 +200,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Subscriptions',
     type: 'expense',
     icon: 'replay',
+    color: '#5E35B1', // digital, premium, recurring
     sortOrder: 12,
     isDefault: true,
   },
@@ -206,6 +209,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Rent & Housing',
     type: 'expense',
     icon: 'home',
+    color: '#6D4C41', // earth, home, stability
     sortOrder: 13,
     isDefault: true,
   },
@@ -214,6 +218,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Cash Withdrawal',
     type: 'expense',
     icon: 'atm',
+    color: '#F9A825', // money, cash, value
     sortOrder: 14,
     isDefault: true,
   },
@@ -222,6 +227,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Transfer',
     type: 'expense',
     icon: 'swap_horiz',
+    color: '#039BE5', // flow, movement of money
     sortOrder: 15,
     isDefault: true,
   },
@@ -230,6 +236,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Fees & Charges',
     type: 'expense',
     icon: 'receipt',
+    color: '#C62828', // caution, loss, warning
     sortOrder: 16,
     isDefault: true,
   },
@@ -238,6 +245,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Donations & Zakat',
     type: 'expense',
     icon: 'volunteer_activism',
+    color: '#00695C', // generosity, growth, faith
     sortOrder: 17,
     isDefault: true,
   },
@@ -246,6 +254,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Income',
     type: 'income',
     icon: 'payments',
+    color: '#2E7D32', // prosperity, growth
     sortOrder: 18,
     isDefault: true,
   },
@@ -254,6 +263,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Refund',
     type: 'income',
     icon: 'undo',
+    color: '#26A69A', // return, recovery, relief
     sortOrder: 19,
     isDefault: true,
   },
@@ -262,6 +272,7 @@ export const DEFAULT_CATEGORIES: readonly CategorySeed[] = [
     name: 'Uncategorized',
     type: 'other',
     icon: 'help_outline',
+    color: '#757575', // neutral, unknown
     sortOrder: 20,
     isDefault: true,
   },
