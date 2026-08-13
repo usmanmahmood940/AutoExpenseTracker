@@ -6,7 +6,7 @@ import 'package:nova_spend/features/categories/domain/repositories/category_repo
 
 class CategoryRepositoryImpl implements CategoryRepository {
   CategoryRepositoryImpl({required FirestoreCategoryDatasource datasource})
-      : _datasource = datasource;
+    : _datasource = datasource;
 
   final FirestoreCategoryDatasource _datasource;
 
@@ -24,6 +24,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
     required String name,
     required String type,
     String icon = 'label',
+    String color = '#757575',
   }) async {
     try {
       return await _datasource.createCustom(
@@ -31,6 +32,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
         name: name,
         type: type,
         icon: icon,
+        color: color,
       );
     } on ServerException catch (e) {
       throw ServerFailure(e.message);

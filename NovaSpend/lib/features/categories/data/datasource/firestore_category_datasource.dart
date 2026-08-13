@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 
 class FirestoreCategoryDatasource {
   FirestoreCategoryDatasource({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+    : _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
   final _uuid = const Uuid();
@@ -18,10 +18,12 @@ class FirestoreCategoryDatasource {
         .orderBy('sortOrder')
         .snapshots()
         .map((snap) {
-      return snap.docs
-          .map((d) => CategoryModel.fromFirestore(d).toEntity(isDefault: true))
-          .toList();
-    });
+          return snap.docs
+              .map(
+                (d) => CategoryModel.fromFirestore(d).toEntity(isDefault: true),
+              )
+              .toList();
+        });
   }
 
   Stream<List<CategoryEntity>> watchUserCategories(String uid) {
@@ -32,10 +34,13 @@ class FirestoreCategoryDatasource {
         .orderBy('sortOrder')
         .snapshots()
         .map((snap) {
-      return snap.docs
-          .map((d) => CategoryModel.fromFirestore(d).toEntity(isDefault: false))
-          .toList();
-    });
+          return snap.docs
+              .map(
+                (d) =>
+                    CategoryModel.fromFirestore(d).toEntity(isDefault: false),
+              )
+              .toList();
+        });
   }
 
   Future<String> createCustom({
@@ -43,6 +48,7 @@ class FirestoreCategoryDatasource {
     required String name,
     required String type,
     String icon = 'label',
+    String color = '#757575',
   }) async {
     try {
       final id = _uuid.v4();
@@ -53,14 +59,15 @@ class FirestoreCategoryDatasource {
           .collection(AppConstants.categories)
           .doc(id)
           .set({
-        'name': name.trim(),
-        'type': type,
-        'icon': icon,
-        'sortOrder': 1000,
-        'isDefault': false,
-        'createdAt': now,
-        'updatedAt': now,
-      });
+            'name': name.trim(),
+            'type': type,
+            'icon': icon,
+            'color': color,
+            'sortOrder': 1000,
+            'isDefault': false,
+            'createdAt': now,
+            'updatedAt': now,
+          });
       return id;
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to create category');

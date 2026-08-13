@@ -7,8 +7,10 @@ import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/utils/category_visuals.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/category_avatar.dart';
+import 'package:nova_spend/core/widgets/category_color_scope.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
@@ -73,14 +75,14 @@ class _DetailViewState extends State<_DetailView> {
     final uid = context.read<AuthProvider>().uid;
     final defaults = await repo.watchDefaults().first;
     if (!mounted) return;
-    final custom =
-        uid == null ? <dynamic>[] : await repo.watchUserCategories(uid).first;
+    final custom = uid == null
+        ? <dynamic>[]
+        : await repo.watchUserCategories(uid).first;
     if (!mounted) return;
     final names = <String>{
       ...defaults.map((c) => c.name),
       ...custom.map((c) => c.name),
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     setState(() => _categories = names);
   }
 
@@ -91,9 +93,9 @@ class _DetailViewState extends State<_DetailView> {
       categories: _categories,
     );
     if (!mounted || saved != true) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.transactionSaved)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.transactionSaved)));
   }
 
   Future<void> _confirmDelete() async {
@@ -118,18 +120,19 @@ class _DetailViewState extends State<_DetailView> {
     );
     if (confirmed != true || !mounted) return;
 
-    final ok =
-        await context.read<TransactionDetailProvider>().deleteTransaction();
+    final ok = await context
+        .read<TransactionDetailProvider>()
+        .deleteTransaction();
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.transactionDeleted)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.transactionDeleted)));
       Navigator.of(context).maybePop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorGeneric)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
     }
   }
 
@@ -154,10 +157,12 @@ class _DetailViewState extends State<_DetailView> {
     final pageBg = AppColors.surface(brightness);
     final provider = context.watch<TransactionDetailProvider>();
     final overlay = isDark
-        ? SystemUiOverlayStyle.light
-            .copyWith(statusBarColor: Colors.transparent)
-        : SystemUiOverlayStyle.dark
-            .copyWith(statusBarColor: Colors.transparent);
+        ? SystemUiOverlayStyle.light.copyWith(
+            statusBarColor: Colors.transparent,
+          )
+        : SystemUiOverlayStyle.dark.copyWith(
+            statusBarColor: Colors.transparent,
+          );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
@@ -264,8 +269,16 @@ class _DetailViewState extends State<_DetailView> {
     }
 
     add(l10n.transactionBank, tx.bank, icon: Icons.account_balance_outlined);
-    add(l10n.transactionBranch, tx.branch ?? '', icon: Icons.location_city_outlined);
-    add(l10n.transactionAccount, tx.accountIdMasked, icon: Icons.wallet_outlined);
+    add(
+      l10n.transactionBranch,
+      tx.branch ?? '',
+      icon: Icons.location_city_outlined,
+    );
+    add(
+      l10n.transactionAccount,
+      tx.accountIdMasked,
+      icon: Icons.wallet_outlined,
+    );
     add(
       l10n.transactionPaymentMethod,
       paymentMethodLabel(l10n, tx.paymentMethod),
@@ -333,9 +346,7 @@ class _DetailViewState extends State<_DetailView> {
     add(
       l10n.transactionType,
       isCredit ? l10n.feedFilterTypeCredit : l10n.feedFilterTypeDebit,
-      icon: isCredit
-          ? Icons.south_west_rounded
-          : Icons.north_east_rounded,
+      icon: isCredit ? Icons.south_west_rounded : Icons.north_east_rounded,
     );
     add(
       l10n.transactionMerchantDetails,
@@ -349,8 +360,10 @@ class _DetailViewState extends State<_DetailView> {
       icon: Icons.info_outline,
     );
 
-    final confidencePercent =
-        (tx.parseConfidence * 100).clamp(0, 100).round().toString();
+    final confidencePercent = (tx.parseConfidence * 100)
+        .clamp(0, 100)
+        .round()
+        .toString();
     add(
       l10n.transactionConfidence,
       l10n.transactionConfidenceValue(confidencePercent),
@@ -447,12 +460,7 @@ class _DetailSectionCard extends StatelessWidget {
         children: [
           for (var i = 0; i < children.length; i++) ...[
             if (i > 0)
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 56,
-                color: dividerColor,
-              ),
+              Divider(height: 1, thickness: 1, indent: 56, color: dividerColor),
             children[i],
           ],
         ],
@@ -482,13 +490,13 @@ class _HeroCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tx = transaction;
     final isCredit = tx.type == 'credit';
-    final merchantLabel =
-        tx.merchant.isEmpty ? l10n.transactionMerchant : tx.merchant;
+    final merchantLabel = tx.merchant.isEmpty
+        ? l10n.transactionMerchant
+        : tx.merchant;
     final amountColor = isCredit ? AppColors.accent : AppColors.spend;
     final sign = isCredit ? '+ ' : '− ';
     final currency = AppCurrencyScope.of(context);
-    final amountText =
-        '$sign${currency.formatMoney(tx.amount)}';
+    final amountText = '$sign${currency.formatMoney(tx.amount)}';
     final canOpenMerchant = tx.merchant.trim().isNotEmpty;
     final meta = _metaLine(context, tx);
 
@@ -501,7 +509,6 @@ class _HeroCard extends StatelessWidget {
             size: 56,
             circular: true,
             showBorder: true,
-            backgroundColor: AppColors.neutralFill(theme.brightness),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -569,7 +576,11 @@ class _HeroCard extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: muted,
+                color: categoryColor(
+                  tx.category,
+                  storedHex: CategoryColorScope.maybeOf(context)
+                      ?.hexFor(tx.category),
+                ),
               ),
             ),
           ],
@@ -708,8 +719,10 @@ class _StatusBadges extends StatelessWidget {
     final chips = <Widget>[];
 
     if (transaction.needsConfidenceReview) {
-      final percent =
-          (transaction.parseConfidence * 100).clamp(0, 100).round().toString();
+      final percent = (transaction.parseConfidence * 100)
+          .clamp(0, 100)
+          .round()
+          .toString();
       final brightness = theme.brightness;
       chips.add(
         _StatusChip(
@@ -864,10 +877,7 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
           Flexible(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: value,
-            ),
+            child: Align(alignment: Alignment.centerRight, child: value),
           ),
         ],
       ),
@@ -935,10 +945,7 @@ class _ReferenceBadge extends StatelessWidget {
 // ─── SMS (last) ──────────────────────────────────────────────────────────────
 
 class _SmsExpandableCard extends StatelessWidget {
-  const _SmsExpandableCard({
-    required this.rawSms,
-    required this.muted,
-  });
+  const _SmsExpandableCard({required this.rawSms, required this.muted});
 
   final String rawSms;
   final Color muted;

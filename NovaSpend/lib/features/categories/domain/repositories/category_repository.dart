@@ -10,5 +10,6 @@ abstract class CategoryRepository {
     required String name,
     required String type,
     String icon = 'label',
+    String color = '#757575',
   });
 }

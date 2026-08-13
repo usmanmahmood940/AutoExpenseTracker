@@ -8,6 +8,7 @@ import 'package:nova_spend/core/locale/app_locale_scope.dart';
 import 'package:nova_spend/core/theme/app_theme.dart';
 import 'package:nova_spend/features/auth/presentation/pages/auth_gate.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/categories/presentation/widgets/category_color_binder.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -31,33 +32,36 @@ class NovaSpendApp extends StatelessWidget {
         ChangeNotifierProvider<AppCurrencyController>.value(
           value: currencyController,
         ),
-        ChangeNotifierProvider<AuthProvider>(
-          create: (_) => sl<AuthProvider>(),
-        ),
+        ChangeNotifierProvider<AuthProvider>(create: (_) => sl<AuthProvider>()),
       ],
-      child: AppCurrencyScope(
-        controller: currencyController,
-        child: AppLocaleScope(
-          controller: localeController,
-          child: ListenableBuilder(
-            listenable: Listenable.merge([localeController, currencyController]),
-            builder: (context, _) {
-              return MaterialApp(
-                onGenerateTitle: (context) =>
-                    AppLocalizations.of(context)!.appTitle,
-                theme: AppTheme.light,
-                darkTheme: AppTheme.dark,
-                locale: localeController.locale,
-                supportedLocales: AppLocalizations.supportedLocales,
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                home: const AuthGate(),
-              );
-            },
+      child: CategoryColorBinder(
+        child: AppCurrencyScope(
+          controller: currencyController,
+          child: AppLocaleScope(
+            controller: localeController,
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                localeController,
+                currencyController,
+              ]),
+              builder: (context, _) {
+                return MaterialApp(
+                  onGenerateTitle: (context) =>
+                      AppLocalizations.of(context)!.appTitle,
+                  theme: AppTheme.light,
+                  darkTheme: AppTheme.dark,
+                  locale: localeController.locale,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  home: const AuthGate(),
+                );
+              },
+            ),
           ),
         ),
       ),

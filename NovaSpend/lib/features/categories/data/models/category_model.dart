@@ -13,7 +13,9 @@ class CategoryModel {
   final String id;
   final Map<String, dynamic> data;
 
-  factory CategoryModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory CategoryModel.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     return CategoryModel(doc.id, doc.data() ?? {});
   }
 
@@ -23,6 +25,7 @@ class CategoryModel {
       name: data['name'] as String? ?? id,
       type: data['type'] as String? ?? 'expense',
       icon: data['icon'] as String? ?? 'label',
+      color: data['color'] as String? ?? '',
       sortOrder: (data['sortOrder'] as num?)?.toInt() ?? 0,
       isDefault: isDefault ?? data['isDefault'] as bool? ?? false,
       createdAt: _asDateTime(data['createdAt']),
