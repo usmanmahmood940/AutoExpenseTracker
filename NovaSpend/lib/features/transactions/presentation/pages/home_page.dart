@@ -108,15 +108,11 @@ class _HomeView extends StatelessWidget {
                         AppSpacing.md,
                         0,
                       ),
-                      sliver: const SliverToBoxAdapter(
-                        child: _PeriodToggle(),
-                      ),
+                      sliver: const SliverToBoxAdapter(child: _PeriodToggle()),
                     ),
                     const SliverPadding(
                       padding: EdgeInsets.only(top: _sectionGap),
-                      sliver: SliverToBoxAdapter(
-                        child: _PeriodBalance(),
-                      ),
+                      sliver: SliverToBoxAdapter(child: _PeriodBalance()),
                     ),
                     if (!reviewBannerDismissed)
                       SliverToBoxAdapter(
@@ -131,9 +127,7 @@ class _HomeView extends StatelessWidget {
                         AppSpacing.md,
                         AppSpacing.xxl + PrimaryFab.size,
                       ),
-                      sliver: const SliverToBoxAdapter(
-                        child: _HomeBody(),
-                      ),
+                      sliver: const SliverToBoxAdapter(child: _HomeBody()),
                     ),
                   ],
                 ),
@@ -213,14 +207,8 @@ class _PeriodBalance extends StatelessWidget {
         p.periodComparison.netChangePercent,
       ),
     );
-    final (
-      period,
-      spent,
-      received,
-      spentChange,
-      receivedChange,
-      netChange,
-    ) = snapshot;
+    final (period, spent, received, spentChange, receivedChange, netChange) =
+        snapshot;
     final net = received - spent;
     final showTrends = period != HomePeriod.today;
 
@@ -235,12 +223,15 @@ class _PeriodBalance extends StatelessWidget {
         netLabel: l10n.homeOverviewNet,
         netAmount: _formatNet(money, net),
         spentChangePercent: showTrends && spent != 0 ? spentChange : null,
-        receivedChangePercent: showTrends && received != 0 ? receivedChange : null,
+        receivedChangePercent: showTrends && received != 0
+            ? receivedChange
+            : null,
         netChangePercent: showTrends && net != 0 ? netChange : null,
         trendSuffix: showTrends ? _trendSuffix(l10n, period) : null,
         spentIsZero: spent == 0,
         receivedIsZero: received == 0,
         netIsZero: net == 0,
+        netIsNegative: net < 0,
       ),
     );
   }
@@ -249,7 +240,7 @@ class _PeriodBalance extends StatelessWidget {
 String _formatNet(AppCurrencyController money, double net) {
   final formatted = money.formatMoney(net.abs());
   if (net > 0) return '+$formatted';
-  if (net < 0) return '-$formatted';
+  if (net < 0) return '−$formatted';
   return formatted;
 }
 
@@ -282,9 +273,9 @@ class _ReviewBannerSlot extends StatelessWidget {
       ),
       child: ReviewBanner(
         count: count,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const ReviewPage()),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const ReviewPage())),
         onDismiss: onDismiss,
       ),
     );
@@ -295,7 +286,7 @@ class _ReviewBannerSlot extends StatelessWidget {
 class _HomeBody extends StatelessWidget {
   const _HomeBody();
 
-  static const _sectionGap = AppSpacing.xl - AppSpacing.xs;
+  static const _sectionGap = AppSpacing.lg;
 
   @override
   Widget build(BuildContext context) {
@@ -321,11 +312,10 @@ class _HomeBody extends StatelessWidget {
             child: Text(
               l10n.homePeriodEmpty,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.55),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -343,7 +333,7 @@ class _HomeBody extends StatelessWidget {
           actionLabel: l10n.homeViewAll,
           onActionTap: () => MainShellScope.selectSearchTab(context),
         ),
-        const SizedBox(height: _sectionGap),
+        const SizedBox(height: _Highlights._headerGap),
         ..._dayGroups(context, l10n, home),
         if (home.isLoadingMore)
           const Padding(
@@ -360,39 +350,52 @@ class _Highlights extends StatelessWidget {
 
   final HomeProvider home;
 
+  static const _headerGap = AppSpacing.sm;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final period = context.select((HomeProvider p) => p.period);
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _highlightCard(
-              context,
-              l10n,
-              tx: home.highestSpend,
-              label: l10n.homeHighestSpend,
-              icon: Icons.arrow_upward_rounded,
-              accentColor: AppColors.spend,
-              amountColor: Theme.of(context).colorScheme.onSurface,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(
+          title: _highlightsTitle(l10n, period),
+          actionLabel: l10n.homeViewAllInsights,
+          onActionTap: () => MainShellScope.selectInsightsTab(context),
+          showActionChevron: true,
+        ),
+        const SizedBox(height: _headerGap),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _highlightCard(
+                  context,
+                  l10n,
+                  tx: home.highestSpend,
+                  label: l10n.homeHighestSpend,
+                  iconAsset: 'assets/icons/icon_highest_spend.svg',
+                  amountColor: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.smPlus2),
+              Expanded(
+                child: _highlightCard(
+                  context,
+                  l10n,
+                  tx: home.highestReceive,
+                  label: l10n.homeHighestReceived,
+                  iconAsset: 'assets/icons/icon_highest_received.svg',
+                  amountColor: AppColors.primaryStrong,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: _highlightCard(
-              context,
-              l10n,
-              tx: home.highestReceive,
-              label: l10n.homeHighestReceived,
-              icon: Icons.arrow_downward_rounded,
-              accentColor: AppColors.primaryStrong,
-              amountColor: AppColors.primaryStrong,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -402,15 +405,13 @@ Widget _highlightCard(
   AppLocalizations l10n, {
   required TransactionEntity? tx,
   required String label,
-  required IconData icon,
-  required Color accentColor,
+  required String iconAsset,
   required Color amountColor,
 }) {
   if (tx == null) {
     return StatHighlightCard(
       label: label,
-      icon: icon,
-      accentColor: accentColor,
+      iconAsset: iconAsset,
       amount: '—',
       subtitle: l10n.homeHighlightNone,
     );
@@ -426,8 +427,7 @@ Widget _highlightCard(
 
   return StatHighlightCard(
     label: label,
-    icon: icon,
-    accentColor: accentColor,
+    iconAsset: iconAsset,
     amount: AppCurrencyScope.of(context).formatMoney(tx.amount),
     amountColor: amountColor,
     subtitle: l10n.homeHighlightSubtitle(_truncate(merchant, 10), day),
@@ -436,7 +436,13 @@ Widget _highlightCard(
 }
 
 String _truncate(String value, int maxChars) {
-  final trimmed = value.trim();
+  final nameSplit = value.trim().split(" ");
+  var trimmed = "";
+  for (var i = 0; i < nameSplit.length && i < 2; i++) {
+    trimmed = trimmed + nameSplit[i] + " ";
+
+  }
+  trimmed = trimmed.trim();
   if (trimmed.length <= maxChars) return trimmed;
   return trimmed.substring(0, maxChars);
 }
@@ -456,6 +462,17 @@ List<Widget> _dayGroups(
     final spent = txs
         .where((t) => t.type != 'credit')
         .fold<double>(0, (sum, t) => sum + t.amount);
+    final received = txs
+        .where((t) => t.type == 'credit')
+        .fold<double>(0, (sum, t) => sum + t.amount);
+    final money = AppCurrencyScope.of(context);
+    final summary = dayGroupSummary(
+      spent: spent,
+      received: received,
+      spentPrefix: l10n.homeDayGroupSpent,
+      netPrefix: l10n.homeDayGroupNet,
+      formatMoney: money.formatMoney,
+    );
 
     widgets.add(
       Padding(
@@ -469,9 +486,9 @@ List<Widget> _dayGroups(
                 today: l10n.homePeriodToday,
                 yesterday: l10n.commonYesterday,
               ),
-              totalLabel: spent > 0
-                  ? AppCurrencyScope.of(context).formatMoney(spent)
-                  : null,
+              summaryPrefix: summary.prefix,
+              summaryAmount: summary.amount,
+              summaryAmountColor: summary.amountColor,
             ),
             const SizedBox(height: AppSpacing.sm),
             TransactionGroupCard(
@@ -522,9 +539,7 @@ Widget _emptyState(BuildContext context, AppLocalizations l10n) {
 
 Widget _stateBox(BuildContext context, Widget child) {
   return Padding(
-    padding: EdgeInsets.only(
-      top: MediaQuery.sizeOf(context).height * 0.2,
-    ),
+    padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * 0.2),
     child: Center(child: child),
   );
 }
@@ -546,6 +561,14 @@ void _openMerchant(BuildContext context, TransactionEntity tx) {
       ),
     ),
   );
+}
+
+String _highlightsTitle(AppLocalizations l10n, HomePeriod period) {
+  return switch (period) {
+    HomePeriod.today => l10n.homeDailyHighlights,
+    HomePeriod.thisWeek => l10n.homeWeeklyHighlights,
+    HomePeriod.thisMonth => l10n.homeMonthlyHighlights,
+  };
 }
 
 String _periodLabel(AppLocalizations l10n, HomePeriod period) {

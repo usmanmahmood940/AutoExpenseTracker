@@ -85,6 +85,8 @@ flutter:
     - assets/icons/icon_account.svg
     - assets/icons/icon_payment_method.svg
     - assets/icons/icon_reference_id.svg
+    - assets/icons/icon_highest_spend.svg
+    - assets/icons/icon_highest_received.svg
     - assets/icons/categories/
 
   # An image asset can refer to one or more resolution-specific "variants", see

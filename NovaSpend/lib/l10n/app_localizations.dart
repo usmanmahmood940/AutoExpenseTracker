@@ -535,14 +535,38 @@ abstract class AppLocalizations {
   /// No description provided for @homeHighestSpend.
   ///
   /// In en, this message translates to:
-  /// **'Highest \nspend'**
+  /// **'Highest Spend'**
   String get homeHighestSpend;
 
   /// No description provided for @homeHighestReceived.
   ///
   /// In en, this message translates to:
-  /// **'Highest \nreceived'**
+  /// **'Highest Received'**
   String get homeHighestReceived;
+
+  /// No description provided for @homeDailyHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily highlights'**
+  String get homeDailyHighlights;
+
+  /// No description provided for @homeWeeklyHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly highlights'**
+  String get homeWeeklyHighlights;
+
+  /// No description provided for @homeMonthlyHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly highlights'**
+  String get homeMonthlyHighlights;
+
+  /// No description provided for @homeViewAllInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'View all insights'**
+  String get homeViewAllInsights;
 
   /// No description provided for @homeHighlightNone.
   ///
@@ -573,6 +597,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No transactions in this period'**
   String get homePeriodEmpty;
+
+  /// No description provided for @homeDayGroupSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent '**
+  String get homeDayGroupSpent;
+
+  /// No description provided for @homeDayGroupNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net '**
+  String get homeDayGroupNet;
 
   /// No description provided for @commonYesterday.
   ///

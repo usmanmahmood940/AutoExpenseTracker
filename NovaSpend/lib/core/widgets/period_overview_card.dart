@@ -22,6 +22,7 @@ class PeriodOverviewCard extends StatelessWidget {
     this.spentIsZero = false,
     this.receivedIsZero = false,
     this.netIsZero = false,
+    this.netIsNegative = false,
     super.key,
   });
 
@@ -41,6 +42,7 @@ class PeriodOverviewCard extends StatelessWidget {
   final bool spentIsZero;
   final bool receivedIsZero;
   final bool netIsZero;
+  final bool netIsNegative;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +105,9 @@ class PeriodOverviewCard extends StatelessWidget {
               _OverviewRow(
                 label: netLabel,
                 amount: netAmount,
-                amountColor: AppColors.primaryStrong,
+                amountColor: netIsNegative
+                    ? AppColors.spend
+                    : AppColors.primaryStrong,
                 amountIsZero: netIsZero,
                 changePercent: netChangePercent,
                 trendSuffix: trendSuffix,

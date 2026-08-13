@@ -10,12 +10,14 @@ class SectionHeader extends StatelessWidget {
     required this.title,
     this.actionLabel,
     this.onActionTap,
+    this.showActionChevron = false,
     super.key,
   });
 
   final String title;
   final String? actionLabel;
   final VoidCallback? onActionTap;
+  final bool showActionChevron;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               letterSpacing: -0.01 * 18,
             ),
@@ -41,13 +43,26 @@ class SectionHeader extends StatelessWidget {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onActionTap,
-            child: Text(
-              actionLabel!,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.accent,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  actionLabel!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.primaryStrong,
+                  ),
+                ),
+                if (showActionChevron) ...[
+                  const SizedBox(width: 1),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 17,
+                    color: AppColors.primaryStrong,
+                  ),
+                ],
+              ],
             ),
           ),
       ],

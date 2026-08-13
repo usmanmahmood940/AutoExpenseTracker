@@ -50,12 +50,12 @@ class TransactionListTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal:AppSpacing.md, vertical: AppSpacing.md),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CategoryAvatar(category: transaction.category),
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.smPlus),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

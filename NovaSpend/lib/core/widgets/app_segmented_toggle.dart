@@ -70,9 +70,7 @@ class _AppSegmentedToggleState<T> extends State<AppSegmentedToggle<T>> {
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.xs),
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : AppColors.cardLight,
+            color: isDark ? AppColors.cardDark : AppColors.cardLight,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
               color: isDark ? AppColors.borderDark : AppColors.borderLight,

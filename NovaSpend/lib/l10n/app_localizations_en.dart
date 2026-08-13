@@ -241,10 +241,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeViewAll => 'View All';
 
   @override
-  String get homeHighestSpend => 'Highest \nspend';
+  String get homeHighestSpend => 'Highest Spend';
 
   @override
-  String get homeHighestReceived => 'Highest \nreceived';
+  String get homeHighestReceived => 'Highest Received';
+
+  @override
+  String get homeDailyHighlights => 'Daily highlights';
+
+  @override
+  String get homeWeeklyHighlights => 'Weekly highlights';
+
+  @override
+  String get homeMonthlyHighlights => 'Monthly highlights';
+
+  @override
+  String get homeViewAllInsights => 'View all insights';
 
   @override
   String get homeHighlightNone => 'No activity yet';
@@ -264,6 +276,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homePeriodEmpty => 'No transactions in this period';
+
+  @override
+  String get homeDayGroupSpent => 'Spent ';
+
+  @override
+  String get homeDayGroupNet => 'Net ';
 
   @override
   String get commonYesterday => 'Yesterday';

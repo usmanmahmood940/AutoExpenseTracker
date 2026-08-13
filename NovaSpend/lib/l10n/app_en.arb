@@ -98,8 +98,12 @@
   "homeBrandName": "NovaSpend",
   "homeRecentTransactions": "Recent Transactions",
   "homeViewAll": "View All",
-  "homeHighestSpend": "Highest \nspend",
-  "homeHighestReceived": "Highest \nreceived",
+  "homeHighestSpend": "Highest Spend",
+  "homeHighestReceived": "Highest Received",
+  "homeDailyHighlights": "Daily highlights",
+  "homeWeeklyHighlights": "Weekly highlights",
+  "homeMonthlyHighlights": "Monthly highlights",
+  "homeViewAllInsights": "View all insights",
   "homeHighlightNone": "No activity yet",
   "homeReceivedWithSign": "+ {amount} received",
   "@homeReceivedWithSign": {
@@ -116,6 +120,8 @@
   },
   "homeAddTransaction": "Add transaction",
   "homePeriodEmpty": "No transactions in this period",
+  "homeDayGroupSpent": "Spent ",
+  "homeDayGroupNet": "Net ",
   "commonYesterday": "Yesterday",
   "reviewBannerMessage": "{count, plural, =1{1 item needs review} other{{count} items need review}}",
   "@reviewBannerMessage": {

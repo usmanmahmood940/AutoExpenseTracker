@@ -20,6 +20,7 @@ abstract final class AppColors {
   /// highest-spend highlight badge), never as decoration.
   static const Color spend = Color(0xFFB61722);
 
+
   static const Color surfaceLight = Color(0xFFF9F9F9);
   static const Color surfaceDark = Color(0xFF1C1C1E);
 

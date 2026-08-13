@@ -22,6 +22,10 @@ class MainShellScope extends InheritedWidget {
     maybeOf(context)?.selectTab(1);
   }
 
+  static void selectInsightsTab(BuildContext context) {
+    maybeOf(context)?.selectTab(2);
+  }
+
   @override
   bool updateShouldNotify(MainShellScope oldWidget) => false;
 }
