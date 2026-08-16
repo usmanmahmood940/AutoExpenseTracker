@@ -89,6 +89,7 @@ class _HomeView extends StatelessWidget {
         children: [
           Positioned.fill(
             child: RefreshIndicator(
+              edgeOffset: GlassHeaderBar.totalHeight(context),
               onRefresh: home.refresh,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (n) {
