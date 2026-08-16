@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -10,15 +8,11 @@ class ReviewProvider extends ChangeNotifier {
   ReviewProvider({
     required TransactionRepository repository,
     required MarkTransactionReviewed markReviewed,
-  })  : _repository = repository,
-        _markReviewed = markReviewed;
+  }) : _repository = repository,
+       _markReviewed = markReviewed;
 
   final TransactionRepository _repository;
   final MarkTransactionReviewed _markReviewed;
-
-  StreamSubscription<List<TransactionEntity>>? _confidenceSub;
-  StreamSubscription<List<RawIngestionEntity>>? _needsParseSub;
-  StreamSubscription<List<RawIngestionEntity>>? _duplicateSub;
 
   List<TransactionEntity> lowConfidence = [];
   List<RawIngestionEntity> needsParse = [];
@@ -29,55 +23,57 @@ class ReviewProvider extends ChangeNotifier {
 
   void start(String uid) {
     _uid = uid;
-    _confidenceSub?.cancel();
-    _needsParseSub?.cancel();
-    _duplicateSub?.cancel();
+    refresh();
+  }
+
+  Future<void> refresh() async {
+    final uid = _uid;
+    if (uid == null) return;
+
     isLoading = true;
+    error = null;
     notifyListeners();
 
-    _confidenceSub = _repository.watchNeedsReview(uid).listen((list) {
-      lowConfidence = list;
-      isLoading = false;
-      notifyListeners();
-    }, onError: (Object e) {
+    try {
+      final review = await _repository.getNeedsReview(uid, limit: 50);
+      final parse = await _repository.getIngestionsByStatus(
+        uid,
+        'needs_parse',
+        limit: 50,
+      );
+      final dups = await _repository.getIngestionsByStatus(
+        uid,
+        'duplicate',
+        limit: 50,
+      );
+      lowConfidence = review;
+      needsParse = parse;
+      duplicates = dups;
+    } catch (e) {
       error = e.toString();
+      lowConfidence = [];
+      needsParse = [];
+      duplicates = [];
+    } finally {
       isLoading = false;
       notifyListeners();
-    });
-
-    _needsParseSub =
-        _repository.watchIngestionsByStatus(uid, 'needs_parse').listen((list) {
-      needsParse = list;
-      isLoading = false;
-      notifyListeners();
-    }, onError: (Object e) {
-      error = e.toString();
-      isLoading = false;
-      notifyListeners();
-    });
-
-    _duplicateSub =
-        _repository.watchIngestionsByStatus(uid, 'duplicate').listen((list) {
-      duplicates = list;
-      isLoading = false;
-      notifyListeners();
-    }, onError: (Object e) {
-      error = e.toString();
-      isLoading = false;
-      notifyListeners();
-    });
+    }
   }
 
   Future<void> confirm(TransactionEntity tx) async {
     final uid = _uid;
     if (uid == null) return;
     await _markReviewed(uid, tx.id);
+    lowConfidence = lowConfidence.where((item) => item.id != tx.id).toList();
+    notifyListeners();
   }
 
   Future<void> dismiss(TransactionEntity tx) async {
     final uid = _uid;
     if (uid == null) return;
     await _repository.softDelete(uid, tx.id);
+    lowConfidence = lowConfidence.where((item) => item.id != tx.id).toList();
+    notifyListeners();
   }
 
   Future<void> completeManually({
@@ -91,13 +87,7 @@ class ReviewProvider extends ChangeNotifier {
       ingestionId: ingestionId,
       transactionFields: fields,
     );
-  }
-
-  @override
-  void dispose() {
-    _confidenceSub?.cancel();
-    _needsParseSub?.cancel();
-    _duplicateSub?.cancel();
-    super.dispose();
+    needsParse = needsParse.where((item) => item.id != ingestionId).toList();
+    notifyListeners();
   }
 }

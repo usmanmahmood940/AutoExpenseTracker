@@ -41,7 +41,6 @@ import 'package:nova_spend/features/transactions/domain/repositories/transaction
 import 'package:nova_spend/features/transactions/domain/usecases/get_transactions_page.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/mark_transaction_reviewed.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
-import 'package:nova_spend/features/transactions/domain/usecases/watch_transactions.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -89,13 +88,11 @@ Future<void> configureDependencies({
   sl.registerLazySingleton<TransactionRepository>(
     () => TransactionRepositoryImpl(datasource: sl()),
   );
-  sl.registerLazySingleton(() => WatchTransactions(sl()));
   sl.registerLazySingleton(() => GetTransactionsPage(sl()));
   sl.registerLazySingleton(() => UpdateTransaction(sl()));
   sl.registerLazySingleton(() => MarkTransactionReviewed(sl()));
   sl.registerFactory(
     () => HomeProvider(
-      watchTransactions: sl(),
       getTransactionsPage: sl(),
       analyticsRepository: sl(),
       transactionRepository: sl(),

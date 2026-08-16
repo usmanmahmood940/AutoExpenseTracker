@@ -10,7 +10,7 @@
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
-import { defineSecret } from 'firebase-functions/params';
+import { defineSecret, defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 
 import { auth, db } from './admin';
@@ -19,7 +19,7 @@ import { ensureUserDocument, ensureUserProfileForUid } from './user_profile';
 
 const otpHashSecret = defineSecret('OTP_HASH_SECRET');
 const resendApiKey = defineSecret('RESEND_API_KEY');
-const resendFromEmail = defineSecret('RESEND_FROM_EMAIL');
+const resendFromEmail = defineString('RESEND_FROM_EMAIL');
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const RESET_SESSION_EXPIRY_MS = 10 * 60 * 1000;
@@ -232,7 +232,7 @@ function requireAuthUid(request: { auth?: { uid: string } | null }): string {
 }
 
 const authSecrets = {
-  secrets: [otpHashSecret, resendApiKey, resendFromEmail],
+  secrets: [otpHashSecret, resendApiKey],
   invoker: 'public' as const,
   cors: true,
 };

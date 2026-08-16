@@ -6,6 +6,7 @@ import 'package:nova_spend/features/auth/domain/repositories/auth_repository.dar
 import 'package:nova_spend/features/auth/domain/services/user_account_service.dart';
 import 'package:nova_spend/features/settings/domain/entities/sync_meta_entity.dart';
 import 'package:nova_spend/features/settings/domain/repositories/settings_repository.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -15,11 +16,11 @@ class SettingsProvider extends ChangeNotifier {
     required TransactionRepository transactionRepository,
     required ExportService exportService,
     required UserAccountService userAccountService,
-  })  : _settingsRepository = settingsRepository,
-        _authRepository = authRepository,
-        _transactionRepository = transactionRepository,
-        _exportService = exportService,
-        _userAccountService = userAccountService;
+  }) : _settingsRepository = settingsRepository,
+       _authRepository = authRepository,
+       _transactionRepository = transactionRepository,
+       _exportService = exportService,
+       _userAccountService = userAccountService;
 
   final SettingsRepository _settingsRepository;
   final AuthRepository _authRepository;
@@ -42,15 +43,20 @@ class SettingsProvider extends ChangeNotifier {
 
     biometricEnabled = await _settingsRepository.isBiometricEnabled();
 
-    _syncSub = _settingsRepository.watchSyncMeta(uid).listen((meta) {
-      syncMeta = meta;
-      isLoading = false;
-      notifyListeners();
-    }, onError: (Object e) {
-      error = e.toString();
-      isLoading = false;
-      notifyListeners();
-    });
+    _syncSub = _settingsRepository
+        .watchSyncMeta(uid)
+        .listen(
+          (meta) {
+            syncMeta = meta;
+            isLoading = false;
+            notifyListeners();
+          },
+          onError: (Object e) {
+            error = e.toString();
+            isLoading = false;
+            notifyListeners();
+          },
+        );
   }
 
   Future<void> setBiometricEnabled(bool enabled) async {
@@ -63,8 +69,20 @@ class SettingsProvider extends ChangeNotifier {
     isExporting = true;
     notifyListeners();
     try {
-      final txs = await _transactionRepository
-          .getTransactionsPage(uid, limit: 500);
+      final txs = <TransactionEntity>[];
+      TransactionEntity? cursor;
+      var hasMore = true;
+      while (hasMore) {
+        final page = await _transactionRepository.getTransactionsPage(
+          uid,
+          limit: 100,
+          startAfter: cursor,
+        );
+        txs.addAll(page.items);
+        hasMore = page.hasMore && page.items.isNotEmpty;
+        cursor = page.items.isEmpty ? null : page.items.last;
+        if (txs.length >= 5000) break;
+      }
       await _exportService.exportTransactionsCsv(txs);
     } catch (e) {
       error = e.toString();

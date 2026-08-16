@@ -1,20 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/exceptions.dart';
+import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 import 'package:nova_spend/features/transactions/data/models/transaction_model.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transactions_page.dart';
 import 'package:uuid/uuid.dart';
 
 // RawIngestionModel lives in transaction_model.dart
 
-
 class FirestoreTransactionDatasource {
-  FirestoreTransactionDatasource({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+  FirestoreTransactionDatasource({
+    FirebaseFirestore? firestore,
+    CloudFunctionsHttpClient? functionsClient,
+  }) : _db = firestore ?? FirebaseFirestore.instance,
+       _functionsClient = functionsClient ?? CloudFunctionsHttpClient();
 
   final FirebaseFirestore _db;
+  final CloudFunctionsHttpClient _functionsClient;
   final _uuid = const Uuid();
 
   CollectionReference<Map<String, dynamic>> _txs(String uid) => _db
@@ -41,32 +46,44 @@ class FirestoreTransactionDatasource {
         .limit(limit)
         .snapshots()
         .map((snap) {
-      return snap.docs
-          .map((d) => TransactionModel.fromFirestore(d).toEntity())
-          .where((t) => t.status != 'deleted')
-          .toList();
-    });
+          return snap.docs
+              .map((d) => TransactionModel.fromFirestore(d).toEntity())
+              .where((t) => t.status != 'deleted')
+              .toList();
+        });
   }
 
-  Future<List<TransactionEntity>> getTransactionsPage(
+  Future<TransactionsPage> getTransactionsPage(
     String uid, {
     int limit = 50,
     TransactionEntity? startAfter,
     TransactionFilter? filter,
   }) async {
     try {
-      Query<Map<String, dynamic>> query =
-          _txs(uid).orderBy('transactionDate', descending: true);
-
-      if (startAfter != null) {
-        query = query.startAfter([startAfter.transactionDate]);
+      final response = await _functionsClient.call(
+        'listTransactions',
+        requireAuth: true,
+        data: {
+          'pageSize': limit,
+          if (startAfter != null) 'cursor': startAfter.id,
+        },
+      );
+      final rawItems = response['items'];
+      if (rawItems is! List) {
+        throw const ServerException('Invalid transaction page response');
       }
-
-      // Over-fetch so client filters still yield a usable page.
-      final snap = await query.limit(limit * 3).get();
-      var items = snap.docs
-          .map((d) => TransactionModel.fromFirestore(d).toEntity())
-          .where((t) => t.status != 'deleted')
+      var items = rawItems
+          .whereType<Map>()
+          .map((item) {
+            final id = item['id'];
+            final data = item['data'];
+            if (id is! String || data is! Map) return null;
+            return TransactionModel(
+              id,
+              Map<String, dynamic>.from(data),
+            ).toEntity();
+          })
+          .whereType<TransactionEntity>()
           .toList();
 
       if (filter != null) {
@@ -76,7 +93,23 @@ class FirestoreTransactionDatasource {
       if (items.length > limit) {
         items = items.take(limit).toList();
       }
-      return items;
+
+      final totalCount =
+          (response['totalCount'] as num?)?.toInt() ?? items.length;
+      final totalAmount = (response['totalAmount'] as num?)?.toDouble() ?? 0;
+      final hasMore =
+          response['hasMore'] == true ||
+          (response['nextCursor'] is String &&
+              (response['nextCursor'] as String).isNotEmpty);
+
+      return TransactionsPage(
+        items: items,
+        hasMore: hasMore,
+        totalCount: totalCount,
+        totalAmount: totalAmount,
+      );
+    } on CloudFunctionsHttpException catch (e) {
+      throw ServerException(e.message);
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to load transactions');
     }
@@ -84,20 +117,43 @@ class FirestoreTransactionDatasource {
 
   Stream<List<TransactionEntity>> watchNeedsReview(String uid) {
     return _txs(uid)
+        .where('status', isEqualTo: 'needs_review')
         .orderBy('transactionDate', descending: true)
-        .limit(200)
+        .limit(50)
         .snapshots()
         .map((snap) {
+          return snap.docs
+              .map((d) => TransactionModel.fromFirestore(d).toEntity())
+              .toList();
+        });
+  }
+
+  Future<List<TransactionEntity>> getNeedsReview(
+    String uid, {
+    int limit = 50,
+  }) async {
+    try {
+      final snap = await _txs(uid)
+          .where('status', isEqualTo: 'needs_review')
+          .orderBy('transactionDate', descending: true)
+          .limit(limit)
+          .get();
       return snap.docs
           .map((d) => TransactionModel.fromFirestore(d).toEntity())
-          .where(
-            (t) =>
-                t.status != 'deleted' &&
-                t.parseConfidence < AppConstants.confidenceReviewThreshold &&
-                t.reviewedAt == null,
-          )
           .toList();
-    });
+    } on FirebaseException catch (e) {
+      throw ServerException(e.message ?? 'Failed to load review queue');
+    }
+  }
+
+  Future<int> getPendingReviewCount(String uid) async {
+    final snapshots = await Future.wait([
+      _txs(uid).where('status', isEqualTo: 'needs_review').count().get(),
+      _ingestions(uid).where('status', isEqualTo: 'needs_parse').count().get(),
+    ]);
+    final reviewCount = snapshots[0].count ?? 0;
+    final needsParseCount = snapshots[1].count ?? 0;
+    return reviewCount + needsParseCount;
   }
 
   Stream<List<RawIngestionEntity>> watchIngestionsByStatus(
@@ -110,10 +166,29 @@ class FirestoreTransactionDatasource {
         .limit(100)
         .snapshots()
         .map((snap) {
+          return snap.docs
+              .map((d) => RawIngestionModel.fromFirestore(d).toEntity())
+              .toList();
+        });
+  }
+
+  Future<List<RawIngestionEntity>> getIngestionsByStatus(
+    String uid,
+    String status, {
+    int limit = 50,
+  }) async {
+    try {
+      final snap = await _ingestions(uid)
+          .where('status', isEqualTo: status)
+          .orderBy('receivedAt', descending: true)
+          .limit(limit)
+          .get();
       return snap.docs
           .map((d) => RawIngestionModel.fromFirestore(d).toEntity())
           .toList();
-    });
+    } on FirebaseException catch (e) {
+      throw ServerException(e.message ?? 'Failed to load ingestions');
+    }
   }
 
   Future<void> updateTransaction(
@@ -161,7 +236,8 @@ class FirestoreTransactionDatasource {
           'raw': ingestion['raw'] ?? '',
           'source': 'manual',
           'receivedAt': ingestion['receivedAt'] ?? now,
-          if (ingestion['messageId'] != null) 'messageId': ingestion['messageId'],
+          if (ingestion['messageId'] != null)
+            'messageId': ingestion['messageId'],
           if (ingestion['idempotencyKey'] != null)
             'idempotencyKey': ingestion['idempotencyKey'],
         },
@@ -202,9 +278,7 @@ class FirestoreTransactionDatasource {
   }
 
   Future<void> softDelete(String uid, String transactionId) async {
-    await updateTransaction(uid, transactionId, {
-      'status': 'deleted',
-    });
+    await updateTransaction(uid, transactionId, {'status': 'deleted'});
   }
 
   Future<void> upsertMerchantCategoryOverride({

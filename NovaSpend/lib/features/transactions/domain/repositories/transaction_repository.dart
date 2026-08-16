@@ -1,11 +1,15 @@
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transactions_page.dart';
 
 abstract class TransactionRepository {
-  Stream<List<TransactionEntity>> watchTransactions(String uid, {int limit = 50});
+  Stream<List<TransactionEntity>> watchTransactions(
+    String uid, {
+    int limit = 50,
+  });
 
-  Future<List<TransactionEntity>> getTransactionsPage(
+  Future<TransactionsPage> getTransactionsPage(
     String uid, {
     int limit = 50,
     TransactionEntity? startAfter,
@@ -20,10 +24,23 @@ abstract class TransactionRepository {
 
   Stream<List<TransactionEntity>> watchNeedsReview(String uid);
 
+  /// One-shot review queue page (no long-lived listener).
+  Future<List<TransactionEntity>> getNeedsReview(String uid, {int limit = 50});
+
   Stream<List<RawIngestionEntity>> watchIngestionsByStatus(
     String uid,
     String status,
   );
+
+  /// One-shot ingestion queue page (no long-lived listener).
+  Future<List<RawIngestionEntity>> getIngestionsByStatus(
+    String uid,
+    String status, {
+    int limit = 50,
+  });
+
+  /// Count review items once without opening long-lived collection listeners.
+  Future<int> getPendingReviewCount(String uid);
 
   Future<String> createManualFromIngestion({
     required String uid,

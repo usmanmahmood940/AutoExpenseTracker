@@ -1,5 +1,6 @@
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transactions_page.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 
 class GetTransactionsPage {
@@ -7,7 +8,7 @@ class GetTransactionsPage {
 
   final TransactionRepository _repository;
 
-  Future<List<TransactionEntity>> call(
+  Future<TransactionsPage> call(
     String uid, {
     int limit = 50,
     TransactionEntity? startAfter,

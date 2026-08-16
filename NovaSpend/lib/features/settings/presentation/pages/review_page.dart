@@ -43,7 +43,8 @@ class _ReviewView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final provider = context.watch<ReviewProvider>();
-    final empty = provider.lowConfidence.isEmpty &&
+    final empty =
+        provider.lowConfidence.isEmpty &&
         provider.needsParse.isEmpty &&
         provider.duplicates.isEmpty;
 
@@ -52,47 +53,57 @@ class _ReviewView extends StatelessWidget {
       body: provider.isLoading
           ? Center(child: Text(l10n.commonLoading))
           : empty
-              ? Center(child: Text(l10n.reviewEmpty))
-              : ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  children: [
-                    if (provider.lowConfidence.isNotEmpty) ...[
-                      Text(
-                        l10n.reviewConfidenceSection,
-                        style: Theme.of(context).textTheme.titleMedium,
+          ? Center(child: Text(l10n.reviewEmpty))
+          : RefreshIndicator(
+              onRefresh: provider.refresh,
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                children: [
+                  if (provider.error != null) ...[
+                    Text(
+                      provider.error!,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      ...provider.lowConfidence.map(
-                        (tx) => _ConfidenceCard(transaction: tx),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    if (provider.needsParse.isNotEmpty) ...[
-                      Text(
-                        l10n.reviewParseSection,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      ...provider.needsParse.map(
-                        (ing) => _IngestionCard(
-                          ingestion: ing,
-                          showComplete: true,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    if (provider.duplicates.isNotEmpty) ...[
-                      Text(
-                        l10n.reviewDuplicatesSection,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      ...provider.duplicates.map(
-                        (ing) => _IngestionCard(ingestion: ing),
-                      ),
-                    ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                   ],
-                ),
+                  if (provider.lowConfidence.isNotEmpty) ...[
+                    Text(
+                      l10n.reviewConfidenceSection,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ...provider.lowConfidence.map(
+                      (tx) => _ConfidenceCard(transaction: tx),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                  if (provider.needsParse.isNotEmpty) ...[
+                    Text(
+                      l10n.reviewParseSection,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ...provider.needsParse.map(
+                      (ing) =>
+                          _IngestionCard(ingestion: ing, showComplete: true),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                  if (provider.duplicates.isNotEmpty) ...[
+                    Text(
+                      l10n.reviewDuplicatesSection,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ...provider.duplicates.map(
+                      (ing) => _IngestionCard(ingestion: ing),
+                    ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }
@@ -115,7 +126,10 @@ class _ConfidenceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(transaction.merchant, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              transaction.merchant,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(money.formatMoney(transaction.amount)),
             Text(l10n.reviewConfidence(percent)),
@@ -151,10 +165,7 @@ class _ConfidenceCard extends StatelessWidget {
 }
 
 class _IngestionCard extends StatelessWidget {
-  const _IngestionCard({
-    required this.ingestion,
-    this.showComplete = false,
-  });
+  const _IngestionCard({required this.ingestion, this.showComplete = false});
 
   final RawIngestionEntity ingestion;
   final bool showComplete;
@@ -179,20 +190,24 @@ class _IngestionCard extends StatelessWidget {
                   children: [
                     TextField(
                       controller: merchant,
-                      decoration:
-                          InputDecoration(labelText: l10n.transactionMerchant),
+                      decoration: InputDecoration(
+                        labelText: l10n.transactionMerchant,
+                      ),
                     ),
                     TextField(
                       controller: amount,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration:
-                          InputDecoration(labelText: l10n.transactionAmount),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l10n.transactionAmount,
+                      ),
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: type,
-                      decoration:
-                          InputDecoration(labelText: l10n.transactionType),
+                      decoration: InputDecoration(
+                        labelText: l10n.transactionType,
+                      ),
                       items: [
                         DropdownMenuItem(
                           value: 'debit',
@@ -209,8 +224,9 @@ class _IngestionCard extends StatelessWidget {
                     ),
                     TextField(
                       onChanged: (v) => category = v,
-                      decoration:
-                          InputDecoration(labelText: l10n.transactionCategory),
+                      decoration: InputDecoration(
+                        labelText: l10n.transactionCategory,
+                      ),
                     ),
                   ],
                 ),
@@ -238,16 +254,18 @@ class _IngestionCard extends StatelessWidget {
           '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final currency = AppCurrencyScope.of(context).currency;
       await context.read<ReviewProvider>().completeManually(
-            ingestionId: ingestion.id,
-            fields: {
-              'merchant': merchant.text.trim(),
-              'amount': parsedAmount,
-              'type': type,
-              'category': category.trim().isEmpty ? 'Uncategorized' : category.trim(),
-              'transactionDate': date,
-              'currency': currency,
-            },
-          );
+        ingestionId: ingestion.id,
+        fields: {
+          'merchant': merchant.text.trim(),
+          'amount': parsedAmount,
+          'type': type,
+          'category': category.trim().isEmpty
+              ? 'Uncategorized'
+              : category.trim(),
+          'transactionDate': date,
+          'currency': currency,
+        },
+      );
     }
     merchant.dispose();
     amount.dispose();
@@ -263,11 +281,7 @@ class _IngestionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              ingestion.raw,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(ingestion.raw, maxLines: 4, overflow: TextOverflow.ellipsis),
             if (ingestion.error != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(

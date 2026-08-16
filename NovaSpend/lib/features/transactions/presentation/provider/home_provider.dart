@@ -4,12 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/repositories/analytics_repository.dart';
-import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_transactions_page.dart';
-import 'package:nova_spend/features/transactions/domain/usecases/watch_transactions.dart';
 import 'package:nova_spend/features/transactions/presentation/home_period.dart';
 
 class PeriodTotals {
@@ -40,30 +38,26 @@ class PeriodComparison {
 
 class HomeProvider extends ChangeNotifier {
   HomeProvider({
-    required WatchTransactions watchTransactions,
     required GetTransactionsPage getTransactionsPage,
     required AnalyticsRepository analyticsRepository,
     required TransactionRepository transactionRepository,
-  })  : _watchTransactions = watchTransactions,
-        _getTransactionsPage = getTransactionsPage,
-        _analyticsRepository = analyticsRepository,
-        _transactionRepository = transactionRepository;
+  }) : _getTransactionsPage = getTransactionsPage,
+       _analyticsRepository = analyticsRepository,
+       _transactionRepository = transactionRepository;
 
-  final WatchTransactions _watchTransactions;
   final GetTransactionsPage _getTransactionsPage;
   final AnalyticsRepository _analyticsRepository;
   final TransactionRepository _transactionRepository;
 
-  StreamSubscription<List<TransactionEntity>>? _subscription;
   StreamSubscription<MonthlySummaryEntity?>? _summarySub;
-  StreamSubscription<List<TransactionEntity>>? _reviewSub;
-  StreamSubscription<List<RawIngestionEntity>>? _needsParseSub;
 
   List<TransactionEntity> _items = [];
   TransactionFilter _filter = TransactionFilter.empty;
   HomePeriod _period = HomePeriod.thisWeek;
   MonthlySummaryEntity? _monthlySummary;
   int _pendingReviewCount = 0;
+  int _totalCount = 0;
+  double _totalAmount = 0;
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -95,6 +89,8 @@ class HomeProvider extends ChangeNotifier {
   TransactionFilter get filter => _filter;
   HomePeriod get period => _period;
   int get pendingReviewCount => _pendingReviewCount;
+  int get totalCount => _totalCount;
+  double get totalAmount => _totalAmount;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMore => _hasMore;
@@ -110,7 +106,8 @@ class HomeProvider extends ChangeNotifier {
   }
 
   PeriodTotals get periodTotals {
-    final currency = _monthlySummary?.currency ??
+    final currency =
+        _monthlySummary?.currency ??
         (_items.isNotEmpty ? _items.first.currency : 'PKR');
 
     switch (_period) {
@@ -136,10 +133,11 @@ class HomeProvider extends ChangeNotifier {
     final previous = _previousComparisonTotals;
 
     return PeriodComparison(
-      spentChangePercent:
-          _percentChange(previous.spent, current.spent),
-      receivedChangePercent:
-          _percentChange(previous.received, current.received),
+      spentChangePercent: _percentChange(previous.spent, current.spent),
+      receivedChangePercent: _percentChange(
+        previous.received,
+        current.received,
+      ),
       netChangePercent: _percentChange(previous.net, current.net),
     );
   }
@@ -208,11 +206,11 @@ class HomeProvider extends ChangeNotifier {
   }
 
   void start(String uid) {
-    if (_uid == uid && _subscription != null) return;
+    if (_uid == uid) return;
     _uid = uid;
-    _listenTransactions(uid);
+    unawaited(refresh());
     _listenMonthlySummary(uid);
-    _listenPendingReview(uid);
+    unawaited(_loadPendingReviewCount(uid));
   }
 
   void setPeriod(HomePeriod period) {
@@ -233,10 +231,13 @@ class HomeProvider extends ChangeNotifier {
         limit: 100,
         filter: _filter.hasActiveFilters ? _filter : null,
       );
-      _items = page;
+      _items = page.items;
+      _totalCount = page.totalCount;
+      _totalAmount = page.totalAmount;
       _invalidatePeriodCache();
-      _hasMore = page.length >= 100;
+      _hasMore = page.hasMore;
       _error = null;
+      unawaited(_loadPendingReviewCount(uid));
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -257,13 +258,18 @@ class HomeProvider extends ChangeNotifier {
         startAfter: _items.last,
         filter: _filter.hasActiveFilters ? _filter : null,
       );
-      if (more.isEmpty) {
+      if (more.items.isEmpty) {
         _hasMore = false;
       } else {
         final existingIds = _items.map((e) => e.id).toSet();
-        _items = [..._items, ...more.where((t) => !existingIds.contains(t.id))];
+        _items = [
+          ..._items,
+          ...more.items.where((t) => !existingIds.contains(t.id)),
+        ];
+        _totalCount = more.totalCount;
+        _totalAmount = more.totalAmount;
         _invalidatePeriodCache();
-        _hasMore = more.length >= 50;
+        _hasMore = more.hasMore;
       }
     } catch (e) {
       _error = e.toString();
@@ -308,71 +314,26 @@ class HomeProvider extends ChangeNotifier {
     return {for (final k in keys) k: map[k]!};
   }
 
-  void _listenTransactions(String uid) {
-    _subscription?.cancel();
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    _subscription = _watchTransactions(uid, limit: 100).listen(
-      (list) {
-        _items = list;
-        _invalidatePeriodCache();
-        _isLoading = false;
-        _hasMore = list.length >= 100;
-        notifyListeners();
-      },
-      onError: (Object e) {
-        _error = e.toString();
-        _isLoading = false;
-        notifyListeners();
-      },
-    );
-  }
-
   void _listenMonthlySummary(String uid) {
     _summarySub?.cancel();
     final yearMonth = DateFormat('yyyy-MM').format(DateTime.now());
-    _summarySub = _analyticsRepository.watchSummary(uid, yearMonth).listen(
-      (summary) {
-        _monthlySummary = summary;
-        notifyListeners();
-      },
-      onError: (_) {},
-    );
+    _summarySub = _analyticsRepository.watchSummary(uid, yearMonth).listen((
+      summary,
+    ) {
+      _monthlySummary = summary;
+      notifyListeners();
+    }, onError: (_) {});
   }
 
-  void _listenPendingReview(String uid) {
-    _reviewSub?.cancel();
-    _needsParseSub?.cancel();
-
-    var lowConfidenceCount = 0;
-    var needsParseCount = 0;
-
-    void updateCount() {
-      final next = lowConfidenceCount + needsParseCount;
-      if (_pendingReviewCount != next) {
-        _pendingReviewCount = next;
-        notifyListeners();
-      }
+  Future<void> _loadPendingReviewCount(String uid) async {
+    try {
+      final count = await _transactionRepository.getPendingReviewCount(uid);
+      if (_uid != uid || _pendingReviewCount == count) return;
+      _pendingReviewCount = count;
+      notifyListeners();
+    } catch (_) {
+      // The badge is non-critical; the review screen will surface any errors.
     }
-
-    _reviewSub = _transactionRepository.watchNeedsReview(uid).listen(
-      (list) {
-        lowConfidenceCount = list.length;
-        updateCount();
-      },
-      onError: (_) {},
-    );
-
-    _needsParseSub =
-        _transactionRepository.watchIngestionsByStatus(uid, 'needs_parse').listen(
-      (list) {
-        needsParseCount = list.length;
-        updateCount();
-      },
-      onError: (_) {},
-    );
   }
 
   PeriodTotals _aggregateFrom(DateTime startInclusive, String currency) {
@@ -442,7 +403,8 @@ class HomeProvider extends ChangeNotifier {
     if (parsed != null) return DateTime(parsed.year, parsed.month, parsed.day);
 
     final fromDay = DateTime.tryParse(tx.day);
-    if (fromDay != null) return DateTime(fromDay.year, fromDay.month, fromDay.day);
+    if (fromDay != null)
+      return DateTime(fromDay.year, fromDay.month, fromDay.day);
 
     return null;
   }
@@ -489,10 +451,7 @@ class HomeProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _subscription?.cancel();
     _summarySub?.cancel();
-    _reviewSub?.cancel();
-    _needsParseSub?.cancel();
     super.dispose();
   }
 }

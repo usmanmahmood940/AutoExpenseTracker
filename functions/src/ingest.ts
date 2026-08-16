@@ -4,16 +4,12 @@ import { onRequest } from 'firebase-functions/v2/https';
 import type { Request, Response } from 'express';
 
 import { db, auth } from './admin';
-import {
-  loadAllowedCategoryNamesForUser,
-  loadDefaultCategoryNames,
-} from './categories';
+import { loadAllowedCategoryNamesForUser } from './categories';
 import { dayNameFromDate, parseReceivedAt } from './dates';
 import { computeDedupKey, maskAccountId } from './dedup';
 import { parseTransaction } from './gemini';
 import {
   COLLECTIONS,
-  DEFAULT_USER_ID,
   normalizeMerchant,
   normalizeMerchantKey,
   type IngestWebhookRequest,
@@ -25,22 +21,12 @@ import {
 import { validateParsedTransaction, validateWebhookRequest } from './validate';
 import { ensureUserDocument } from './user_profile';
 
-const webhookApiKey = defineSecret('WEBHOOK_API_KEY');
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
-const API_KEY_HEADER = 'x-api-key';
 const USER_ID_HEADER = 'x-user-id';
 
 /** Firebase Auth UIDs / safe path segment: letters, digits, _ and - */
 const UID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
-
-type IngestScope =
-  | { mode: 'legacy' }
-  | { mode: 'user'; uid: string };
-
-function unauthorized(): IngestWebhookResponse {
-  return { success: false, error: 'Unauthorized' };
-}
 
 function toTimestamp(receivedAt: string): Timestamp {
   const date = parseReceivedAt(receivedAt);
@@ -50,63 +36,39 @@ function toTimestamp(receivedAt: string): Timestamp {
   return Timestamp.fromDate(date);
 }
 
-function resolveUserId(scope: IngestScope): string {
-  return scope.mode === 'user' ? scope.uid : DEFAULT_USER_ID;
+function rawIngestionsCollection(uid: string) {
+  return db
+    .collection(COLLECTIONS.users)
+    .doc(uid)
+    .collection(COLLECTIONS.rawIngestions);
 }
 
-function rawIngestionsCollection(scope: IngestScope) {
-  if (scope.mode === 'user') {
-    return db
-      .collection(COLLECTIONS.users)
-      .doc(scope.uid)
-      .collection(COLLECTIONS.rawIngestions);
-  }
-  return db.collection(COLLECTIONS.rawIngestions);
+function transactionsCollection(uid: string) {
+  return db
+    .collection(COLLECTIONS.users)
+    .doc(uid)
+    .collection(COLLECTIONS.transactions);
 }
-
-function transactionsCollection(scope: IngestScope) {
-  if (scope.mode === 'user') {
-    return db
-      .collection(COLLECTIONS.users)
-      .doc(scope.uid)
-      .collection(COLLECTIONS.transactions);
-  }
-  return db.collection(COLLECTIONS.transactions);
-}
-
 
 async function findIdempotentIngestion(
-  scope: IngestScope,
+  uid: string,
   idempotencyKey: string,
 ): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
-  const col = rawIngestionsCollection(scope);
-
-  // Legacy top-level collections still filter by userId field
-  const query =
-    scope.mode === 'legacy'
-      ? col
-          .where('userId', '==', DEFAULT_USER_ID)
-          .where('idempotencyKey', '==', idempotencyKey)
-      : col.where('idempotencyKey', '==', idempotencyKey);
-
-  const snapshot = await query.limit(1).get();
+  const snapshot = await rawIngestionsCollection(uid)
+    .where('idempotencyKey', '==', idempotencyKey)
+    .limit(1)
+    .get();
   return snapshot.empty ? null : snapshot.docs[0];
 }
 
 async function findDuplicateTransaction(
-  scope: IngestScope,
+  uid: string,
   dedupKey: string,
 ): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
-  const col = transactionsCollection(scope);
-
-  const query =
-    scope.mode === 'legacy'
-      ? col
-          .where('userId', '==', DEFAULT_USER_ID)
-          .where('dedupKey', '==', dedupKey)
-      : col.where('dedupKey', '==', dedupKey);
-
-  const snapshot = await query.limit(1).get();
+  const snapshot = await transactionsCollection(uid)
+    .where('dedupKey', '==', dedupKey)
+    .limit(1)
+    .get();
   return snapshot.empty ? null : snapshot.docs[0];
 }
 
@@ -154,17 +116,17 @@ function buildIngestionResponse(
 }
 
 async function createRawIngestion(
-  scope: IngestScope,
+  uid: string,
   request: IngestWebhookRequest,
 ): Promise<string> {
   const now = FieldValue.serverTimestamp();
-  const docRef = rawIngestionsCollection(scope).doc();
+  const docRef = rawIngestionsCollection(uid).doc();
 
   const ingestion: Omit<RawIngestion, 'createdAt' | 'updatedAt'> & {
     createdAt: FirebaseFirestore.FieldValue;
     updatedAt: FirebaseFirestore.FieldValue;
   } = {
-    userId: resolveUserId(scope),
+    userId: uid,
     raw: request.raw,
     source: request.source,
     receivedAt: toTimestamp(request.receivedAt),
@@ -186,11 +148,11 @@ async function createRawIngestion(
 }
 
 async function updateRawIngestion(
-  scope: IngestScope,
+  uid: string,
   ingestionId: string,
   patch: Partial<Pick<RawIngestion, 'status' | 'transactionId' | 'error'>>,
 ): Promise<void> {
-  await rawIngestionsCollection(scope)
+  await rawIngestionsCollection(uid)
     .doc(ingestionId)
     .update({
       ...patch,
@@ -199,31 +161,23 @@ async function updateRawIngestion(
 }
 
 async function processIngest(
-  scope: IngestScope,
+  uid: string,
   request: IngestWebhookRequest,
   geminiKey: string,
 ): Promise<IngestWebhookResponse> {
-  if (scope.mode === 'user') {
-    await ensureUserDocument(scope.uid);
-  }
+  await ensureUserDocument(uid);
 
   if (request.idempotencyKey) {
-    const existing = await findIdempotentIngestion(
-      scope,
-      request.idempotencyKey,
-    );
+    const existing = await findIdempotentIngestion(uid, request.idempotencyKey);
     if (existing) {
       const ingestion = existing.data() as RawIngestion;
       return buildIngestionResponse(ingestion, existing.id);
     }
   }
 
-  const ingestionId = await createRawIngestion(scope, request);
+  const ingestionId = await createRawIngestion(uid, request);
 
-  const allowedCategories =
-    scope.mode === 'user'
-      ? await loadAllowedCategoryNamesForUser(scope.uid)
-      : await loadDefaultCategoryNames();
+  const allowedCategories = await loadAllowedCategoryNamesForUser(uid);
   const parseResult = await parseTransaction(
     geminiKey,
     request.raw,
@@ -232,7 +186,7 @@ async function processIngest(
   );
 
   if (!parseResult.ok) {
-    await updateRawIngestion(scope, ingestionId, {
+    await updateRawIngestion(uid, ingestionId, {
       status: 'needs_parse',
       error: parseResult.error,
     });
@@ -249,7 +203,7 @@ async function processIngest(
     allowedCategories,
   );
   if (!fieldValidation.ok) {
-    await updateRawIngestion(scope, ingestionId, {
+    await updateRawIngestion(uid, ingestionId, {
       status: 'needs_parse',
       error: fieldValidation.error,
     });
@@ -263,10 +217,10 @@ async function processIngest(
 
   const parsed = parseResult.parsed;
   const dedupKey = computeDedupKey(parsed);
-  const duplicate = await findDuplicateTransaction(scope, dedupKey);
+  const duplicate = await findDuplicateTransaction(uid, dedupKey);
 
   if (duplicate) {
-    await updateRawIngestion(scope, ingestionId, {
+    await updateRawIngestion(uid, ingestionId, {
       status: 'duplicate',
       transactionId: duplicate.id,
     });
@@ -282,21 +236,19 @@ async function processIngest(
   let category = parsed.category;
   let categorySource: Transaction['categorySource'] = parseResult.model;
 
-  if (scope.mode === 'user') {
-    const override = await loadMerchantOverride(scope.uid, parsed.merchant);
-    if (override) {
-      category = override.category;
-      categorySource = 'rule';
-    }
+  const override = await loadMerchantOverride(uid, parsed.merchant);
+  if (override) {
+    category = override.category;
+    categorySource = 'rule';
   }
 
   const now = FieldValue.serverTimestamp();
-  const transactionRef = transactionsCollection(scope).doc();
+  const transactionRef = transactionsCollection(uid).doc();
   const transaction: Omit<Transaction, 'createdAt' | 'updatedAt'> & {
     createdAt: FirebaseFirestore.FieldValue;
     updatedAt: FirebaseFirestore.FieldValue;
   } = {
-    userId: resolveUserId(scope),
+    userId: uid,
     amount: parsed.amount,
     currency: parsed.currency,
     type: parsed.type,
@@ -336,18 +288,16 @@ async function processIngest(
   };
 
   await transactionRef.set(transaction);
-  await updateRawIngestion(scope, ingestionId, {
+  await updateRawIngestion(uid, ingestionId, {
     status: 'parsed',
     transactionId: transactionRef.id,
   });
 
-  if (scope.mode === 'user') {
-    await updateSyncMeta(scope.uid, {
-      lastMerchant: parsed.merchant,
-      lastAmount: parsed.amount,
-      lastTransactionId: transactionRef.id,
-    });
-  }
+  await updateSyncMeta(uid, {
+    lastMerchant: parsed.merchant,
+    lastAmount: parsed.amount,
+    lastTransactionId: transactionRef.id,
+  });
 
   return {
     success: true,
@@ -458,71 +408,60 @@ async function lookupAuthUid(uid: string): Promise<AuthUidLookupResult> {
   }
 }
 
-async function handleIngestRequest(
+async function resolveUid(
   req: Request,
   res: Response,
-  options: {
-    authenticate: (req: Request) => boolean;
-    resolveScope: (
-      req: Request,
-      res: Response,
-    ) => Promise<IngestScope | null> | IngestScope | null;
-  },
-): Promise<void> {
-  try {
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
-    }
-
-    if (!options.authenticate(req)) {
-      res.status(401).json(unauthorized());
-      return;
-    }
-
-    const scope = await options.resolveScope(req, res);
-    if (!scope) {
-      return;
-    }
-
-    const validation = validateWebhookRequest(req.body);
-    if (!validation.ok) {
-      res.status(400).json({ success: false, error: validation.error });
-      return;
-    }
-
-    const result = await processIngest(
-      scope,
-      validation.data,
-      geminiApiKey.value(),
-    );
-    res.status(200).json(result);
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    console.error('Ingest request failed', message, error);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, error: 'Internal server error' });
-    }
-  }
-}
-
-/** Legacy webhook: X-API-Key auth → top-level raw_ingestions + transactions */
-export const ingestTransaction = onRequest(
-  {
-    secrets: [webhookApiKey, geminiApiKey],
-    cors: false,
-  },
-  async (req, res) => {
-    await handleIngestRequest(req, res, {
-      authenticate: (r) => {
-        const providedKey = r.header(API_KEY_HEADER);
-        return Boolean(providedKey && providedKey === webhookApiKey.value());
-      },
-      resolveScope: () => ({ mode: 'legacy' }),
+): Promise<string | null> {
+  const uid = extractUid(req);
+  if (!uid) {
+    res.status(400).json({
+      success: false,
+      error: 'uid is required (X-User-Id header or ?uid= query parameter)',
     });
-  },
-);
+    return null;
+  }
+  if (!isValidUid(uid)) {
+    res.status(400).json({
+      success: false,
+      error:
+        'uid must be 1–128 characters: letters, digits, underscore, or hyphen',
+    });
+    return null;
+  }
+
+  const lookup = await lookupAuthUid(uid);
+  if (lookup.status === 'not_found') {
+    res.status(404).json({
+      success: false,
+      error: 'uid does not exist in Firebase Auth',
+    });
+    return null;
+  }
+  if (lookup.status === 'invalid_uid') {
+    res.status(400).json({
+      success: false,
+      error: 'uid is not a valid Firebase Auth user id',
+    });
+    return null;
+  }
+  if (lookup.status === 'auth_not_configured') {
+    res.status(503).json({
+      success: false,
+      error:
+        'Firebase Authentication is not configured for this project. Enable Authentication in the Firebase Console, then run: firebase deploy --only auth',
+    });
+    return null;
+  }
+  if (lookup.status === 'error') {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify uid with Firebase Auth',
+    });
+    return null;
+  }
+
+  return uid;
+}
 
 /**
  * Multi-user webhook: identifies the user via X-User-Id (or ?uid=)
@@ -535,60 +474,36 @@ export const ingestTransactionForUser = onRequest(
     cors: false,
   },
   async (req, res) => {
-    await handleIngestRequest(req, res, {
-      authenticate: () => true,
-      resolveScope: async (r, response) => {
-        const uid = extractUid(r);
-        if (!uid) {
-          response.status(400).json({
-            success: false,
-            error:
-              'uid is required (X-User-Id header or ?uid= query parameter)',
-          });
-          return null;
-        }
-        if (!isValidUid(uid)) {
-          response.status(400).json({
-            success: false,
-            error:
-              'uid must be 1–128 characters: letters, digits, underscore, or hyphen',
-          });
-          return null;
-        }
+    try {
+      if (req.method !== 'POST') {
+        res.status(405).json({ success: false, error: 'Method not allowed' });
+        return;
+      }
 
-        const lookup = await lookupAuthUid(uid);
-        if (lookup.status === 'not_found') {
-          response.status(404).json({
-            success: false,
-            error: 'uid does not exist in Firebase Auth',
-          });
-          return null;
-        }
-        if (lookup.status === 'invalid_uid') {
-          response.status(400).json({
-            success: false,
-            error: 'uid is not a valid Firebase Auth user id',
-          });
-          return null;
-        }
-        if (lookup.status === 'auth_not_configured') {
-          response.status(503).json({
-            success: false,
-            error:
-              'Firebase Authentication is not configured for this project. Enable Authentication in the Firebase Console, then run: firebase deploy --only auth',
-          });
-          return null;
-        }
-        if (lookup.status === 'error') {
-          response.status(500).json({
-            success: false,
-            error: 'Failed to verify uid with Firebase Auth',
-          });
-          return null;
-        }
+      const uid = await resolveUid(req, res);
+      if (!uid) {
+        return;
+      }
 
-        return { mode: 'user', uid };
-      },
-    });
+      const validation = validateWebhookRequest(req.body);
+      if (!validation.ok) {
+        res.status(400).json({ success: false, error: validation.error });
+        return;
+      }
+
+      const result = await processIngest(
+        uid,
+        validation.data,
+        geminiApiKey.value(),
+      );
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Internal server error';
+      console.error('Ingest request failed', message, error);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, error: 'Internal server error' });
+      }
+    }
   },
 );

@@ -18,9 +18,9 @@ UNSIGNED = EXPORT / "_unsigned"
 SIGNED = EXPORT
 
 WEBHOOK_URL = (
-    "https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction"
+    "https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransactionForUser"
 )
-API_KEY_PLACEHOLDER = "PASTE_YOUR_WEBHOOK_API_KEY_HERE"
+USER_ID_PLACEHOLDER = "PASTE_YOUR_FIREBASE_UID_HERE"
 BANK_NAME_PLACEHOLDER = "PASTE_YOUR_BANK_NAME_HERE"
 
 
@@ -145,8 +145,8 @@ def build_send_to_webhook() -> dict:
             "is.workflow.actions.gettext",
             {
                 "UUID": api_uuid,
-                "CustomOutputName": "API Key",
-                "WFTextActionText": API_KEY_PLACEHOLDER,
+                "CustomOutputName": "User ID",
+                "WFTextActionText": USER_ID_PLACEHOLDER,
             },
         ),
         action(
@@ -194,7 +194,7 @@ def build_send_to_webhook() -> dict:
                 "WFHTTPHeaders": dv(
                     [
                         di_static("Content-Type", "application/json"),
-                        di_key_value("X-API-Key", oref(api_uuid, "API Key")),
+                        di_key_value("X-User-Id", oref(api_uuid, "User ID")),
                     ]
                 ),
                 "WFHTTPBodyType": "JSON",
@@ -232,7 +232,7 @@ def build_send_to_webhook() -> dict:
             "ActionIndex": 0,
             "Category": "Parameter",
             "ParameterKey": "WFTextActionText",
-            "Text": "Enter your WEBHOOK_API_KEY (same value you set in Firebase)",
+            "Text": "Enter your Firebase Auth UID (from NovaSpend Settings)",
             "DefaultValue": "",
         },
         {
@@ -428,7 +428,7 @@ def main() -> None:
         "\nImport on iPhone:\n"
         "  1. AirDrop the .shortcut files from ios/export/ to your iPhone\n"
         "  2. Tap each file → Add Shortcut\n"
-        "  3. On 'Send to Webhook' import, paste WEBHOOK_API_KEY and bank name when prompted\n"
+        "  3. On 'Send to Webhook' import, paste your Firebase Auth UID and bank name when prompted\n"
         "  4. Run 'Manual Test Log' to verify\n"
     )
 

@@ -4,21 +4,26 @@ import 'package:nova_spend/features/transactions/data/datasource/firestore_trans
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transactions_page.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
-  TransactionRepositoryImpl({required FirestoreTransactionDatasource datasource})
-      : _datasource = datasource;
+  TransactionRepositoryImpl({
+    required FirestoreTransactionDatasource datasource,
+  }) : _datasource = datasource;
 
   final FirestoreTransactionDatasource _datasource;
 
   @override
-  Stream<List<TransactionEntity>> watchTransactions(String uid, {int limit = 50}) {
+  Stream<List<TransactionEntity>> watchTransactions(
+    String uid, {
+    int limit = 50,
+  }) {
     return _datasource.watchTransactions(uid, limit: limit);
   }
 
   @override
-  Future<List<TransactionEntity>> getTransactionsPage(
+  Future<TransactionsPage> getTransactionsPage(
     String uid, {
     int limit = 50,
     TransactionEntity? startAfter,
@@ -55,11 +60,41 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<List<TransactionEntity>> getNeedsReview(
+    String uid, {
+    int limit = 50,
+  }) async {
+    try {
+      return await _datasource.getNeedsReview(uid, limit: limit);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
   Stream<List<RawIngestionEntity>> watchIngestionsByStatus(
     String uid,
     String status,
   ) {
     return _datasource.watchIngestionsByStatus(uid, status);
+  }
+
+  @override
+  Future<List<RawIngestionEntity>> getIngestionsByStatus(
+    String uid,
+    String status, {
+    int limit = 50,
+  }) async {
+    try {
+      return await _datasource.getIngestionsByStatus(uid, status, limit: limit);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<int> getPendingReviewCount(String uid) {
+    return _datasource.getPendingReviewCount(uid);
   }
 
   @override

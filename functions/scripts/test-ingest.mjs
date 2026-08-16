@@ -1,17 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Local test harness for ingest webhooks.
+ * Local test harness for ingestTransactionForUser.
  *
- * Legacy (API key → top-level collections):
- *   WEBHOOK_API_KEY=your-key node functions/scripts/test-ingest.mjs
- *
- * Multi-user (UID → users/{uid}/…):
- *   INGEST_MODE=user USER_ID=some-uid node functions/scripts/test-ingest.mjs
+ *   USER_ID=your-firebase-uid node functions/scripts/test-ingest.mjs
  *
  * With emulators:
- *   WEBHOOK_API_KEY=your-key INGEST_URL=http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransaction node functions/scripts/test-ingest.mjs
- *   INGEST_MODE=user USER_ID=test-user INGEST_URL=http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransactionForUser node functions/scripts/test-ingest.mjs
+ *   USER_ID=test-user INGEST_URL=http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransactionForUser node functions/scripts/test-ingest.mjs
  */
 
 import { readFileSync } from 'node:fs';
@@ -24,33 +19,20 @@ const samples = JSON.parse(
   readFileSync(join(__dirname, '../test-data/sample-sms.json'), 'utf8'),
 );
 
-const mode = process.env.INGEST_MODE === 'user' ? 'user' : 'legacy';
-const apiKey = process.env.WEBHOOK_API_KEY;
 const userId = process.env.USER_ID;
 const defaultBank = process.env.BANK_NAME ?? 'HBL';
 
-const defaultEndpoint =
-  mode === 'user'
-    ? 'http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransactionForUser'
-    : 'http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransaction';
+const endpoint =
+  process.env.INGEST_URL ??
+  'http://127.0.0.1:5001/auto-expense-tracker-2026/asia-south1/ingestTransactionForUser';
 
-const endpoint = process.env.INGEST_URL ?? defaultEndpoint;
-
-if (mode === 'legacy' && !apiKey) {
-  console.error('Set WEBHOOK_API_KEY environment variable (legacy mode).');
+if (!userId) {
+  console.error('Set USER_ID environment variable (Firebase Auth UID).');
   process.exit(1);
 }
 
-if (mode === 'user' && !userId) {
-  console.error('Set USER_ID environment variable (user mode).');
-  process.exit(1);
-}
-
-console.log(`Mode: ${mode}`);
 console.log(`Endpoint: ${endpoint}`);
-if (mode === 'user') {
-  console.log(`User ID: ${userId}`);
-}
+console.log(`User ID: ${userId}`);
 console.log(`Samples: ${samples.length}\n`);
 
 let passed = 0;
@@ -68,18 +50,12 @@ for (const [index, sample] of samples.entries()) {
   console.log(`--- [${index + 1}/${samples.length}] ${sample.name} ---`);
 
   try {
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    if (mode === 'legacy') {
-      headers['X-API-Key'] = apiKey;
-    } else {
-      headers['X-User-Id'] = userId;
-    }
-
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId,
+      },
       body: JSON.stringify(payload),
     });
 

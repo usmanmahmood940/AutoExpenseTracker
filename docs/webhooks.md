@@ -1,13 +1,11 @@
 # Webhook API Reference
 
-Both webhooks accept the **same JSON request body**. They differ in auth headers and where data is written in Firestore.
-
 Region: `asia-south1`  
 Project: `auto-expense-tracker-2026`
 
 ---
 
-## Request body (shared)
+## Request body
 
 ```json
 {
@@ -31,7 +29,7 @@ Project: `auto-expense-tracker-2026`
 
 ---
 
-## Response body (shared success shapes)
+## Response body
 
 **Success (HTTP 200)**
 
@@ -75,57 +73,9 @@ Project: `auto-expense-tracker-2026`
 
 ---
 
-## 1. Legacy webhook — `ingestTransaction`
+## `ingestTransactionForUser`
 
-Single-user / original pipeline. Authenticated with a shared API key.
-
-### URL
-
-```
-https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction
-```
-
-### Headers
-
-```http
-Content-Type: application/json
-X-API-Key: YOUR_WEBHOOK_KEY
-```
-
-### Example request
-
-```bash
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_WEBHOOK_KEY" \
-  -d '{
-    "raw": "PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522",
-    "source": "ios_shortcut",
-    "bank": "HBL",
-    "receivedAt": "2026-07-06T11:27:00+05:00"
-  }' \
-  https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransaction
-```
-
-### Extra error responses
-
-| Case | HTTP | Body |
-|------|------|------|
-| Bad or missing API key | 401 | `{ "success": false, "error": "Unauthorized" }` |
-
-### Firestore paths
-
-- `raw_ingestions/{ingestionId}`
-- `transactions/{transactionId}`
-
-(`userId` field is set to `"me"`.)
-
----
-
-## 2. Multi-user webhook — `ingestTransactionForUser` (**preferred for NovaSpend**)
-
-Use this with the Flutter app. Copy your Firebase Auth UID from **Settings** and set `X-User-Id`. Prefer this over the legacy webhook for all new Shortcut setups.
-
+Identifies the user via Firebase Auth UID (`X-User-Id` or `?uid=`). Writes under `users/{uid}/…`.
 
 ### URL
 
@@ -165,7 +115,7 @@ Firebase Authentication must be enabled before this webhook can verify UIDs:
 firebase deploy --only auth
 ```
 
-Create at least one user in **Firebase Console → Authentication** before testing with a real UID.
+Create at least one user in **Firebase Console → Authentication** before testing with a real UID. Copy your UID from NovaSpend **Settings**.
 
 ### Extra error responses
 
@@ -185,24 +135,8 @@ Create at least one user in **Firebase Console → Authentication** before testi
 
 ---
 
-## Comparison
-
-| | Legacy `ingestTransaction` | Multi-user `ingestTransactionForUser` |
-|---|---|---|
-| Auth | `X-API-Key` | `X-User-Id` or `?uid=` |
-| Request body | Shared shape above | Shared shape above |
-| Success / duplicate / parse responses | Shared shapes above | Shared shapes above |
-| Extra errors | 401 Unauthorized | 400 missing/invalid uid, 404 uid not in Auth, 503 Auth not configured |
-| Firestore | Top-level `raw_ingestions`, `transactions` | `users/{uid}/raw_ingestions`, `users/{uid}/transactions` |
-
----
-
 ## Local testing
 
 ```bash
-# Legacy
-WEBHOOK_API_KEY=your-key npm run test:ingest --prefix functions
-
-# Multi-user
-INGEST_MODE=user USER_ID=your-firebase-uid npm run test:ingest --prefix functions
+USER_ID=your-firebase-uid npm run test:ingest --prefix functions
 ```

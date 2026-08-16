@@ -1,6 +1,5 @@
 /**
  * Cloud Functions entry point.
- * Phase 1 will add ingestTransaction HTTP function here.
  */
 
 import { setGlobalOptions } from 'firebase-functions/v2';
@@ -10,7 +9,8 @@ setGlobalOptions({
   maxInstances: 10,
 });
 
-export { ingestTransaction, ingestTransactionForUser } from './ingest';
+export { ingestTransactionForUser } from './ingest';
+export { listTransactions } from './transactions';
 export { onUserTransactionWritten } from './aggregates';
 export { onUserTransactionCreatedNotify } from './notify';
 export {
