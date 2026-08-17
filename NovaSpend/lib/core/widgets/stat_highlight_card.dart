@@ -46,9 +46,7 @@ class StatHighlightCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : AppColors.cardLight,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          border: Border.all(color: AppColors.cardBorder(brightness)),
         ),
         child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

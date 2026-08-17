@@ -70,6 +70,13 @@ abstract final class AppColors {
     return brightness == Brightness.light ? borderLight : borderDark;
   }
 
+  /// Softer outline for raised cards (lower contrast than field borders).
+  static Color cardBorder(Brightness brightness) {
+    return border(brightness).withValues(
+      alpha: brightness == Brightness.light ? 0.7 : 0.45,
+    );
+  }
+
   /// Neutral avatar/icon fill for the current brightness.
   static Color neutralFill(Brightness brightness) {
     return brightness == Brightness.light ? neutralFillLight : neutralFillDark;

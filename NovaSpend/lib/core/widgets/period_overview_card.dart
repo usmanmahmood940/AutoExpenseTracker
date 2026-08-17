@@ -49,8 +49,10 @@ class PeriodOverviewCard extends StatelessWidget {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final isDark = brightness == Brightness.dark;
-    final border = AppColors.border(brightness);
-    final dividerColor = border.withValues(alpha: isDark ? 0.45 : 0.35);
+    final border = AppColors.cardBorder(brightness);
+    final dividerColor = AppColors.border(brightness).withValues(
+      alpha: isDark ? 0.45 : 0.35,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
