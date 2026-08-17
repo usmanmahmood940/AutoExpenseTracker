@@ -1,0 +1,25 @@
+{
+  "_comment": "Psychology-based #RRGGBB per default category id. Keep in sync with functions/src/schema.ts DEFAULT_CATEGORIES and NovaSpend/lib/core/utils/category_visuals.dart.",
+  "colors": {
+    "food_dining": "#F57C00",
+    "groceries": "#43A047",
+    "fuel": "#BF360C",
+    "transport": "#1E88E5",
+    "shopping": "#D81B60",
+    "entertainment": "#8E24AA",
+    "bills_utilities": "#FB8C00",
+    "healthcare": "#E53935",
+    "education": "#3949AB",
+    "travel": "#00838F",
+    "personal_care": "#EC407A",
+    "subscriptions": "#5E35B1",
+    "rent_housing": "#6D4C41",
+    "cash_withdrawal": "#F9A825",
+    "transfer": "#039BE5",
+    "fees_charges": "#C62828",
+    "donations_zakat": "#00695C",
+    "income": "#2E7D32",
+    "refund": "#26A69A",
+    "uncategorized": "#757575"
+  }
+}
