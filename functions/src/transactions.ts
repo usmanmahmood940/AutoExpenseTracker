@@ -104,18 +104,28 @@ export const listTransactions = onCall(async (request) => {
     pageQuery = pageQuery.startAfter(cursorSnapshot);
   }
 
-  const [pageSnapshot, aggregateSnapshot] = await Promise.all([
-    pageQuery.limit(pageSize + 1).get(),
-    baseQuery.aggregate({
-      totalCount: AggregateField.count(),
-      totalAmount: AggregateField.sum('amount'),
-    }).get(),
-  ]);
+  // Fetch the page first so a missing aggregate index cannot blank the home feed.
+  const pageSnapshot = await pageQuery.limit(pageSize + 1).get();
 
   const documents = pageSnapshot.docs;
   const hasMore = documents.length > pageSize;
   const pageDocuments = hasMore ? documents.slice(0, pageSize) : documents;
-  const aggregate = aggregateSnapshot.data();
+
+  let totalCount = pageDocuments.length;
+  let totalAmount = 0;
+  try {
+    const aggregateSnapshot = await baseQuery
+      .aggregate({
+        totalCount: AggregateField.count(),
+        totalAmount: AggregateField.sum('amount'),
+      })
+      .get();
+    const aggregate = aggregateSnapshot.data();
+    totalCount = aggregate.totalCount;
+    totalAmount = aggregate.totalAmount ?? 0;
+  } catch (error) {
+    console.warn('listTransactions aggregates unavailable; returning page only', error);
+  }
 
   return {
     items: pageDocuments.map((doc) => ({
@@ -124,7 +134,7 @@ export const listTransactions = onCall(async (request) => {
     })),
     nextCursor: hasMore ? pageDocuments.at(-1)?.id ?? null : null,
     hasMore,
-    totalCount: aggregate.totalCount,
-    totalAmount: aggregate.totalAmount ?? 0,
+    totalCount,
+    totalAmount,
   };
 });
