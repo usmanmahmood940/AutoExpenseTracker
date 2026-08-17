@@ -59,7 +59,6 @@ class HomeProvider extends ChangeNotifier {
   int _totalCount = 0;
   double _totalAmount = 0;
   bool _isLoading = false;
-  bool _isLoadingMore = false;
   bool _hasMore = true;
   String? _error;
   String? _uid;
@@ -92,7 +91,6 @@ class HomeProvider extends ChangeNotifier {
   int get totalCount => _totalCount;
   double get totalAmount => _totalAmount;
   bool get isLoading => _isLoading;
-  bool get isLoadingMore => _isLoadingMore;
   bool get hasMore => _hasMore;
   String? get error => _error;
 
@@ -228,7 +226,7 @@ class HomeProvider extends ChangeNotifier {
     try {
       final page = await _getTransactionsPage(
         uid,
-        limit: 100,
+        limit: 30,
         filter: _filter.hasActiveFilters ? _filter : null,
       );
       _items = page.items;
@@ -242,39 +240,6 @@ class HomeProvider extends ChangeNotifier {
       _error = e.toString();
     } finally {
       _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadMore() async {
-    final uid = _uid;
-    if (uid == null || _isLoadingMore || !_hasMore || _items.isEmpty) return;
-    _isLoadingMore = true;
-    notifyListeners();
-    try {
-      final more = await _getTransactionsPage(
-        uid,
-        limit: 50,
-        startAfter: _items.last,
-        filter: _filter.hasActiveFilters ? _filter : null,
-      );
-      if (more.items.isEmpty) {
-        _hasMore = false;
-      } else {
-        final existingIds = _items.map((e) => e.id).toSet();
-        _items = [
-          ..._items,
-          ...more.items.where((t) => !existingIds.contains(t.id)),
-        ];
-        _totalCount = more.totalCount;
-        _totalAmount = more.totalAmount;
-        _invalidatePeriodCache();
-        _hasMore = more.hasMore;
-      }
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoadingMore = false;
       notifyListeners();
     }
   }

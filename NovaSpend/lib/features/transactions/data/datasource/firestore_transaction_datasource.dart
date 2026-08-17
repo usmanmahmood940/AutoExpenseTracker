@@ -65,6 +65,7 @@ class FirestoreTransactionDatasource {
         requireAuth: true,
         data: {
           'pageSize': limit,
+          'includeAggregates': false,
           if (startAfter != null) 'cursor': startAfter.id,
         },
       );

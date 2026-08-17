@@ -14,11 +14,13 @@ const MAX_PAGE_SIZE = 100;
 interface ListTransactionsInput {
   pageSize?: unknown;
   cursor?: unknown;
+  includeAggregates?: unknown;
 }
 
 function parseInput(data: unknown): {
   pageSize: number;
   cursor: string | null;
+  includeAggregates: boolean;
 } {
   if (data != null && (typeof data !== 'object' || Array.isArray(data))) {
     throw new HttpsError('invalid-argument', 'Request data must be an object.');
@@ -44,10 +46,20 @@ function parseInput(data: unknown): {
   ) {
     throw new HttpsError('invalid-argument', 'cursor must be a transaction id.');
   }
+  if (
+    input.includeAggregates !== undefined &&
+    typeof input.includeAggregates !== 'boolean'
+  ) {
+    throw new HttpsError(
+      'invalid-argument',
+      'includeAggregates must be a boolean.',
+    );
+  }
 
   return {
     pageSize: requestedPageSize,
     cursor: input.cursor?.trim() || null,
+    includeAggregates: input.includeAggregates ?? false,
   };
 }
 
@@ -78,7 +90,7 @@ function activeTransactions(uid: string): Query {
 }
 
 /**
- * Returns a transaction page plus server-side aggregate totals for the user.
+ * Returns a transaction page and, when requested, server-side aggregate totals.
  * The request UID is derived exclusively from the verified Firebase ID token.
  */
 export const listTransactions = onCall(async (request) => {
@@ -87,7 +99,7 @@ export const listTransactions = onCall(async (request) => {
     throw new HttpsError('unauthenticated', 'Authentication is required.');
   }
 
-  const { pageSize, cursor } = parseInput(request.data);
+  const { pageSize, cursor, includeAggregates } = parseInput(request.data);
   const baseQuery = activeTransactions(uid);
   let pageQuery = baseQuery.orderBy('transactionDate', 'desc');
 
@@ -113,18 +125,23 @@ export const listTransactions = onCall(async (request) => {
 
   let totalCount = pageDocuments.length;
   let totalAmount = 0;
-  try {
-    const aggregateSnapshot = await baseQuery
-      .aggregate({
-        totalCount: AggregateField.count(),
-        totalAmount: AggregateField.sum('amount'),
-      })
-      .get();
-    const aggregate = aggregateSnapshot.data();
-    totalCount = aggregate.totalCount;
-    totalAmount = aggregate.totalAmount ?? 0;
-  } catch (error) {
-    console.warn('listTransactions aggregates unavailable; returning page only', error);
+  if (includeAggregates) {
+    try {
+      const aggregateSnapshot = await baseQuery
+        .aggregate({
+          totalCount: AggregateField.count(),
+          totalAmount: AggregateField.sum('amount'),
+        })
+        .get();
+      const aggregate = aggregateSnapshot.data();
+      totalCount = aggregate.totalCount;
+      totalAmount = aggregate.totalAmount ?? 0;
+    } catch (error) {
+      console.warn(
+        'listTransactions aggregates unavailable; returning page only',
+        error,
+      );
+    }
   }
 
   return {

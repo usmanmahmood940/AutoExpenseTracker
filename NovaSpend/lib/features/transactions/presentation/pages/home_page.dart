@@ -91,47 +91,39 @@ class _HomeView extends StatelessWidget {
             child: RefreshIndicator(
               edgeOffset: GlassHeaderBar.totalHeight(context),
               onRefresh: home.refresh,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (n) {
-                  if (n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
-                    home.loadMore();
-                  }
-                  return false;
-                },
-                child: CustomScrollView(
-                  clipBehavior: Clip.none,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        AppSpacing.md,
-                        topPad,
-                        AppSpacing.md,
-                        0,
-                      ),
-                      sliver: const SliverToBoxAdapter(child: _PeriodToggle()),
+              child: CustomScrollView(
+                clipBehavior: Clip.none,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      topPad,
+                      AppSpacing.md,
+                      0,
                     ),
-                    const SliverPadding(
-                      padding: EdgeInsets.only(top: _sectionGap),
-                      sliver: SliverToBoxAdapter(child: _PeriodBalance()),
-                    ),
-                    if (!reviewBannerDismissed)
-                      SliverToBoxAdapter(
-                        child: _ReviewBannerSlot(
-                          onDismiss: onDismissReviewBanner,
-                        ),
+                    sliver: const SliverToBoxAdapter(child: _PeriodToggle()),
+                  ),
+                  const SliverPadding(
+                    padding: EdgeInsets.only(top: _sectionGap),
+                    sliver: SliverToBoxAdapter(child: _PeriodBalance()),
+                  ),
+                  if (!reviewBannerDismissed)
+                    SliverToBoxAdapter(
+                      child: _ReviewBannerSlot(
+                        onDismiss: onDismissReviewBanner,
                       ),
-                    SliverPadding(
-                      padding: EdgeInsets.fromLTRB(
-                        AppSpacing.md,
-                        _sectionGap,
-                        AppSpacing.md,
-                        AppSpacing.xxl + PrimaryFab.size,
-                      ),
-                      sliver: const SliverToBoxAdapter(child: _HomeBody()),
                     ),
-                  ],
-                ),
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      _sectionGap,
+                      AppSpacing.md,
+                      AppSpacing.xxl + PrimaryFab.size,
+                    ),
+                    sliver: const SliverToBoxAdapter(child: _HomeBody()),
+                  ),
+                ],
               ),
             ),
           ),
@@ -331,16 +323,13 @@ class _HomeBody extends StatelessWidget {
         const SizedBox(height: _sectionGap),
         SectionHeader(
           title: l10n.homeRecentTransactions,
-          actionLabel: l10n.homeViewAll,
-          onActionTap: () => MainShellScope.selectSearchTab(context),
+          actionLabel: home.hasMore ? l10n.homeViewAll : null,
+          onActionTap: home.hasMore
+              ? () => MainShellScope.selectSearchTab(context)
+              : null,
         ),
         const SizedBox(height: _Highlights._headerGap),
         ..._dayGroups(context, l10n, home),
-        if (home.isLoadingMore)
-          const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.md),
-            child: Center(child: CircularProgressIndicator()),
-          ),
       ],
     );
   }
@@ -441,7 +430,6 @@ String _truncate(String value, int maxChars) {
   var trimmed = "";
   for (var i = 0; i < nameSplit.length && i < 2; i++) {
     trimmed = trimmed + nameSplit[i] + " ";
-
   }
   trimmed = trimmed.trim();
   if (trimmed.length <= maxChars) return trimmed;
