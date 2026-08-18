@@ -238,7 +238,8 @@ class HomeProvider extends ChangeNotifier {
         limit: homePageSize,
         filter: _filter.hasActiveFilters ? _filter : null,
       );
-      _items = page.items;
+      _items = List<TransactionEntity>.from(page.items)
+        ..sort(TransactionEntity.compareNewestFirst);
       _totalCount = page.totalCount;
       _totalAmount = page.totalAmount;
       _invalidatePeriodCache();
@@ -277,6 +278,9 @@ class HomeProvider extends ChangeNotifier {
     final map = <String, List<TransactionEntity>>{};
     for (final t in periodItems) {
       map.putIfAbsent(t.transactionDate, () => []).add(t);
+    }
+    for (final txs in map.values) {
+      txs.sort(TransactionEntity.compareNewestFirst);
     }
     final keys = map.keys.toList()
       ..sort((a, b) {

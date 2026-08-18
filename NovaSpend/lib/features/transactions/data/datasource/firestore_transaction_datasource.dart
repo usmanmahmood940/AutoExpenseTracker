@@ -46,10 +46,11 @@ class FirestoreTransactionDatasource {
         .limit(limit)
         .snapshots()
         .map((snap) {
-          return snap.docs
-              .map((d) => TransactionModel.fromFirestore(d).toEntity())
-              .where((t) => t.status != 'deleted')
-              .toList();
+          return _newestFirst(
+            snap.docs
+                .map((d) => TransactionModel.fromFirestore(d).toEntity())
+                .where((t) => t.status != 'deleted'),
+          );
         });
   }
 
@@ -85,7 +86,8 @@ class FirestoreTransactionDatasource {
             ).toEntity();
           })
           .whereType<TransactionEntity>()
-          .toList();
+          .toList()
+        ..sort(TransactionEntity.compareNewestFirst);
 
       if (filter != null) {
         items = items.where((t) => _matchesFilter(t, filter)).toList();
@@ -123,9 +125,9 @@ class FirestoreTransactionDatasource {
         .limit(50)
         .snapshots()
         .map((snap) {
-          return snap.docs
-              .map((d) => TransactionModel.fromFirestore(d).toEntity())
-              .toList();
+          return _newestFirst(
+            snap.docs.map((d) => TransactionModel.fromFirestore(d).toEntity()),
+          );
         });
   }
 
@@ -139,9 +141,9 @@ class FirestoreTransactionDatasource {
           .orderBy('transactionDate', descending: true)
           .limit(limit)
           .get();
-      return snap.docs
-          .map((d) => TransactionModel.fromFirestore(d).toEntity())
-          .toList();
+      return _newestFirst(
+        snap.docs.map((d) => TransactionModel.fromFirestore(d).toEntity()),
+      );
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to load review queue');
     }
@@ -334,6 +336,10 @@ class FirestoreTransactionDatasource {
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to delete merchant override');
     }
+  }
+
+  List<TransactionEntity> _newestFirst(Iterable<TransactionEntity> items) {
+    return items.toList()..sort(TransactionEntity.compareNewestFirst);
   }
 
   bool _matchesFilter(TransactionEntity t, TransactionFilter f) {

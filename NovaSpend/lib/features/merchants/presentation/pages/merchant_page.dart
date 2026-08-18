@@ -181,6 +181,9 @@ class _MerchantView extends StatelessWidget {
     for (final t in items) {
       map.putIfAbsent(t.transactionDate, () => []).add(t);
     }
+    for (final txs in map.values) {
+      txs.sort(TransactionEntity.compareNewestFirst);
+    }
     return map;
   }
 

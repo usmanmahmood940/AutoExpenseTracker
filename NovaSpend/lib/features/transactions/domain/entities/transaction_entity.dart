@@ -92,6 +92,50 @@ class TransactionEntity extends Equatable {
   bool get needsConfidenceReview =>
       parseConfidence < 0.8 && reviewedAt == null && status != 'deleted';
 
+  /// Instant this transaction occurred, used to sort newest-first.
+  /// Prefers [transactionTime] (ISO or `HH:mm`), then [transactionDate], then [createdAt].
+  DateTime? get occurredAt {
+    final time = transactionTime.trim();
+    if (time.isNotEmpty) {
+      final iso = DateTime.tryParse(time);
+      if (iso != null) return iso;
+
+      final clock = RegExp(r'^(\d{1,2}):(\d{2})(?::(\d{2}))?$').firstMatch(time);
+      if (clock != null) {
+        final date = DateTime.tryParse(transactionDate);
+        if (date != null) {
+          return DateTime(
+            date.year,
+            date.month,
+            date.day,
+            int.parse(clock.group(1)!),
+            int.parse(clock.group(2)!),
+            int.parse(clock.group(3) ?? '0'),
+          );
+        }
+      }
+    }
+
+    final date = DateTime.tryParse(transactionDate);
+    if (date != null) return DateTime(date.year, date.month, date.day);
+    return createdAt;
+  }
+
+  /// Newest transaction first. Ties fall back to [id] for a stable order.
+  static int compareNewestFirst(TransactionEntity a, TransactionEntity b) {
+    final ta = a.occurredAt;
+    final tb = b.occurredAt;
+    if (ta != null && tb != null) {
+      final byTime = tb.compareTo(ta);
+      if (byTime != 0) return byTime;
+    } else if (tb != null) {
+      return 1;
+    } else if (ta != null) {
+      return -1;
+    }
+    return b.id.compareTo(a.id);
+  }
+
   /// Effective key for merchant grouping / navigation.
   String get resolvedMerchantKey {
     final stored = merchantNormalized;
