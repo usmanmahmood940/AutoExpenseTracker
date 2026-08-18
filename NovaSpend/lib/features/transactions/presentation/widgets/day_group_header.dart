@@ -5,12 +5,16 @@ import 'package:nova_spend/core/theme/app_spacing.dart';
 
 /// Header above a day's transaction group: a relative day [label] on the left
 /// and an optional day summary on the right (spent total or positive net).
+///
+/// When [embedded] is true the header is an in-card band with a neutral fill
+/// (full-bleed + tighter vertical padding).
 class DayGroupHeader extends StatelessWidget {
   const DayGroupHeader({
     required this.label,
     this.summaryPrefix,
     this.summaryAmount,
     this.summaryAmountColor,
+    this.embedded = false,
     super.key,
   });
 
@@ -18,21 +22,31 @@ class DayGroupHeader extends StatelessWidget {
   final String? summaryPrefix;
   final String? summaryAmount;
   final Color? summaryAmountColor;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
+    final muted = Color.lerp(
+      theme.colorScheme.onSurfaceVariant,
+      theme.colorScheme.onSurface,
+      1,
+    )!;
     final showSummary =
         summaryPrefix != null &&
         summaryAmount != null &&
         summaryAmount!.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+    final row = Padding(
+      padding: embedded
+          ? const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.smPlus,
+            )
+          : const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
@@ -68,6 +82,13 @@ class DayGroupHeader extends StatelessWidget {
             ),
         ],
       ),
+    );
+
+    if (!embedded) return row;
+
+    return ColoredBox(
+      color: AppColors.neutralFill(theme.brightness).withValues(alpha: 0.35),
+      child: row,
     );
   }
 }

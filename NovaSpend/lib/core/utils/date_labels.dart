@@ -1,9 +1,9 @@
 import 'package:intl/intl.dart';
 
 /// Human day label for a `yyyy-MM-dd` (or ISO) date key: "Today", "Yesterday",
-/// or a formatted date. When [includeYear] is false, older dates use month + day
-/// only (e.g. "Jul 1"). [today]/[yesterday] are injected so the caller can pass
-/// localized strings.
+/// or a weekday + date (e.g. "Tue, Aug 12, 2026"). When [includeYear] is false,
+/// the year is omitted (e.g. "Tue, Aug 12"). [today]/[yesterday] are injected
+/// so the caller can pass localized strings.
 String relativeDayLabel(
   String dateKey, {
   required String today,
@@ -21,8 +21,8 @@ String relativeDayLabel(
   if (diff == 0) return today;
   if (diff == 1) return yesterday;
   return includeYear
-      ? DateFormat.yMMMd().format(parsed)
-      : DateFormat.MMMd().format(parsed);
+      ? DateFormat.yMMMEd().format(parsed)
+      : DateFormat.MMMEd().format(parsed);
 }
 
 /// Formats a stored transaction time (e.g. "16:20", "16:20:00", or an ISO

@@ -75,21 +75,12 @@ class HomeFeedSkeleton extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           const _SectionHeaderBones(titleWidth: 168, actionWidth: 56),
           const SizedBox(height: AppSpacing.sm),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                SkeletonBox(width: 72, height: 11),
-                SkeletonBox(width: 88, height: 11),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           _CardShell(
             padding: EdgeInsets.zero,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const _DayHeaderBones(),
                 for (var i = 0; i < _rowCount; i++) ...[
                   const _TransactionRowBones(),
                   if (i != _rowCount - 1) _rowDivider(context),
@@ -151,6 +142,31 @@ class _HighlightCardBones extends StatelessWidget {
           SizedBox(height: AppSpacing.xs),
           SkeletonBox(width: 108, height: 10),
         ],
+      ),
+    );
+  }
+}
+
+class _DayHeaderBones extends StatelessWidget {
+  const _DayHeaderBones();
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return ColoredBox(
+      color: AppColors.neutralFill(brightness).withValues(alpha: 0.45),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.smPlus,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            SkeletonBox(width: 72, height: 11),
+            SkeletonBox(width: 88, height: 11),
+          ],
+        ),
       ),
     );
   }

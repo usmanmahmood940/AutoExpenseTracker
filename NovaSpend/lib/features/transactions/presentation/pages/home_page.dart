@@ -341,7 +341,7 @@ class _HomeBody extends StatelessWidget {
               : null,
         ),
         const SizedBox(height: _Highlights._headerGap),
-        ..._dayGroups(context, l10n, home),
+        _dayGroups(context, l10n, home),
         if (home.periodHasMore) ...[
           const SizedBox(height: AppSpacing.lg),
           _ShowMoreButton(
@@ -454,68 +454,75 @@ String _truncate(String value, int maxChars) {
   return trimmed.substring(0, maxChars);
 }
 
-List<Widget> _dayGroups(
+Widget _dayGroups(
   BuildContext context,
   AppLocalizations l10n,
   HomeProvider home,
 ) {
   final grouped = home.groupByDay();
   final days = grouped.keys.toList();
-  final widgets = <Widget>[];
+  if (days.isEmpty) return const SizedBox.shrink();
 
-  for (var i = 0; i < days.length; i++) {
-    final day = days[i];
-    final txs = grouped[day]!;
-    final spent = txs
-        .where((t) => t.type != 'credit')
-        .fold<double>(0, (sum, t) => sum + t.amount);
-    final received = txs
-        .where((t) => t.type == 'credit')
-        .fold<double>(0, (sum, t) => sum + t.amount);
-    final money = AppCurrencyScope.of(context);
-    final summary = dayGroupSummary(
-      spent: spent,
-      received: received,
-      spentPrefix: l10n.homeDayGroupSpent,
-      netPrefix: l10n.homeDayGroupNet,
-      formatMoney: money.formatMoney,
-    );
+  final money = AppCurrencyScope.of(context);
 
-    widgets.add(
-      Padding(
-        padding: EdgeInsets.only(top: i == 0 ? 0 : AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DayGroupHeader(
-              label: relativeDayLabel(
-                day,
-                today: l10n.homePeriodToday,
-                yesterday: l10n.commonYesterday,
-              ),
-              summaryPrefix: summary.prefix,
-              summaryAmount: summary.amount,
-              summaryAmountColor: summary.amountColor,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TransactionGroupCard(
-              children: [
-                for (final tx in txs)
-                  TransactionListTile(
-                    transaction: tx,
-                    onTap: () => _openDetail(context, tx),
-                    onMerchantTap: tx.merchant.isEmpty
-                        ? null
-                        : () => _openMerchant(context, tx),
-                  ),
-              ],
-            ),
-          ],
+  return TransactionGroupCard.grouped(
+    sections: [
+      for (final day in days)
+        _daySection(
+          context,
+          l10n,
+          day: day,
+          txs: grouped[day]!,
+          money: money,
         ),
+    ],
+  );
+}
+
+TransactionGroupSection _daySection(
+  BuildContext context,
+  AppLocalizations l10n, {
+  required String day,
+  required List<TransactionEntity> txs,
+  required AppCurrencyController money,
+}) {
+  final spent = txs
+      .where((t) => t.type != 'credit')
+      .fold<double>(0, (sum, t) => sum + t.amount);
+  final received = txs
+      .where((t) => t.type == 'credit')
+      .fold<double>(0, (sum, t) => sum + t.amount);
+  final summary = dayGroupSummary(
+    spent: spent,
+    received: received,
+    spentPrefix: l10n.homeDayGroupSpent,
+    netPrefix: l10n.homeDayGroupNet,
+    formatMoney: money.formatMoney,
+  );
+
+  return TransactionGroupSection(
+    header: DayGroupHeader(
+      label: relativeDayLabel(
+        day,
+        today: l10n.homePeriodToday,
+        yesterday: l10n.commonYesterday,
       ),
-    );
-  }
-  return widgets;
+      summaryPrefix: summary.prefix,
+      summaryAmount: summary.amount,
+      summaryAmountColor: summary.amountColor,
+      embedded: true,
+    ),
+    children: [
+      for (final tx in txs)
+        TransactionListTile(
+          transaction: tx,
+          onTap: () => _openDetail(context, tx),
+          onMerchantTap: tx.merchant.isEmpty
+              ? null
+              : () => _openMerchant(context, tx),
+        ),
+    ],
+  );
 }
 
 class _ShowMoreButton extends StatelessWidget {
