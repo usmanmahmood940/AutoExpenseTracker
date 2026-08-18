@@ -241,6 +241,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeViewAll => 'View All';
 
   @override
+  String get homeShowMore => 'Show more';
+
+  @override
   String get homeHighestSpend => 'Highest Spend';
 
   @override

@@ -3,6 +3,7 @@ import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
+import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
@@ -22,6 +23,7 @@ import 'package:nova_spend/features/transactions/presentation/home_period.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/day_group_header.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/home_skeleton.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/review_banner.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
@@ -188,6 +190,16 @@ class _PeriodBalance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showSkeleton = context.select(
+      (HomeProvider p) => p.isLoading && p.items.isEmpty,
+    );
+    if (showSkeleton) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: PeriodOverviewSkeleton(),
+      );
+    }
+
     final l10n = context.l10n;
     final money = AppCurrencyScope.of(context);
     final snapshot = context.select(
@@ -287,7 +299,7 @@ class _HomeBody extends StatelessWidget {
     final home = context.watch<HomeProvider>();
 
     if (home.isLoading && home.items.isEmpty) {
-      return _stateBox(context, Text(l10n.commonLoading));
+      return const HomeFeedSkeleton();
     }
     if (home.error != null && home.items.isEmpty) {
       return _stateBox(context, Text(l10n.errorLoadFailed));
@@ -330,6 +342,12 @@ class _HomeBody extends StatelessWidget {
         ),
         const SizedBox(height: _Highlights._headerGap),
         ..._dayGroups(context, l10n, home),
+        if (home.periodHasMore) ...[
+          const SizedBox(height: AppSpacing.lg),
+          _ShowMoreButton(
+            onPressed: () => MainShellScope.selectSearchTab(context),
+          ),
+        ],
       ],
     );
   }
@@ -498,6 +516,55 @@ List<Widget> _dayGroups(
     );
   }
   return widgets;
+}
+
+class _ShowMoreButton extends StatelessWidget {
+  const _ShowMoreButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final brightness = Theme.of(context).brightness;
+
+    return Center(
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.smPlus,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.neutralFill(brightness),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: AppColors.border(brightness).withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.homeShowMore,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryStrong,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: 16,
+                color: AppColors.primaryStrong,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Widget _emptyState(BuildContext context, AppLocalizations l10n) {

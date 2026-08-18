@@ -36,6 +36,9 @@ class PeriodComparison {
   final double? netChangePercent;
 }
 
+/// Max transactions fetched for the home preview feed.
+const int homePageSize = 20;
+
 class HomeProvider extends ChangeNotifier {
   HomeProvider({
     required GetTransactionsPage getTransactionsPage,
@@ -92,6 +95,12 @@ class HomeProvider extends ChangeNotifier {
   double get totalAmount => _totalAmount;
   bool get isLoading => _isLoading;
   bool get hasMore => _hasMore;
+
+  /// True when the currently selected period may have more transactions than
+  /// the ones loaded in the 30-item preview. Used for the "Show more" button.
+  bool get periodHasMore =>
+      periodItems.length >= homePageSize && _hasMore;
+
   String? get error => _error;
 
   List<String> get availableAccounts {
@@ -226,7 +235,7 @@ class HomeProvider extends ChangeNotifier {
     try {
       final page = await _getTransactionsPage(
         uid,
-        limit: 30,
+        limit: homePageSize,
         filter: _filter.hasActiveFilters ? _filter : null,
       );
       _items = page.items;

@@ -532,6 +532,12 @@ abstract class AppLocalizations {
   /// **'View All'**
   String get homeViewAll;
 
+  /// No description provided for @homeShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get homeShowMore;
+
   /// No description provided for @homeHighestSpend.
   ///
   /// In en, this message translates to:
