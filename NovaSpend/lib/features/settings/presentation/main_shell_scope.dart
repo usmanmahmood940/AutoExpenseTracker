@@ -18,7 +18,7 @@ class MainShellScope extends InheritedWidget {
     maybeOf(context)?.selectTab(3);
   }
 
-  static void selectSearchTab(BuildContext context) {
+  static void selectTransactionsTab(BuildContext context) {
     maybeOf(context)?.selectTab(1);
   }
 

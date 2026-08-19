@@ -337,7 +337,7 @@ class _HomeBody extends StatelessWidget {
           title: l10n.homeRecentTransactions,
           actionLabel: home.hasMore ? l10n.homeViewAll : null,
           onActionTap: home.hasMore
-              ? () => MainShellScope.selectSearchTab(context)
+              ? () => MainShellScope.selectTransactionsTab(context)
               : null,
         ),
         const SizedBox(height: _Highlights._headerGap),
@@ -345,7 +345,7 @@ class _HomeBody extends StatelessWidget {
         if (home.periodHasMore) ...[
           const SizedBox(height: AppSpacing.lg),
           _ShowMoreButton(
-            onPressed: () => MainShellScope.selectSearchTab(context),
+            onPressed: () => MainShellScope.selectTransactionsTab(context),
           ),
         ],
       ],

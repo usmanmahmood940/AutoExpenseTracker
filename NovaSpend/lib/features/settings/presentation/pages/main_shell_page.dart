@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nova_spend/core/theme/app_colors.dart';
+import 'package:nova_spend/core/widgets/app_bottom_nav.dart';
 import 'package:nova_spend/features/analytics/presentation/pages/insights_page.dart';
 import 'package:nova_spend/features/search/presentation/pages/search_page.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
@@ -40,29 +40,24 @@ class _MainShellPageState extends State<MainShellPage> {
           index: _index,
           children: _pages,
         ),
-        bottomNavigationBar: NavigationBar(
+        bottomNavigationBar: AppBottomNav(
           selectedIndex: _index,
-          indicatorColor: AppColors.accentMuted,
           onDestinationSelected: _selectTab,
           destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
+            AppBottomNavItem(
+              iconAsset: 'assets/icons/icon_nav_home.svg',
               label: l10n.navHome,
             ),
-            NavigationDestination(
-              icon: const Icon(Icons.search_outlined),
-              selectedIcon: const Icon(Icons.search),
-              label: l10n.navSearch,
+            AppBottomNavItem(
+              iconAsset: 'assets/icons/icon_nav_transactions.svg',
+              label: l10n.navTransactions,
             ),
-            NavigationDestination(
-              icon: const Icon(Icons.insights_outlined),
-              selectedIcon: const Icon(Icons.insights),
+            AppBottomNavItem(
+              iconAsset: 'assets/icons/icon_nav_insights.svg',
               label: l10n.navInsights,
             ),
-            NavigationDestination(
-              icon: const Icon(Icons.settings_outlined),
-              selectedIcon: const Icon(Icons.settings),
+            AppBottomNavItem(
+              iconAsset: 'assets/icons/icon_nav_settings.svg',
               label: l10n.navSettings,
             ),
           ],

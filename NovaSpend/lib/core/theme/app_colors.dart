@@ -16,6 +16,14 @@ abstract final class AppColors {
   /// Text/glyph color on an [accent] emerald fill (on-primary-container).
   static const Color onAccent = Color(0xFF00422B);
 
+  /// Soft fill behind the selected bottom-nav destination.
+  static const Color navActiveFillLight = Color(0xFFE8F5EB);
+  static const Color navActiveFillDark = Color(0xFF1B3A2C);
+
+  /// Glyph/label on the selected bottom-nav destination (dark).
+  /// Light mode uses [accent].
+  static const Color navActiveForegroundDark = Color(0xFF4EDEA3);
+
   /// Debit/"spend" red — used only for high-impact debit emphasis (e.g. the
   /// highest-spend highlight badge), never as decoration.
   static const Color spend = Color(0xFFB61722);
@@ -88,5 +96,19 @@ abstract final class AppColors {
 
   static Color warningBackground(Brightness brightness) {
     return brightness == Brightness.light ? warningBgLight : warningBgDark;
+  }
+
+  /// Pale green pill behind the selected bottom-nav item.
+  static Color navActiveFill(Brightness brightness) {
+    return brightness == Brightness.light
+        ? navActiveFillLight
+        : navActiveFillDark;
+  }
+
+  /// Icon and label color for the selected bottom-nav item.
+  static Color navActiveForeground(Brightness brightness) {
+    return brightness == Brightness.light
+        ? accent
+        : navActiveForegroundDark;
   }
 }
