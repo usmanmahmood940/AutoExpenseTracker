@@ -9,7 +9,6 @@ import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/category_visuals.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
-import 'package:nova_spend/core/widgets/category_avatar.dart';
 import 'package:nova_spend/core/widgets/category_color_scope.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
@@ -214,9 +213,12 @@ class _DetailViewState extends State<_DetailView> {
         _HeroCard(
           transaction: tx,
           ink: ink,
-          muted: muted,
           onMerchantTap: () => _openMerchant(tx),
         ),
+        if (tx.category.trim().isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          _CategoryCard(category: tx.category),
+        ],
         const SizedBox(height: AppSpacing.md),
         _EditButton(onPressed: _openEditSheet),
         const SizedBox(height: AppSpacing.md),
@@ -408,16 +410,19 @@ class _SurfaceCard extends StatelessWidget {
   const _SurfaceCard({
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.md),
+    this.onTap,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
     final border = AppColors.border(brightness);
+    final padded = Padding(padding: padding, child: child);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -436,7 +441,16 @@ class _SurfaceCard extends StatelessWidget {
                 ),
               ],
       ),
-      child: Padding(padding: padding, child: child),
+      // Transparent Material so InkWell splashes inside the card paint above
+      // the card fill instead of on the Scaffold surface underneath it.
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        clipBehavior: Clip.antiAlias,
+        child: onTap == null
+            ? padded
+            : InkWell(onTap: onTap, child: padded),
+      ),
     );
   }
 }
@@ -475,67 +489,33 @@ class _HeroCard extends StatelessWidget {
   const _HeroCard({
     required this.transaction,
     required this.ink,
-    required this.muted,
     required this.onMerchantTap,
   });
 
   final TransactionEntity transaction;
   final Color ink;
-  final Color muted;
   final VoidCallback onMerchantTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final theme = Theme.of(context);
     final tx = transaction;
     final isCredit = tx.type == 'credit';
-    final merchantLabel = tx.merchant.isEmpty
-        ? l10n.transactionMerchant
-        : tx.merchant;
     final amountColor = isCredit ? AppColors.accent : AppColors.spend;
     final sign = isCredit ? '+ ' : '− ';
     final currency = AppCurrencyScope.of(context);
     final amountText = '$sign${currency.formatMoney(tx.amount)}';
-    final canOpenMerchant = tx.merchant.trim().isNotEmpty;
-    final meta = _metaLine(context, tx);
+    final date = _formatShortDate(tx.transactionDate);
+    final time = formatClockTime(tx.transactionTime);
+    final merchant = tx.merchant.trim();
 
     return _SurfaceCard(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+      onTap: merchant.isNotEmpty ? onMerchantTap : null,
       child: Column(
         children: [
-          CategoryAvatar(
-            category: tx.category,
-            size: 56,
-            circular: true,
-            showBorder: true,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            l10n.transactionAmount,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: muted,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            amountText,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.6,
-              height: 1.15,
-              color: amountColor,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          InkWell(
-            onTap: canOpenMerchant ? onMerchantTap : null,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: Padding(
+          if (merchant.isNotEmpty) ...[
+            Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.sm,
                 vertical: 2,
@@ -545,8 +525,10 @@ class _HeroCard extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      merchantLabel,
+                      merchant,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -556,40 +538,34 @@ class _HeroCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (canOpenMerchant) ...[
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: AppColors.primaryStrong,
-                    ),
-                  ],
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppColors.primaryStrong,
+                  ),
                 ],
               ),
             ),
-          ),
-          if (tx.category.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              tx.category,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: categoryColor(
-                  tx.category,
-                  storedHex: CategoryColorScope.maybeOf(context)
-                      ?.hexFor(tx.category),
-                ),
-              ),
-            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
-          if (meta.isNotEmpty) ...[
+          Text(
+            amountText,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.displaySmall?.copyWith(
+              fontSize: 36,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.8,
+              height: 1.15,
+              color: amountColor,
+            ),
+          ),
+          if (date.isNotEmpty || time.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            _DateTimePill(label: meta, muted: muted),
+            _DateTimePill(date: date, time: time, ink: ink),
           ],
           if (_hasStatusBadges(tx)) ...[
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             _StatusBadges(transaction: tx),
           ],
         ],
@@ -604,60 +580,173 @@ class _HeroCard extends StatelessWidget {
         tx.isRecurring;
   }
 
-  String _metaLine(BuildContext context, TransactionEntity tx) {
-    final l10n = context.l10n;
-    final date = _formatShortDate(tx.transactionDate);
-    final time = formatClockTime(tx.transactionTime);
-    if (date.isEmpty && time.isEmpty) return '';
-    if (date.isNotEmpty && time.isNotEmpty) {
-      return l10n.transactionMetaLine(date, time);
-    }
-    return date.isNotEmpty ? date : time;
-  }
-
   String _formatShortDate(String raw) {
     final parsed = DateTime.tryParse(raw);
     if (parsed == null) return raw;
-    return DateFormat.MMMd().format(parsed);
+    return DateFormat.yMMMd().format(parsed);
   }
 }
 
 class _DateTimePill extends StatelessWidget {
-  const _DateTimePill({required this.label, required this.muted});
+  const _DateTimePill({
+    required this.date,
+    required this.time,
+    required this.ink,
+  });
 
-  final String label;
-  final Color muted;
+  final String date;
+  final String time;
+  final Color ink;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
+    final fill = isDark
+        ? AppColors.neutralFill(brightness)
+        : AppColors.accent.withValues(alpha: 0.08);
+    final divider = AppColors.border(brightness).withValues(alpha: 0.45);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.neutralFill(brightness)
-            : AppColors.accent.withValues(alpha: 0.08),
+        color: fill,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.calendar_today_outlined,
-            size: 14,
-            color: AppColors.primaryStrong,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              height: 1.2,
-              color: muted,
+          if (date.isNotEmpty)
+            _DateTimeSegment(
+              asset: 'assets/icons/icon_calendar.svg',
+              label: date,
+              ink: ink,
             ),
+          if (date.isNotEmpty && time.isNotEmpty) ...[
+            const SizedBox(width: 12),
+            Container(width: 1, height: 16, color: divider),
+            const SizedBox(width: 12),
+          ],
+          if (time.isNotEmpty)
+            _DateTimeSegment(
+              asset: 'assets/icons/icon_clock.svg',
+              label: time,
+              ink: ink,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateTimeSegment extends StatelessWidget {
+  const _DateTimeSegment({
+    required this.asset,
+    required this.label,
+    required this.ink,
+  });
+
+  final String asset;
+  final String label;
+  final Color ink;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SvgPicture.asset(
+          asset,
+          width: 16,
+          height: 16,
+          colorFilter: const ColorFilter.mode(
+            AppColors.primaryStrong,
+            BlendMode.srcIn,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            height: 1.2,
+            color: ink,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({required this.category});
+
+  final String category;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final trimmed = category.trim();
+    final hue = categoryColor(
+      trimmed,
+      storedHex: CategoryColorScope.maybeOf(context)?.hexFor(trimmed),
+    );
+
+    return _SurfaceCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: hue.withValues(alpha: kCategoryIconBackgroundAlpha),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: hue.withValues(alpha: 0.28)),
+            ),
+            alignment: Alignment.center,
+            child: SvgPicture.asset(
+              categoryIconAsset(trimmed),
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(hue, BlendMode.srcIn),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.transactionCategory,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                    letterSpacing: 0.4,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  trimmed,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 22,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ],
       ),
