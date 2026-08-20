@@ -2,6 +2,7 @@ import {
   AggregateField,
   Timestamp,
   type Query,
+  type QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 
@@ -10,17 +11,75 @@ import { COLLECTIONS } from './schema';
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+type SortBy = 'date' | 'amount';
+type OrderBy = 'asc' | 'desc';
 
 interface ListTransactionsInput {
   pageSize?: unknown;
   cursor?: unknown;
   includeAggregates?: unknown;
+  /** Optional inclusive start date (YYYY-MM-DD). */
+  dateFrom?: unknown;
+  /** Optional inclusive end date (YYYY-MM-DD). */
+  dateTo?: unknown;
+  /** Sort field. Defaults to date. Accepts Date/date or Amount/amount. */
+  sortBy?: unknown;
+  /** Sort direction. Defaults to desc. Accepts Asc/asc or Desc/desc. */
+  orderBy?: unknown;
+}
+
+function parseDateField(
+  value: unknown,
+  fieldName: string,
+): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !DATE_RE.test(value.trim())) {
+    throw new HttpsError(
+      'invalid-argument',
+      `${fieldName} must be a YYYY-MM-DD date.`,
+    );
+  }
+  return value.trim();
+}
+
+function parseSortBy(value: unknown): SortBy {
+  if (value === undefined || value === null || value === '') return 'date';
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', 'sortBy must be a string.');
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'date') return 'date';
+  if (normalized === 'amount') return 'amount';
+  throw new HttpsError(
+    'invalid-argument',
+    'sortBy must be "date" or "amount".',
+  );
+}
+
+function parseOrderBy(value: unknown): OrderBy {
+  if (value === undefined || value === null || value === '') return 'desc';
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', 'orderBy must be a string.');
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'desc') return 'desc';
+  if (normalized === 'asc') return 'asc';
+  throw new HttpsError(
+    'invalid-argument',
+    'orderBy must be "asc" or "desc".',
+  );
 }
 
 function parseInput(data: unknown): {
   pageSize: number;
   cursor: string | null;
   includeAggregates: boolean;
+  dateFrom: string | null;
+  dateTo: string | null;
+  sortBy: SortBy;
+  orderBy: OrderBy;
 } {
   if (data != null && (typeof data !== 'object' || Array.isArray(data))) {
     throw new HttpsError('invalid-argument', 'Request data must be an object.');
@@ -56,10 +115,34 @@ function parseInput(data: unknown): {
     );
   }
 
+  const dateFrom = parseDateField(input.dateFrom, 'dateFrom');
+  const dateTo = parseDateField(input.dateTo, 'dateTo');
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    throw new HttpsError(
+      'invalid-argument',
+      'dateFrom must be on or before dateTo.',
+    );
+  }
+
+  const sortBy = parseSortBy(input.sortBy);
+  const orderBy = parseOrderBy(input.orderBy);
+
+  // Firestore requires the inequality field to be the first orderBy.
+  if (sortBy === 'amount' && (dateFrom || dateTo)) {
+    throw new HttpsError(
+      'invalid-argument',
+      'sortBy "amount" cannot be combined with a date range.',
+    );
+  }
+
   return {
     pageSize: requestedPageSize,
     cursor: input.cursor?.trim() || null,
     includeAggregates: input.includeAggregates ?? false,
+    dateFrom,
+    dateTo,
+    sortBy,
+    orderBy,
   };
 }
 
@@ -89,9 +172,31 @@ function activeTransactions(uid: string): Query {
     .where('status', 'in', ['active', 'needs_review']);
 }
 
+function sortField(sortBy: SortBy): string {
+  return sortBy === 'amount' ? 'amount' : 'transactionDate';
+}
+
+function applyDateRange(
+  query: Query,
+  dateFrom: string | null,
+  dateTo: string | null,
+): Query {
+  let next = query;
+  if (dateFrom) {
+    next = next.where('transactionDate', '>=', dateFrom);
+  }
+  if (dateTo) {
+    next = next.where('transactionDate', '<=', dateTo);
+  }
+  return next;
+}
+
 /**
  * Returns a transaction page and, when requested, server-side aggregate totals.
  * The request UID is derived exclusively from the verified Firebase ID token.
+ *
+ * Optional: dateFrom / dateTo (YYYY-MM-DD).
+ * sortBy defaults to "date"; orderBy defaults to "desc".
  */
 export const listTransactions = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -99,9 +204,24 @@ export const listTransactions = onCall(async (request) => {
     throw new HttpsError('unauthenticated', 'Authentication is required.');
   }
 
-  const { pageSize, cursor, includeAggregates } = parseInput(request.data);
-  const baseQuery = activeTransactions(uid);
-  let pageQuery = baseQuery.orderBy('transactionDate', 'desc');
+  const {
+    pageSize,
+    cursor,
+    includeAggregates,
+    dateFrom,
+    dateTo,
+    sortBy,
+    orderBy,
+  } = parseInput(request.data);
+
+  const field = sortField(sortBy);
+  let baseQuery = applyDateRange(activeTransactions(uid), dateFrom, dateTo);
+  let pageQuery = baseQuery.orderBy(field, orderBy);
+
+  // Tie-breaker for stable paging when sorting by amount.
+  if (sortBy === 'amount') {
+    pageQuery = pageQuery.orderBy('transactionDate', orderBy);
+  }
 
   if (cursor) {
     const cursorSnapshot = await db
@@ -111,9 +231,14 @@ export const listTransactions = onCall(async (request) => {
       .doc(cursor)
       .get();
     if (!cursorSnapshot.exists) {
-      throw new HttpsError('invalid-argument', 'The page cursor is no longer valid.');
+      throw new HttpsError(
+        'invalid-argument',
+        'The page cursor is no longer valid.',
+      );
     }
-    pageQuery = pageQuery.startAfter(cursorSnapshot);
+    pageQuery = pageQuery.startAfter(
+      cursorSnapshot as QueryDocumentSnapshot,
+    );
   }
 
   // Fetch the page first so a missing aggregate index cannot blank the home feed.
@@ -153,5 +278,9 @@ export const listTransactions = onCall(async (request) => {
     hasMore,
     totalCount,
     totalAmount,
+    sortBy,
+    orderBy,
+    dateFrom,
+    dateTo,
   };
 });

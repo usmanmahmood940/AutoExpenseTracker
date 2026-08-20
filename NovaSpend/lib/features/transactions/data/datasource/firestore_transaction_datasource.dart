@@ -60,6 +60,10 @@ class FirestoreTransactionDatasource {
     int limit = 50,
     TransactionEntity? startAfter,
     TransactionFilter? filter,
+    String? dateFrom,
+    String? dateTo,
+    String sortBy = 'date',
+    String orderBy = 'desc',
   }) async {
     try {
       final response = await _functionsClient.call(
@@ -68,7 +72,11 @@ class FirestoreTransactionDatasource {
         data: {
           'pageSize': limit,
           'includeAggregates': false,
+          'sortBy': sortBy,
+          'orderBy': orderBy,
           if (startAfter != null) 'cursor': startAfter.id,
+          if (dateFrom != null && dateFrom.isNotEmpty) 'dateFrom': dateFrom,
+          if (dateTo != null && dateTo.isNotEmpty) 'dateTo': dateTo,
         },
       );
       final rawItems = response['items'];
@@ -87,9 +95,9 @@ class FirestoreTransactionDatasource {
             ).toEntity();
           })
           .whereType<TransactionEntity>()
-          .toList()
-        ..sort(TransactionEntity.compareNewestFirst);
+          .toList();
 
+      // Keep cloud function order; only drop rows that fail local soft filters.
       if (filter != null) {
         items = items.where((t) => _matchesFilter(t, filter)).toList();
       }

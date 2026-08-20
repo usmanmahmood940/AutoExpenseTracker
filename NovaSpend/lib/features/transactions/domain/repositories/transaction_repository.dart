@@ -15,6 +15,10 @@ abstract class TransactionRepository {
     int limit = 50,
     TransactionEntity? startAfter,
     TransactionFilter? filter,
+    String? dateFrom,
+    String? dateTo,
+    String sortBy = 'date',
+    String orderBy = 'desc',
   });
 
   /// Period overview + highlights from the getPeriodStats cloud function.

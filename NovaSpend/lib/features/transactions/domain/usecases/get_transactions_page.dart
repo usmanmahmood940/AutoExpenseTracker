@@ -13,12 +13,20 @@ class GetTransactionsPage {
     int limit = 50,
     TransactionEntity? startAfter,
     TransactionFilter? filter,
+    String? dateFrom,
+    String? dateTo,
+    String sortBy = 'date',
+    String orderBy = 'desc',
   }) {
     return _repository.getTransactionsPage(
       uid,
       limit: limit,
       startAfter: startAfter,
       filter: filter,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      sortBy: sortBy,
+      orderBy: orderBy,
     );
   }
 }

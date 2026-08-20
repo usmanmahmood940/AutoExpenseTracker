@@ -29,6 +29,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
     int limit = 50,
     TransactionEntity? startAfter,
     TransactionFilter? filter,
+    String? dateFrom,
+    String? dateTo,
+    String sortBy = 'date',
+    String orderBy = 'desc',
   }) async {
     try {
       return await _datasource.getTransactionsPage(
@@ -36,6 +40,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
         limit: limit,
         startAfter: startAfter,
         filter: filter,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        sortBy: sortBy,
+        orderBy: orderBy,
       );
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
