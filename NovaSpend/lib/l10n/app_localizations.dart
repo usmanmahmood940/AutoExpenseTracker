@@ -124,11 +124,11 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get navSearch;
 
-  /// No description provided for @navTransactions.
+  /// No description provided for @navActivity.
   ///
   /// In en, this message translates to:
-  /// **'Transactions'**
-  String get navTransactions;
+  /// **'Activity'**
+  String get navActivity;
 
   /// No description provided for @navInsights.
   ///
@@ -169,7 +169,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchClearRecent.
   ///
   /// In en, this message translates to:
-  /// **'Clear'**
+  /// **'Clear all'**
   String get searchClearRecent;
 
   /// No description provided for @searchQuickFilters.
@@ -183,6 +183,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This month'**
   String get searchFilterThisMonth;
+
+  /// No description provided for @activityChipAllCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get activityChipAllCategories;
+
+  /// No description provided for @activityChipFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get activityChipFilter;
 
   /// No description provided for @searchFilterDebits.
   ///

@@ -23,7 +23,11 @@ class GlassHeaderBar extends StatelessWidget {
   final List<Widget>? actions;
   final double barHeight;
 
-  static const double defaultBarHeight = 50;
+  static const double defaultBarHeight = 40;
+
+  /// Space under the title inside the bar. Kept independent of [barHeight]
+  /// so shrinking the bar only trims space above the title.
+  static const double titleBottomPadding = 12;
 
   /// Total height including status-bar inset.
   static double totalHeight(BuildContext context, {double barHeight = defaultBarHeight}) {
@@ -64,8 +68,14 @@ class GlassHeaderBar extends StatelessWidget {
               child: SizedBox(
                 height: barHeight,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    0,
+                    16,
+                    titleBottomPadding,
+                  ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(child: title),
                       ...?actions,

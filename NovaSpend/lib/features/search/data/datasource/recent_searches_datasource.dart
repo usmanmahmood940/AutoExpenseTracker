@@ -8,7 +8,7 @@ class RecentSearchesDatasource {
   final SharedPreferences _prefs;
 
   static const _key = 'recent_searches';
-  static const _maxItems = 8;
+  static const _maxItems = 5;
 
   List<String> getRecent() {
     final raw = _prefs.getString(_key);

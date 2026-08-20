@@ -25,7 +25,7 @@ class _MainShellPageState extends State<MainShellPage> {
   ];
 
   void _selectTab(int index) {
-    if (index < 0 || index >= _pages.length) return;
+    if (index < 0 || index >= _pages.length || index == _index) return;
     setState(() => _index = index);
   }
 
@@ -50,7 +50,7 @@ class _MainShellPageState extends State<MainShellPage> {
             ),
             AppBottomNavItem(
               iconAsset: 'assets/icons/icon_nav_transactions.svg',
-              label: l10n.navTransactions,
+              label: l10n.navActivity,
             ),
             AppBottomNavItem(
               iconAsset: 'assets/icons/icon_nav_insights.svg',

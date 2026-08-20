@@ -2,6 +2,7 @@
 abstract final class AppSpacing {
   static const double xsMini = 2;
   static const double xs = 4;
+  static const double xsMax = 6;
   static const double sm = 8;
   static const double smPlus = 10;
   static const double smPlus2 = 12;

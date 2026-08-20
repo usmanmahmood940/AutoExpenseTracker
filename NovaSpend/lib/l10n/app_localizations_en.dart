@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSearch => 'Search';
 
   @override
-  String get navTransactions => 'Transactions';
+  String get navActivity => 'Activity';
 
   @override
   String get navInsights => 'Insights';
@@ -46,13 +46,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchRecent => 'Recent searches';
 
   @override
-  String get searchClearRecent => 'Clear';
+  String get searchClearRecent => 'Clear all';
 
   @override
   String get searchQuickFilters => 'Quick filters';
 
   @override
   String get searchFilterThisMonth => 'This month';
+
+  @override
+  String get activityChipAllCategories => 'Categories';
+
+  @override
+  String get activityChipFilter => 'Filter';
 
   @override
   String get searchFilterDebits => 'Debits';
