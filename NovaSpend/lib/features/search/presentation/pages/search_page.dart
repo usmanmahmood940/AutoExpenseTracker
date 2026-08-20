@@ -10,9 +10,12 @@ import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
+import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
+import 'package:nova_spend/features/search/presentation/widgets/date_range_sheet.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
+import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
@@ -210,14 +213,17 @@ class _SearchViewState extends State<_SearchView> {
                       children: [
                         Expanded(
                           child: _ActivityFilterChip(
-                            label: l10n.transactionDate,
-                            emphasized: true,
+                            label: _dateChipLabel(l10n, provider),
+                            emphasized: provider.query.hasDateRange,
+                            onTap: () => _openDateRangeSheet(context, provider),
                             leading: SvgPicture.asset(
                               'assets/icons/icon_calendar.svg',
                               width: 16,
                               height: 16,
-                              colorFilter: const ColorFilter.mode(
-                                AppColors.primaryStrong,
+                              colorFilter: ColorFilter.mode(
+                                provider.query.hasDateRange
+                                    ? AppColors.primaryStrong
+                                    : theme.colorScheme.onSurface,
                                 BlendMode.srcIn,
                               ),
                             ),
@@ -418,6 +424,36 @@ class _SearchViewState extends State<_SearchView> {
       ),
     );
   }
+
+  Future<void> _openDateRangeSheet(
+    BuildContext context,
+    SearchProvider provider,
+  ) async {
+    final q = provider.query;
+    final initial = q.hasDateRange
+        ? DateRangeValue(
+            preset: q.datePreset ?? DateRangePreset.custom,
+            from: q.dateFrom!,
+            to: q.dateTo!,
+          )
+        : null;
+    final selected = await DateRangeSheet.show(context, initial: initial);
+    if (selected == null || !mounted) return;
+    provider.setDateRange(selected);
+  }
+
+  String _dateChipLabel(AppLocalizations l10n, SearchProvider provider) {
+    final preset = provider.query.datePreset;
+    if (preset == null) return l10n.activityChipDate;
+    return switch (preset) {
+      DateRangePreset.today => l10n.homePeriodToday,
+      DateRangePreset.yesterday => l10n.commonYesterday,
+      DateRangePreset.thisWeek => l10n.homePeriodThisWeek,
+      DateRangePreset.thisMonth => l10n.homePeriodThisMonth,
+      DateRangePreset.lastMonth => l10n.dateRangeLastMonth,
+      DateRangePreset.custom => l10n.dateRangeCustom,
+    };
+  }
 }
 
 class _ActivityToolbarIcon extends StatelessWidget {
@@ -455,11 +491,13 @@ class _ActivityFilterChip extends StatelessWidget {
     required this.label,
     required this.leading,
     this.emphasized = false,
+    this.onTap,
   });
 
   final String? label;
   final Widget leading;
   final bool emphasized;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -467,46 +505,57 @@ class _ActivityFilterChip extends StatelessWidget {
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: emphasized
-            ? AppColors.navActiveFill(brightness)
-            : AppColors.card(brightness),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(
-          color: emphasized
-              ? AppColors.border(brightness).withValues(alpha: 0.35)
-              : AppColors.cardBorder(brightness),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.smPlus2,
-          vertical: AppSpacing.smPlus,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            leading,
-            if (label != null) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                label!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: ink,
-                ),
-              ),
-            ],
-            const SizedBox(width: AppSpacing.xs),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 18,
-              color: emphasized ? AppColors.primaryStrong : ink,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: emphasized
+                ? AppColors.navActiveFill(brightness)
+                : AppColors.card(brightness),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: emphasized
+                  ? AppColors.border(brightness).withValues(alpha: 0.35)
+                  : AppColors.cardBorder(brightness),
             ),
-          ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.smPlus2,
+              vertical: AppSpacing.smPlus,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                leading,
+                if (label != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Flexible(
+                    child: Text(
+                      label!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: emphasized ? AppColors.primaryStrong : ink,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: AppSpacing.xs),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: emphasized ? AppColors.primaryStrong : ink,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

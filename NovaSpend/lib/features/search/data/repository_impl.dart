@@ -10,8 +10,8 @@ class SearchRepositoryImpl implements SearchRepository {
   SearchRepositoryImpl({
     required FirestoreSearchDatasource firestoreDatasource,
     required RecentSearchesDatasource recentSearchesDatasource,
-  })  : _firestore = firestoreDatasource,
-        _recent = recentSearchesDatasource;
+  }) : _firestore = firestoreDatasource,
+       _recent = recentSearchesDatasource;
 
   final FirestoreSearchDatasource _firestore;
   final RecentSearchesDatasource _recent;

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/domain/entities/search_query.dart';
 import 'package:nova_spend/features/search/domain/repositories/search_repository.dart';
 import 'package:nova_spend/features/search/domain/usecases/search_transactions.dart';
@@ -10,8 +11,8 @@ class SearchProvider extends ChangeNotifier {
   SearchProvider({
     required SearchTransactions searchTransactions,
     required SearchRepository searchRepository,
-  })  : _searchTransactions = searchTransactions,
-        _searchRepository = searchRepository;
+  }) : _searchTransactions = searchTransactions,
+       _searchRepository = searchRepository;
 
   final SearchTransactions _searchTransactions;
   final SearchRepository _searchRepository;
@@ -49,8 +50,18 @@ class SearchProvider extends ChangeNotifier {
     unawaited(runSearch(saveRecent: true));
   }
 
-  void toggleThisMonth() {
-    query = query.copyWith(thisMonth: !query.thisMonth);
+  void setDateRange(DateRangeValue range) {
+    query = query.copyWith(
+      datePreset: range.preset,
+      dateFrom: range.from,
+      dateTo: range.to,
+    );
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
+  void clearDateRange() {
+    query = query.copyWith(clearDateRange: true);
     notifyListeners();
     unawaited(runSearch(saveRecent: false));
   }
@@ -114,11 +125,7 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final page = await _searchTransactions(
-        uid: uid,
-        query: query,
-        limit: 50,
-      );
+      final page = await _searchTransactions(uid: uid, query: query, limit: 50);
       results = page;
       hasMore = page.length >= 50;
 

@@ -196,6 +196,36 @@ abstract class AppLocalizations {
   /// **'Filter'**
   String get activityChipFilter;
 
+  /// No description provided for @activityChipDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get activityChipDate;
+
+  /// No description provided for @dateRangeSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range'**
+  String get dateRangeSheetTitle;
+
+  /// No description provided for @dateRangeLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get dateRangeLastMonth;
+
+  /// No description provided for @dateRangeCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom range'**
+  String get dateRangeCustom;
+
+  /// No description provided for @dateRangeApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get dateRangeApply;
+
   /// No description provided for @searchFilterDebits.
   ///
   /// In en, this message translates to:

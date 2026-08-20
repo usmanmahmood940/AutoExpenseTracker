@@ -7,7 +7,7 @@ import 'package:nova_spend/features/transactions/domain/entities/transaction_ent
 
 class FirestoreSearchDatasource {
   FirestoreSearchDatasource({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+    : _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
 
@@ -28,7 +28,7 @@ class FirestoreSearchDatasource {
     if (query.hasText &&
         !query.subscriptionsOnly &&
         query.typeFilter == null &&
-        !query.thisMonth) {
+        !query.hasDateRange) {
       try {
         final prefix = normalizeMerchantKey(query.text);
         if (prefix.isNotEmpty) {
@@ -149,8 +149,9 @@ class FirestoreSearchDatasource {
       }
 
       while (matches.length < limit && pages < 12) {
-        Query<Map<String, dynamic>> q =
-            _txs(uid).orderBy('transactionDate', descending: true);
+        Query<Map<String, dynamic>> q = _txs(
+          uid,
+        ).orderBy('transactionDate', descending: true);
         if (cursor != null) {
           q = q.startAfterDocument(cursor);
         }
@@ -184,12 +185,21 @@ class FirestoreSearchDatasource {
     final type = query.typeFilter;
     if (type != null && tx.type != type) return false;
 
-    if (query.thisMonth) {
+    if (query.hasDateRange) {
       final d = DateTime.tryParse(tx.transactionDate);
       if (d == null) return false;
-      final now = DateTime.now();
-      final start = DateTime(now.year, now.month, 1);
-      if (d.isBefore(start)) return false;
+      final day = DateTime(d.year, d.month, d.day);
+      final from = DateTime(
+        query.dateFrom!.year,
+        query.dateFrom!.month,
+        query.dateFrom!.day,
+      );
+      final to = DateTime(
+        query.dateTo!.year,
+        query.dateTo!.month,
+        query.dateTo!.day,
+      );
+      if (day.isBefore(from) || day.isAfter(to)) return false;
     }
 
     if (query.hasText) {

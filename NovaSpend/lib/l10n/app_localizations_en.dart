@@ -61,6 +61,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityChipFilter => 'Filter';
 
   @override
+  String get activityChipDate => 'Date';
+
+  @override
+  String get dateRangeSheetTitle => 'Select date range';
+
+  @override
+  String get dateRangeLastMonth => 'Last month';
+
+  @override
+  String get dateRangeCustom => 'Custom range';
+
+  @override
+  String get dateRangeApply => 'Apply';
+
+  @override
   String get searchFilterDebits => 'Debits';
 
   @override

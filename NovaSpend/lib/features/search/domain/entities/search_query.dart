@@ -1,16 +1,21 @@
 import 'package:equatable/equatable.dart';
+import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 
 class SearchQuery extends Equatable {
   const SearchQuery({
     this.text = '',
-    this.thisMonth = false,
+    this.datePreset,
+    this.dateFrom,
+    this.dateTo,
     this.debitsOnly = false,
     this.creditsOnly = false,
     this.subscriptionsOnly = false,
   });
 
   final String text;
-  final bool thisMonth;
+  final DateRangePreset? datePreset;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
   final bool debitsOnly;
   final bool creditsOnly;
   final bool subscriptionsOnly;
@@ -19,12 +24,10 @@ class SearchQuery extends Equatable {
 
   bool get hasText => text.trim().isNotEmpty;
 
+  bool get hasDateRange => dateFrom != null && dateTo != null;
+
   bool get hasActiveFilters =>
-      hasText ||
-      thisMonth ||
-      debitsOnly ||
-      creditsOnly ||
-      subscriptionsOnly;
+      hasText || hasDateRange || debitsOnly || creditsOnly || subscriptionsOnly;
 
   String? get typeFilter {
     if (debitsOnly && !creditsOnly) return 'debit';
@@ -34,14 +37,19 @@ class SearchQuery extends Equatable {
 
   SearchQuery copyWith({
     String? text,
-    bool? thisMonth,
+    DateRangePreset? datePreset,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    bool clearDateRange = false,
     bool? debitsOnly,
     bool? creditsOnly,
     bool? subscriptionsOnly,
   }) {
     return SearchQuery(
       text: text ?? this.text,
-      thisMonth: thisMonth ?? this.thisMonth,
+      datePreset: clearDateRange ? null : (datePreset ?? this.datePreset),
+      dateFrom: clearDateRange ? null : (dateFrom ?? this.dateFrom),
+      dateTo: clearDateRange ? null : (dateTo ?? this.dateTo),
       debitsOnly: debitsOnly ?? this.debitsOnly,
       creditsOnly: creditsOnly ?? this.creditsOnly,
       subscriptionsOnly: subscriptionsOnly ?? this.subscriptionsOnly,
@@ -50,10 +58,12 @@ class SearchQuery extends Equatable {
 
   @override
   List<Object?> get props => [
-        text,
-        thisMonth,
-        debitsOnly,
-        creditsOnly,
-        subscriptionsOnly,
-      ];
+    text,
+    datePreset,
+    dateFrom,
+    dateTo,
+    debitsOnly,
+    creditsOnly,
+    subscriptionsOnly,
+  ];
 }
