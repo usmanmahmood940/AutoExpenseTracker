@@ -182,10 +182,12 @@ normal environment variable (no Secret Manager).
 make deploy
 ```
 
-Live service (Phase A):
+Live service (Phase B):
 
 - https://novaspend-api-h7asbihbya-el.a.run.app/health  
 - https://novaspend-api-h7asbihbya-el.a.run.app/docs  
+- Auth: `/auth/signup/otp`, `/auth/signup`, `/auth/login`, … and `/me`  
+
 
 `make deploy` runs [`scripts/deploy-cloud-run.sh`](scripts/deploy-cloud-run.sh):
 builds via Cloud Build, copies env from `.env`, clears any old secret mounts,
