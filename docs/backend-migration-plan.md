@@ -6,6 +6,8 @@
 
 This plan moves product data and business APIs off Firestore/Cloud Functions onto a proper backend, while keeping Firebase for identity and push unless you later choose to replace those too.
 
+> **Where to start:** [§6 Migration order](#6-migration-order-checklist-you-can-follow) is the authoritative sequence. [§5](#5-backend-build-plan-correct-order) explains each phase in detail; [§15](#15-one-page-summary) is the short version. If they ever conflict, §6 wins.
+
 ---
 
 ## 1. Goals
@@ -133,32 +135,37 @@ AutoExpenseTracker/
 
 ## 5. Backend build plan (correct order)
 
-Do **not** migrate Flutter until Phase A–C APIs exist and are tested in Swagger (`/docs`).
+Gating rules (these prevent the common ordering mistakes):
+
+- Flutter auth work starts only after **Phase B** is testable in Swagger (`/docs`).
+- Flutter product screens start only after **Phase C**.
+- Shortcuts/webhook work needs **Phase D**, not just A–C.
+- **Nothing in production points at the backend until Phase F data migration has run.** Phases E and D are exercised against **dev/staging** first.
 
 ### Phase A — Foundation (week 1)
 
 **Deliverables**
 
-- [ ] Create `backend/` FastAPI project
-- [ ] Docker + local run (`uvicorn`)
-- [ ] Postgres (local Docker or Supabase/Cloud SQL) + Alembic
-- [ ] Config via env (DB URL, Firebase project, secrets)
-- [ ] Firebase Admin SDK init (verify ID tokens, manage users)
-- [ ] Health: `GET /health`
-- [ ] Deploy empty app to **Cloud Run** (CI optional later)
-- [ ] CORS + structured logging + error envelope
+- [x] Create `backend/` FastAPI project
+- [x] Docker + local run (`uvicorn`)
+- [x] Postgres (local Homebrew for day-to-day; **Supabase** for Cloud Run) + Alembic
+- [x] Config via env (DB URL, Firebase project, secrets)
+- [x] Firebase Admin SDK init (verify ID tokens, manage users)
+- [x] Health: `GET /health`
+- [x] Deploy empty app to **Cloud Run** (CI optional later) — `https://novaspend-api-h7asbihbya-el.a.run.app`
+- [x] CORS + structured logging + error envelope
 
 **Postgres core tables (minimum)**
 
-- `users` (`id`, `firebase_uid` UNIQUE, email, display_name, currency, created_at, …)
-- `auth_otps` (purpose, code_hash, expires_at, attempts) — if keeping OTP flows
-- `devices` (user_id, fcm_token, platform)
+- [x] `users` (`id`, `firebase_uid` UNIQUE, email, display_name, currency, created_at, …)
+- [x] `auth_otps` (purpose, code_hash, expires_at, attempts) — if keeping OTP flows
+- [x] `devices` (user_id, fcm_token, platform)
 
-**Exit criteria:** Cloud Run URL live; `/docs` opens; DB migrations apply cleanly.
+**Exit criteria:** Cloud Run URL live; `/docs` opens; DB migrations apply cleanly. ✅ (2026-08-21)
 
 ---
 
-### Phase B — Auth APIs (week 1–2)
+### Phase B — Auth APIs (week 1–2) — **done (local)**
 
 Backend owns the surface; Firebase stores credentials.
 
@@ -173,14 +180,25 @@ Backend owns the surface; Firebase stores credentials.
 | POST | `/auth/logout` | Optional revoke refresh tokens |
 | GET | `/me` | Verify Bearer → return Postgres profile |
 | PATCH | `/me` | Update profile/settings |
+| POST | `/me/devices` | Register FCM token → `devices` row |
+| DELETE | `/me/devices/{token}` | Unregister on logout / token rotation |
 
 **Also**
 
-- [ ] Rate limits on login/OTP/forgot
-- [ ] Secure OTP storage (hash, TTL, max attempts)
-- [ ] Port logic from existing Functions: `sendEmailOtp`, `completeEmailOtpSignup`, password reset OTP, `ensureUserProfile`
+- [x] Rate limits on login/OTP/forgot — sliding window, per email and per IP (`auth_rate_limits`)
+- [x] Secure OTP storage (hash, TTL, max attempts) — `auth_otps`, HMAC-hashed codes
+- [x] Port logic from existing Functions: `sendEmailOtp`, `completeEmailOtpSignup`, password reset OTP, `ensureUserProfile`
 
-**Exit criteria:** Swagger can signup → login → `/me` → change password → forgot/reset without Flutter.
+**Implementation note:** `POST /auth/signup` in the table above is split into
+two calls to mirror the OTP-gated flow the Functions had: `POST
+/auth/signup/otp` (send the code) then `POST /auth/signup` (verify the code +
+create the account). Two new tables support the parts Firestore's `authTemp`/
+`authRateLimits` collections used to cover: `password_reset_sessions` (the
+token minted by `verify-reset-otp`) and `auth_rate_limits`.
+
+**Why `/me/devices` ships here, not in Phase D:** the Phase D push worker reads the `devices` table, but today Flutter writes `fcmTokens` onto the Firestore user doc (`PushNotificationService`) and `onUserTransactionCreatedNotify` reads it from there. The endpoint must exist (and the app must populate it) before the Postgres worker can become the only notification path, or push goes silent.
+
+**Exit criteria:** Swagger can signup → login → `/me` → change password → forgot/reset without Flutter. ✅ Verified locally (`backend/README.md` → Endpoints); not yet deployed to Cloud Run/Supabase.
 
 ---
 
@@ -190,9 +208,11 @@ Backend owns the surface; Firebase stores credentials.
 
 - `transactions`
 - `raw_ingestions`
-- `categories` (global + user)
+- `categories` (global + user) — **seed the default set in this phase** (migration or seed script)
 - `merchant_category_overrides`
-- `monthly_summaries` (or replace with SQL views later)
+- `monthly_summaries` — optional here; Phase D populates it
+
+Seeding categories in C matters because Home tiles resolve colors through `CategoryColorBinder`, which streams categories today. If the table is empty until the Flutter categories screen is cut over (last), migrated Home screens lose their colors.
 
 **APIs**
 
@@ -204,8 +224,8 @@ Backend owns the surface; Firebase stores credentials.
 | DELETE | `/transactions/{id}` | soft delete |
 | POST | `/transactions/{id}/review` | mark reviewed |
 | GET | `/transactions/search` | Firestore search |
-| GET | `/period-stats` | `getPeriodStats` |
-| GET | `/analytics/summary` | monthly summary reads |
+| GET | `/period-stats` | `getPeriodStats` — **live SQL over `transactions`**, no worker dependency |
+| GET | `/analytics/summary` | monthly summary reads (live SQL now, materialized later) |
 | GET | `/merchants/{key}` | merchant summary |
 | GET | `/merchants/{key}/transactions` | merchant list |
 | GET | `/review` | needs_review + ingestions |
@@ -213,11 +233,15 @@ Backend owns the surface; Firebase stores credentials.
 
 **SQL advantage:** `WHERE date BETWEEN … ORDER BY amount DESC LIMIT …` works natively.
 
-**Exit criteria:** All list/search/stats behaviors match current app via curl/Swagger.
+**Compute stats live in this phase.** `getPeriodStats` scans transactions today, so plain SQL reproduces it. Do not make C's exit criteria depend on materialized `monthly_summaries`, or C blocks on the Phase D workers.
+
+**Exit criteria:** All list/search/stats behaviors match current app via curl/Swagger, using seeded categories and hand-inserted transaction rows.
 
 ---
 
-### Phase D — Ingest & workers (week 3–5)
+### Phase D — Ingest & workers (week 3–5, dev/staging only)
+
+Build and verify these against **dev**. Production Shortcuts keep hitting `ingestTransactionForUser` until the Phase F freeze window.
 
 - [ ] `POST /ingest` (or `/webhooks/sms`) — port `ingestTransactionForUser` (Gemini, dedup, normalize)
 - [ ] Auth for webhook (`X-User-Id` or signed secret — document in `docs/webhooks.md`)
@@ -225,11 +249,15 @@ Backend owns the surface; Firebase stores credentials.
 - [ ] Worker: send FCM on new tx (replace `onUserTransactionCreatedNotify`) using Admin messaging + `devices` table
 - [ ] Worker: OTP/doc cleanup (replace `cleanupExpiredAuthDocs`)
 
-**Exit criteria:** Shortcut/SMS ingest creates Postgres rows; push still works.
+**Leave `onUserTransactionCreatedNotify` deployed.** The Postgres push worker only becomes the sole notify path after the app registers tokens via `POST /me/devices` (Phase E step 1) and production has cut over. Until then the two paths cover different data sources, so disabling the trigger early means no push for production users.
+
+**Exit criteria:** on dev, a Shortcut/SMS call creates Postgres rows, aggregates recompute, and the worker sends push to a device registered through `/me/devices`.
 
 ---
 
-### Phase E — Flutter API client (week 4–6, can overlap C/D)
+### Phase E — Flutter API client (week 4–6, can overlap D)
+
+**Runs against the dev/staging Cloud Run URL with dev data already migrated ([§6](#6-migration-order-checklist-you-can-follow) step 5).** A migrated screen pointed at an empty database looks identical to a broken screen, which makes this phase impossible to verify otherwise. It can overlap Phase D, but not Phase C — the screens need those APIs.
 
 - [ ] Add `ApiClient` (Dio/http) + secure token storage
 - [ ] Feature datasources call FastAPI instead of Firestore/Functions
@@ -239,36 +267,42 @@ Backend owns the surface; Firebase stores credentials.
 
 **Order inside Flutter (cutover order)**
 
-1. Auth + `/me`
-2. Home period stats
-3. Home / transactions list
-4. Search
-5. Merchant
-6. Review
-7. Categories / settings
-8. Ingest path (if client-triggered) / confirm Shortcuts hit new URL
+1. Auth + `/me` + FCM token → `POST /me/devices`
+2. Home — period stats **and** transactions list in one flag (`HomeProvider` loads both together; a half-migrated Home is extra work for no benefit)
+3. Search
+4. Merchant
+5. Review — only meaningful once new ingestions land in Postgres, so either enable dual-write ingest first or accept that it shows only backend-era items on dev
+6. Categories / settings — the *screens* go last; category *data* was already seeded in Phase C
+7. Confirm client-triggered ingest paths (if any) target the new URL
 
-**Exit criteria:** App works against Cloud Run with Firestore reads disabled for migrated features.
+**Exit criteria:** App works against **dev** Cloud Run with Firestore reads disabled for migrated features.
 
 ---
 
-### Phase F — Data migration (week 5–7)
+### Phase F — Data migration & production cutover (week 6–7)
 
-**Do not skip backups.**
+**Do not skip backups.** Run the same migration script twice: once against **dev** (before Phase E, [§6](#6-migration-order-checklist-you-can-follow) step 5) and once against **production** here.
 
 1. Export Firestore collections (or Admin SDK dump script).
 2. Transform → Postgres (preserve IDs or map `firestore_id` → uuid).
 3. Migrate users: ensure every Firebase Auth user has a Postgres `users` row (`firebase_uid`).
 4. Migrate transactions, ingestions, categories, overrides, summaries, settings.
 5. Validate counts + spot-check amounts per uid.
-6. Dual-write period (optional): Functions write Firestore **and** call backend, or backend is source of truth only after freeze.
 
-**Freeze window**
+**Optional dual-write (decide in [§13](#13-decisions-to-lock-before-coding), and it belongs *before* the freeze)**
+
+If you want a longer, lower-risk transition, have `ingestTransactionForUser` write Firestore **and** call `POST /ingest` for a few days ahead of the freeze. This is what makes Review-on-API safe early. Dual-**write** is not the same as the dual-**run** in [§7](#7-dual-run--rollback), which is just idle Firebase kept as a rollback target after cutover.
+
+**Freeze window — everything below happens in one session, in this order**
 
 - [ ] Announce short write freeze or accept last-minute delta sync
 - [ ] Final incremental sync
-- [ ] Flip Flutter / Shortcuts to backend URLs
+- [ ] Validate counts again post-sync
+- [ ] Flip Flutter **and** Shortcuts/webhook to backend URLs **together**
+- [ ] Switch push to the Postgres worker; stop `onUserTransactionCreatedNotify`
 - [ ] Monitor errors 48–72h
+
+Flipping Shortcuts before the migration would split history: new transactions in Postgres, everything older in Firestore, and a migration that then has to special-case the gap or double-count it. Flipping Flutter before the migration shows users an empty app.
 
 **Exit criteria:** Production traffic on Postgres; Firestore no longer required for reads/writes.
 
@@ -276,31 +310,42 @@ Backend owns the surface; Firebase stores credentials.
 
 ## 6. Migration order (checklist you can follow)
 
-Use this as the single sequence. Do not jump ahead.
+Use this as the single sequence — it overrides the phase letters and the summary in [§15](#15-one-page-summary) if they ever disagree. Do not jump ahead.
 
-| Step | Work | Done when |
-|------|------|-----------|
-| 0 | Read this doc; create `backend/` repo folder; pick Postgres host | Decision recorded |
-| 1 | Phase A foundation + Cloud Run | `/health` public |
-| 2 | Phase B auth APIs | Swagger auth works |
-| 3 | Phase C transactions + stats APIs | Swagger list/search/stats works |
-| 4 | Phase D ingest + workers | Ingest + push + aggregates on Postgres |
-| 5 | Seed/migrate **dev** Firebase project → Postgres | Dev app can run on backend |
-| 6 | Flutter: Auth → backend | Login/signup on API |
-| 7 | Flutter: Home stats + list → backend | No `listTransactions` / `getPeriodStats` from app |
-| 8 | Flutter: Search, merchant, review, settings → backend | No client Firestore for those |
-| 9 | Point Shortcuts/webhook to new ingest URL | New txs only in Postgres |
-| 10 | Production data migration + freeze + cutover | Live on backend |
-| 11 | Dual-run monitoring | Stable 3–7 days |
-| 12 | Firebase cleanup ([§8](#8-post-migration-firebase-cleanup)) | Unused services removed/disabled |
+Steps 1–9 touch **dev/staging only**. Production keeps running on Firestore/Functions untouched until step 10.
+
+| Step | Work | Env | Done when |
+|------|------|-----|-----------|
+| 0 | Lock [§13](#13-decisions-to-lock-before-coding) decisions; create `backend/` folder; pick Postgres host | — | Decisions recorded in §13 table |
+| 1 | Phase A foundation + Cloud Run | dev | `/health` public, migrations apply |
+| 2 | Phase B auth APIs **+ `/me/devices`** | dev | Swagger signup → login → `/me` works |
+| 3 | Phase C transactions/search/stats APIs **+ seed categories** | dev | Swagger list/search/stats works on live SQL |
+| 4 | Phase D ingest + workers | dev | Dev ingest → Postgres rows, aggregates, push |
+| 5 | Migrate **dev** Firestore → Postgres (same script you'll use in prod) | dev | Dev DB has realistic data |
+| 6 | Flutter: `ApiClient` + Auth + `/me` + device registration | dev | Login/signup on API, token in `devices` |
+| 7 | Flutter: Home (stats **and** list, one flag) | dev | No `listTransactions` / `getPeriodStats` calls |
+| 8 | Flutter: search, merchant, review, categories, settings screens | dev | No client Firestore for those |
+| 9 | Point **dev** Shortcuts/webhook at new ingest URL; rehearse the cutover | dev | Full app works end-to-end on backend |
+| 10 | **Production:** migrate data → validate → freeze → flip Flutter + Shortcuts + push together | **prod** | Live on backend ([§5 Phase F](#phase-f--data-migration--production-cutover-week-67)) |
+| 11 | Dual-run monitoring (Firebase idle, as rollback) | prod | Stable 3–7 days |
+| 12 | Firebase cleanup ([§8](#8-post-migration-firebase-cleanup)) | prod | Unused services removed/disabled |
+
+**Optional dual-write**, if chosen, starts a few days *before* step 10 — not at step 11.
 
 ---
 
 ## 7. Dual-run & rollback
 
-### Dual-run (recommended 3–7 days)
+Two different things, often confused:
 
-- Backend is primary.
+| Term | When | What it means |
+|------|------|---------------|
+| **Dual-write** | *Before* cutover (optional) | Ingest writes Firestore **and** calls `POST /ingest`, so both stores stay current |
+| **Dual-run** | *After* cutover, 3–7 days | Backend is the only writer; Firebase sits deployed but idle as a rollback target |
+
+### Dual-run (recommended 3–7 days, step 11)
+
+- Backend is primary and the only source of truth.
 - Keep Firestore Functions **deployed but unused** (or read-only) for emergency.
 - Feature flag in app: fallback only if you explicitly support it (prefer not to dual-read; dual-write is harder).
 
@@ -314,8 +359,10 @@ Use this as the single sequence. Do not jump ahead.
 
 1. Flip Flutter flag / release previous build pointing at Functions/Firestore.
 2. Point webhook back to `ingestTransactionForUser`.
-3. Do **not** delete Firebase data until cleanup phase.
-4. Fix forward; re-attempt cutover.
+3. Re-enable `onUserTransactionCreatedNotify` so push keeps working on the Firestore path.
+4. Reconcile any transactions written to Postgres during the window back into Firestore (small volume if you roll back fast — this is the main reason to keep the window short).
+5. Do **not** delete Firebase data until cleanup phase.
+6. Fix forward; re-attempt cutover.
 
 ---
 
@@ -420,11 +467,11 @@ Only after backend auth is solid:
 
 ## 10. Security checklist
 
-- [ ] All product routes require verified token
-- [ ] Webhook routes use shared secret / signed requests
-- [ ] Rate limit `/auth/login`, OTP, forgot-password
-- [ ] Passwords never logged
-- [ ] Change-password revokes other sessions
+- [x] All product routes require verified token (`/me`, `/me/devices` — Phase C's product routes will follow the same `CurrentUser` dependency)
+- [ ] Webhook routes use shared secret / signed requests (Phase D)
+- [x] Rate limit `/auth/login`, OTP, forgot-password
+- [x] Passwords never logged
+- [x] Change-password revokes other sessions
 - [ ] Postgres least-privilege DB user for the API
 - [ ] Secrets in Secret Manager / env — not in git
 - [ ] HTTPS only
@@ -446,14 +493,18 @@ Only after backend auth is solid:
 
 ## 12. Rough timeline (indicative)
 
-| Weeks | Focus |
-|-------|--------|
-| 1–2 | Foundation + Auth APIs |
-| 2–4 | Transactions, search, stats |
-| 3–5 | Ingest + workers |
-| 4–6 | Flutter cutover (feature by feature) |
-| 5–7 | Prod migration + dual-run |
-| 7–8 | Firebase cleanup |
+| Weeks | Focus | Steps ([§6](#6-migration-order-checklist-you-can-follow)) |
+|-------|--------|-------|
+| 1–2 | Foundation + Auth APIs + `/me/devices` | 0–2 |
+| 2–4 | Transactions, search, stats (live SQL) | 3 |
+| 3–5 | Ingest + workers on dev | 4 |
+| 4 | Dev data migration (unblocks Flutter) | 5 |
+| 4–6 | Flutter cutover on dev (feature by feature) | 6–9 |
+| 6–7 | Prod migration + freeze + cutover | 10 |
+| 7 | Dual-run | 11 |
+| 7–8 | Firebase cleanup | 12 |
+
+The overlap between ingest (weeks 3–5) and Flutter (weeks 4–6) is fine because both target dev. Only step 10 touches production.
 
 Adjust for team size; one developer may stretch this.
 
@@ -466,16 +517,16 @@ Adjust for team size; one developer may stretch this.
 3. **IDs:** keep Firestore string IDs vs new UUIDs + mapping table  
 4. **Domain:** custom domain for Cloud Run  
 5. **OTP email:** keep current provider vs new  
-6. **Dual-write:** yes/no during transition  
+6. **Dual-write:** yes/no during transition — decide before building Phase D ingest, since "yes" means the legacy Function also calls `POST /ingest`  
 
 Record answers in this section when decided:
 
 | Decision | Choice | Date |
 |----------|--------|------|
-| Postgres host | _TBD_ | |
-| Token strategy | _TBD_ | |
-| ID strategy | _TBD_ | |
-| Dual-write | _TBD_ | |
+| Postgres host | **Dev:** local Homebrew Postgres 16. **Staging/prod (Cloud Run):** Supabase Postgres | 2026-08-21 |
+| Token strategy | **Pass-through Firebase ID tokens.** `/auth/login` and `/auth/signup` return the Identity Toolkit `idToken`/`refreshToken` pair as-is; the client sends `idToken` as the Bearer token and refreshes it the normal Identity Toolkit way. No backend-issued session token. | 2026-08-21 |
+| ID strategy | _TBD_ for transactions. `users` needs no decision: `firebase_uid` is the Firestore document id | 2026-08-20 |
+| Dual-write | _TBD_ — decide before Phase D ingest | |
 
 ---
 
@@ -490,9 +541,12 @@ Record answers in this section when decided:
 ## 15. One-page summary
 
 1. Build FastAPI + Postgres on Cloud Run.  
-2. Ship `/auth/*` (Firebase under the hood).  
-3. Ship transactions/search/stats/ingest APIs.  
-4. Point Flutter + Shortcuts at the API.  
-5. Migrate Firestore data → Postgres.  
-6. Stabilize.  
-7. Delete Functions, lock/delete Firestore, keep Auth + FCM until you outgrow them.
+2. Ship `/auth/*` + `/me/devices` (Firebase under the hood).  
+3. Ship transactions/search/stats APIs (live SQL) with categories seeded.  
+4. Ship ingest + workers, verified on dev.  
+5. Migrate **dev** data → Postgres, then point the Flutter app at dev and cut screens over feature by feature.  
+6. **Production:** migrate data first, then flip Flutter + Shortcuts + push in one freeze window.  
+7. Dual-run with Firebase idle; stabilize 3–7 days.  
+8. Delete Functions, lock/delete Firestore, keep Auth + FCM until you outgrow them.
+
+The order that matters most: **data before traffic.** Never point production clients or webhooks at the backend before its tables are populated.

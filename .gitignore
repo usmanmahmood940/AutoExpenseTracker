@@ -14,11 +14,21 @@ database-debug.log
 .env
 .env.*
 !.env.example
+backend/.supabase_url.tmp
 functions/.env
 # Allow committed Firebase Functions string params (non-secrets)
 !functions/.env.auto-expense-tracker-2026
 functions/.secret.local
 *.local
+
+# Python / backend
+backend/.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Build output
 functions/lib/

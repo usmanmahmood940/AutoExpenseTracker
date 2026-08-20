@@ -1,0 +1,19 @@
+# Runtime dependencies. Direct deps are pinned; transitives resolve from these.
+# Regenerate versions with: pip list --format=freeze
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+
+SQLAlchemy[asyncio]==2.0.52
+asyncpg==0.31.0
+alembic==1.19.1
+# SQLAlchemy's asyncio bridge needs greenlet explicitly on some platforms.
+greenlet==3.5.5
+
+pydantic==2.13.4
+pydantic-settings==2.15.0
+
+firebase-admin==7.5.0
+
+# Phase B uses this for server-side Identity Toolkit password sign-in.
+httpx==0.28.1
