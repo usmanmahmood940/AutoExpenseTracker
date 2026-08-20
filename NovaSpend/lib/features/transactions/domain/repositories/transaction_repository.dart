@@ -1,3 +1,4 @@
+import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
@@ -14,6 +15,13 @@ abstract class TransactionRepository {
     int limit = 50,
     TransactionEntity? startAfter,
     TransactionFilter? filter,
+  });
+
+  /// Period overview + highlights from the getPeriodStats cloud function.
+  Future<PeriodStatsEntity> getPeriodStats({
+    required String period,
+    required String from,
+    required String to,
   });
 
   Future<void> updateTransaction(

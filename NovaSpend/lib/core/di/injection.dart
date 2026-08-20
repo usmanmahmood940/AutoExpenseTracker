@@ -38,6 +38,7 @@ import 'package:nova_spend/features/settings/presentation/provider/settings_prov
 import 'package:nova_spend/features/transactions/data/datasource/firestore_transaction_datasource.dart';
 import 'package:nova_spend/features/transactions/data/repository_impl.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:nova_spend/features/transactions/domain/usecases/get_period_stats.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_transactions_page.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/mark_transaction_reviewed.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
@@ -89,12 +90,13 @@ Future<void> configureDependencies({
     () => TransactionRepositoryImpl(datasource: sl()),
   );
   sl.registerLazySingleton(() => GetTransactionsPage(sl()));
+  sl.registerLazySingleton(() => GetPeriodStats(sl()));
   sl.registerLazySingleton(() => UpdateTransaction(sl()));
   sl.registerLazySingleton(() => MarkTransactionReviewed(sl()));
   sl.registerFactory(
     () => HomeProvider(
       getTransactionsPage: sl(),
-      analyticsRepository: sl(),
+      getPeriodStats: sl(),
       transactionRepository: sl(),
     ),
   );

@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
-import 'package:nova_spend/features/analytics/domain/repositories/analytics_repository.dart';
+import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:nova_spend/features/transactions/domain/usecases/get_period_stats.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_transactions_page.dart';
 import 'package:nova_spend/features/transactions/presentation/home_period.dart';
 
@@ -22,6 +22,8 @@ class PeriodTotals {
   final String currency;
 
   double get net => received - spent;
+
+  static const empty = PeriodTotals(spent: 0, received: 0, currency: 'PKR');
 }
 
 class PeriodComparison {
@@ -34,6 +36,8 @@ class PeriodComparison {
   final double? spentChangePercent;
   final double? receivedChangePercent;
   final double? netChangePercent;
+
+  static const empty = PeriodComparison();
 }
 
 /// Max transactions fetched for the home preview feed.
@@ -42,26 +46,25 @@ const int homePageSize = 20;
 class HomeProvider extends ChangeNotifier {
   HomeProvider({
     required GetTransactionsPage getTransactionsPage,
-    required AnalyticsRepository analyticsRepository,
+    required GetPeriodStats getPeriodStats,
     required TransactionRepository transactionRepository,
   }) : _getTransactionsPage = getTransactionsPage,
-       _analyticsRepository = analyticsRepository,
+       _getPeriodStats = getPeriodStats,
        _transactionRepository = transactionRepository;
 
   final GetTransactionsPage _getTransactionsPage;
-  final AnalyticsRepository _analyticsRepository;
+  final GetPeriodStats _getPeriodStats;
   final TransactionRepository _transactionRepository;
-
-  StreamSubscription<MonthlySummaryEntity?>? _summarySub;
 
   List<TransactionEntity> _items = [];
   TransactionFilter _filter = TransactionFilter.empty;
   HomePeriod _period = HomePeriod.thisWeek;
-  MonthlySummaryEntity? _monthlySummary;
+  final Map<HomePeriod, PeriodStatsEntity> _periodStats = {};
   int _pendingReviewCount = 0;
   int _totalCount = 0;
   double _totalAmount = 0;
   bool _isLoading = false;
+  bool _isPeriodStatsLoading = false;
   bool _hasMore = true;
   String? _error;
   String? _uid;
@@ -94,14 +97,17 @@ class HomeProvider extends ChangeNotifier {
   int get totalCount => _totalCount;
   double get totalAmount => _totalAmount;
   bool get isLoading => _isLoading;
+  bool get isPeriodStatsLoading => _isPeriodStatsLoading;
   bool get hasMore => _hasMore;
 
   /// True when the currently selected period may have more transactions than
-  /// the ones loaded in the 30-item preview. Used for the "Show more" button.
+  /// the ones loaded in the preview. Used for the "Show more" button.
   bool get periodHasMore =>
       periodItems.length >= homePageSize && _hasMore;
 
   String? get error => _error;
+
+  PeriodStatsEntity? get currentPeriodStats => _periodStats[_period];
 
   List<String> get availableAccounts {
     final set = <String>{};
@@ -113,111 +119,62 @@ class HomeProvider extends ChangeNotifier {
   }
 
   PeriodTotals get periodTotals {
-    final currency =
-        _monthlySummary?.currency ??
-        (_items.isNotEmpty ? _items.first.currency : 'PKR');
-
-    switch (_period) {
-      case HomePeriod.thisMonth:
-        final summary = _monthlySummary;
-        if (summary != null) {
-          return PeriodTotals(
-            spent: summary.totalDebit,
-            received: summary.totalCredit,
-            currency: summary.currency,
-          );
-        }
-        return _aggregateFrom(_startOfMonth, currency);
-      case HomePeriod.thisWeek:
-        return _aggregateFrom(_startOfWeek, currency);
-      case HomePeriod.today:
-        return _aggregateFrom(_startOfToday, currency);
+    final stats = currentPeriodStats;
+    if (stats != null) {
+      return PeriodTotals(
+        spent: stats.spent,
+        received: stats.received,
+        currency: stats.currency,
+      );
     }
+    return PeriodTotals.empty;
   }
 
   PeriodComparison get periodComparison {
-    final current = _currentComparisonTotals;
-    final previous = _previousComparisonTotals;
-
+    if (_period == HomePeriod.today) return PeriodComparison.empty;
+    final comparison = currentPeriodStats?.comparison;
+    if (comparison == null) return PeriodComparison.empty;
     return PeriodComparison(
-      spentChangePercent: _percentChange(previous.spent, current.spent),
-      receivedChangePercent: _percentChange(
-        previous.received,
-        current.received,
-      ),
-      netChangePercent: _percentChange(previous.net, current.net),
+      spentChangePercent: comparison.spentChangePercent,
+      receivedChangePercent: comparison.receivedChangePercent,
+      netChangePercent: comparison.netChangePercent,
     );
   }
 
-  PeriodTotals get _currentComparisonTotals {
-    final currency = periodTotals.currency;
-    switch (_period) {
-      case HomePeriod.today:
-        return _aggregateBetween(_startOfToday, _startOfToday, currency);
-      case HomePeriod.thisWeek:
-        return _aggregateBetween(_startOfWeek, _startOfToday, currency);
-      case HomePeriod.thisMonth:
-        return _aggregateBetween(_startOfMonth, _startOfToday, currency);
-    }
-  }
+  /// Largest debit in the selected period (from getPeriodStats).
+  PeriodHighlight? get highestSpend => currentPeriodStats?.highestSpend;
 
-  PeriodTotals get _previousComparisonTotals {
-    final currency = periodTotals.currency;
-    switch (_period) {
-      case HomePeriod.today:
-        final yesterday = _startOfToday.subtract(const Duration(days: 1));
-        return _aggregateBetween(yesterday, yesterday, currency);
-      case HomePeriod.thisWeek:
-        final weekStart = _startOfWeek;
-        final daysElapsed = _startOfToday.difference(weekStart).inDays;
-        final prevWeekStart = weekStart.subtract(const Duration(days: 7));
-        final prevWeekEnd = prevWeekStart.add(Duration(days: daysElapsed));
-        return _aggregateBetween(prevWeekStart, prevWeekEnd, currency);
-      case HomePeriod.thisMonth:
-        final now = DateTime.now();
-        final prevMonthStart = DateTime(now.year, now.month - 1, 1);
-        final lastDayPrevMonth = DateTime(now.year, now.month, 0);
-        final sameDayPrevMonth = DateTime(now.year, now.month - 1, now.day);
-        final prevMonthEnd = sameDayPrevMonth.isAfter(lastDayPrevMonth)
-            ? lastDayPrevMonth
-            : sameDayPrevMonth;
-        return _aggregateBetween(prevMonthStart, prevMonthEnd, currency);
-    }
-  }
-
-  DateTime get _periodStart {
-    switch (_period) {
-      case HomePeriod.thisMonth:
-        return _startOfMonth;
-      case HomePeriod.thisWeek:
-        return _startOfWeek;
-      case HomePeriod.today:
-        return _startOfToday;
-    }
-  }
-
-  /// Largest debit transaction within the selected period, or null if none.
-  TransactionEntity? get highestSpend => _extremeInPeriod(credit: false);
-
-  /// Largest credit transaction within the selected period, or null if none.
-  TransactionEntity? get highestReceive => _extremeInPeriod(credit: true);
-
-  TransactionEntity? _extremeInPeriod({required bool credit}) {
-    TransactionEntity? best;
-    for (final tx in periodItems) {
-      final isCredit = tx.type == 'credit';
-      if (isCredit != credit) continue;
-      if (best == null || tx.amount > best.amount) best = tx;
-    }
-    return best;
-  }
+  /// Largest credit in the selected period (from getPeriodStats).
+  PeriodHighlight? get highestReceive => currentPeriodStats?.highestReceive;
 
   void start(String uid) {
     if (_uid == uid) return;
     _uid = uid;
-    unawaited(refresh());
-    _listenMonthlySummary(uid);
-    unawaited(_loadPendingReviewCount(uid));
+    unawaited(_bootstrap());
+  }
+
+  Future<void> _bootstrap() async {
+    final uid = _uid;
+    if (uid == null) return;
+
+    _isLoading = true;
+    _isPeriodStatsLoading = true;
+    notifyListeners();
+
+    try {
+      await Future.wait([
+        _loadTransactionsPage(uid),
+        _loadAllPeriodStats(),
+        _loadPendingReviewCount(uid),
+      ]);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      _isPeriodStatsLoading = false;
+      notifyListeners();
+    }
   }
 
   void setPeriod(HomePeriod period) {
@@ -227,31 +184,85 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pull-to-refresh: reloads the feed and stats for the **current** period only.
   Future<void> refresh() async {
     final uid = _uid;
     if (uid == null) return;
     _isLoading = true;
+    _isPeriodStatsLoading = true;
     notifyListeners();
+
     try {
-      final page = await _getTransactionsPage(
-        uid,
-        limit: homePageSize,
-        filter: _filter.hasActiveFilters ? _filter : null,
-      );
-      _items = List<TransactionEntity>.from(page.items)
-        ..sort(TransactionEntity.compareNewestFirst);
-      _totalCount = page.totalCount;
-      _totalAmount = page.totalAmount;
-      _invalidatePeriodCache();
-      _hasMore = page.hasMore;
+      await Future.wait([
+        _loadTransactionsPage(uid),
+        _loadPeriodStats(_period),
+        _loadPendingReviewCount(uid),
+      ]);
       _error = null;
-      unawaited(_loadPendingReviewCount(uid));
     } catch (e) {
       _error = e.toString();
     } finally {
       _isLoading = false;
+      _isPeriodStatsLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadTransactionsPage(String uid) async {
+    final page = await _getTransactionsPage(
+      uid,
+      limit: homePageSize,
+      filter: _filter.hasActiveFilters ? _filter : null,
+    );
+    _items = List<TransactionEntity>.from(page.items)
+      ..sort(TransactionEntity.compareNewestFirst);
+    _totalCount = page.totalCount;
+    _totalAmount = page.totalAmount;
+    _invalidatePeriodCache();
+    _hasMore = page.hasMore;
+  }
+
+  Future<void> _loadAllPeriodStats() async {
+    await Future.wait([
+      for (final period in HomePeriod.values) _loadPeriodStatsSafely(period),
+    ]);
+  }
+
+  Future<void> _loadPeriodStatsSafely(HomePeriod period) async {
+    try {
+      await _loadPeriodStats(period);
+    } catch (_) {
+      // Keep other periods; UI falls back to zeros until refresh.
+    }
+  }
+
+  Future<void> _loadPeriodStats(HomePeriod period) async {
+    final range = _dateRangeFor(period);
+    final stats = await _getPeriodStats(
+      period: _periodApiValue(period),
+      from: range.from,
+      to: range.to,
+    );
+    _periodStats[period] = stats;
+  }
+
+  String _periodApiValue(HomePeriod period) {
+    return switch (period) {
+      HomePeriod.today => 'today',
+      HomePeriod.thisWeek => 'week',
+      HomePeriod.thisMonth => 'month',
+    };
+  }
+
+  ({String from, String to}) _dateRangeFor(HomePeriod period) {
+    final fmt = DateFormat('yyyy-MM-dd');
+    final to = _startOfToday;
+    final from = switch (period) {
+      HomePeriod.today => _startOfToday,
+      HomePeriod.thisWeek => _startOfWeek,
+      HomePeriod.thisMonth => _startOfMonth,
+    };
+    return (from: fmt.format(from), to: fmt.format(to));
   }
 
   void setFilter(TransactionFilter filter) {
@@ -292,73 +303,26 @@ class HomeProvider extends ChangeNotifier {
     return {for (final k in keys) k: map[k]!};
   }
 
-  void _listenMonthlySummary(String uid) {
-    _summarySub?.cancel();
-    final yearMonth = DateFormat('yyyy-MM').format(DateTime.now());
-    _summarySub = _analyticsRepository.watchSummary(uid, yearMonth).listen((
-      summary,
-    ) {
-      _monthlySummary = summary;
-      notifyListeners();
-    }, onError: (_) {});
-  }
-
   Future<void> _loadPendingReviewCount(String uid) async {
     try {
-      final count = await _transactionRepository.getPendingReviewCount(uid);
-      if (_uid != uid || _pendingReviewCount == count) return;
-      _pendingReviewCount = count;
+      _pendingReviewCount = await _transactionRepository.getPendingReviewCount(
+        uid,
+      );
       notifyListeners();
     } catch (_) {
-      // The badge is non-critical; the review screen will surface any errors.
+      // Non-fatal — banner simply stays hidden on failure.
     }
   }
 
-  PeriodTotals _aggregateFrom(DateTime startInclusive, String currency) {
-    var spent = 0.0;
-    var received = 0.0;
-
-    for (final tx in _items) {
-      final date = _parseDate(tx);
-      if (date == null || date.isBefore(startInclusive)) continue;
-      if (tx.type == 'credit') {
-        received += tx.amount;
-      } else {
-        spent += tx.amount;
-      }
+  DateTime get _periodStart {
+    switch (_period) {
+      case HomePeriod.thisMonth:
+        return _startOfMonth;
+      case HomePeriod.thisWeek:
+        return _startOfWeek;
+      case HomePeriod.today:
+        return _startOfToday;
     }
-
-    return PeriodTotals(spent: spent, received: received, currency: currency);
-  }
-
-  PeriodTotals _aggregateBetween(
-    DateTime startInclusive,
-    DateTime endInclusive,
-    String currency,
-  ) {
-    var spent = 0.0;
-    var received = 0.0;
-
-    for (final tx in _items) {
-      final date = _parseDate(tx);
-      if (date == null) continue;
-      if (date.isBefore(startInclusive) || date.isAfter(endInclusive)) continue;
-      if (tx.type == 'credit') {
-        received += tx.amount;
-      } else {
-        spent += tx.amount;
-      }
-    }
-
-    return PeriodTotals(spent: spent, received: received, currency: currency);
-  }
-
-  double? _percentChange(double previous, double current) {
-    if (previous == 0) {
-      if (current == 0) return 0;
-      return 100;
-    }
-    return ((current - previous) / previous.abs()) * 100;
   }
 
   DateTime get _startOfToday {
@@ -381,8 +345,9 @@ class HomeProvider extends ChangeNotifier {
     if (parsed != null) return DateTime(parsed.year, parsed.month, parsed.day);
 
     final fromDay = DateTime.tryParse(tx.day);
-    if (fromDay != null)
+    if (fromDay != null) {
       return DateTime(fromDay.year, fromDay.month, fromDay.day);
+    }
 
     return null;
   }
@@ -425,11 +390,5 @@ class HomeProvider extends ChangeNotifier {
       if (d == null || d.isAfter(f.dateTo!)) return false;
     }
     return true;
-  }
-
-  @override
-  void dispose() {
-    _summarySub?.cancel();
-    super.dispose();
   }
 }

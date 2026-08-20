@@ -11,6 +11,7 @@ setGlobalOptions({
 
 export { ingestTransactionForUser } from './ingest';
 export { listTransactions } from './transactions';
+export { getPeriodStats } from './period_stats';
 export { onUserTransactionWritten } from './aggregates';
 export { onUserTransactionCreatedNotify } from './notify';
 export {

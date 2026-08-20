@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
@@ -18,6 +19,7 @@ import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dar
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
 import 'package:nova_spend/features/settings/presentation/pages/review_page.dart';
+import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/home_period.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
@@ -191,7 +193,9 @@ class _PeriodBalance extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showSkeleton = context.select(
-      (HomeProvider p) => p.isLoading && p.items.isEmpty,
+      (HomeProvider p) =>
+          (p.isLoading || p.isPeriodStatsLoading) &&
+          p.currentPeriodStats == null,
     );
     if (showSkeleton) {
       return const Padding(
@@ -383,7 +387,7 @@ class _Highlights extends StatelessWidget {
                 child: _highlightCard(
                   context,
                   l10n,
-                  tx: home.highestSpend,
+                  highlight: home.highestSpend,
                   label: l10n.homeHighestSpend,
                   iconAsset: 'assets/icons/icon_highest_spend.svg',
                   amountColor: Theme.of(context).colorScheme.onSurface,
@@ -394,7 +398,7 @@ class _Highlights extends StatelessWidget {
                 child: _highlightCard(
                   context,
                   l10n,
-                  tx: home.highestReceive,
+                  highlight: home.highestReceive,
                   label: l10n.homeHighestReceived,
                   iconAsset: 'assets/icons/icon_highest_received.svg',
                   amountColor: AppColors.primaryStrong,
@@ -411,12 +415,12 @@ class _Highlights extends StatelessWidget {
 Widget _highlightCard(
   BuildContext context,
   AppLocalizations l10n, {
-  required TransactionEntity? tx,
+  required PeriodHighlight? highlight,
   required String label,
   required String iconAsset,
   required Color amountColor,
 }) {
-  if (tx == null) {
+  if (highlight == null) {
     return StatHighlightCard(
       label: label,
       iconAsset: iconAsset,
@@ -425,9 +429,10 @@ Widget _highlightCard(
     );
   }
 
-  final merchant = tx.merchant.isEmpty ? tx.category : tx.merchant;
+  final merchant =
+      highlight.merchant.isEmpty ? highlight.category : highlight.merchant;
   final day = relativeDayLabel(
-    tx.transactionDate,
+    highlight.transactionDate,
     today: l10n.homePeriodToday,
     yesterday: l10n.commonYesterday,
     includeYear: false,
@@ -436,10 +441,12 @@ Widget _highlightCard(
   return StatHighlightCard(
     label: label,
     iconAsset: iconAsset,
-    amount: AppCurrencyScope.of(context).formatMoney(tx.amount),
+    amount: AppCurrencyScope.of(context).formatMoney(highlight.amount),
     amountColor: amountColor,
     subtitle: l10n.homeHighlightSubtitle(_truncate(merchant, 10), day),
-    onTap: tx.merchant.isEmpty ? null : () => _openMerchant(context, tx),
+    onTap: highlight.merchant.isEmpty
+        ? null
+        : () => _openMerchantHighlight(context, highlight),
   );
 }
 
@@ -621,6 +628,20 @@ void _openMerchant(BuildContext context, TransactionEntity tx) {
       builder: (_) => MerchantPage(
         merchantNormalized: tx.resolvedMerchantKey,
         displayName: tx.merchant,
+      ),
+    ),
+  );
+}
+
+void _openMerchantHighlight(BuildContext context, PeriodHighlight highlight) {
+  final key = highlight.merchantNormalized.isNotEmpty
+      ? highlight.merchantNormalized
+      : normalizeMerchantKey(highlight.merchant);
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => MerchantPage(
+        merchantNormalized: key,
+        displayName: highlight.merchant,
       ),
     ),
   );

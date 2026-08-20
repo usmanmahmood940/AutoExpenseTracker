@@ -3,6 +3,7 @@ import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 import 'package:nova_spend/features/transactions/data/models/transaction_model.dart';
+import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
@@ -116,6 +117,74 @@ class FirestoreTransactionDatasource {
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to load transactions');
     }
+  }
+
+  Future<PeriodStatsEntity> getPeriodStats({
+    required String period,
+    required String from,
+    required String to,
+  }) async {
+    try {
+      final response = await _functionsClient.call(
+        'getPeriodStats',
+        requireAuth: true,
+        data: {
+          'period': period,
+          'from': from,
+          'to': to,
+        },
+      );
+      return _periodStatsFromResponse(response);
+    } on CloudFunctionsHttpException catch (e) {
+      throw ServerException(e.message);
+    } on FirebaseException catch (e) {
+      throw ServerException(e.message ?? 'Failed to load period stats');
+    }
+  }
+
+  PeriodStatsEntity _periodStatsFromResponse(Map<String, dynamic> response) {
+    PeriodHighlight? highlight(dynamic raw) {
+      if (raw is! Map) return null;
+      final map = Map<String, dynamic>.from(raw);
+      final id = map['id'];
+      if (id is! String || id.isEmpty) return null;
+      return PeriodHighlight(
+        id: id,
+        amount: (map['amount'] as num?)?.toDouble() ?? 0,
+        merchant: map['merchant'] as String? ?? '',
+        merchantNormalized: map['merchantNormalized'] as String? ?? '',
+        category: map['category'] as String? ?? 'Uncategorized',
+        transactionDate: map['transactionDate'] as String? ?? '',
+        type: map['type'] as String? ?? 'debit',
+        currency: map['currency'] as String? ?? 'PKR',
+      );
+    }
+
+    PeriodComparisonStats? comparison;
+    final rawComparison = response['comparison'];
+    if (rawComparison is Map) {
+      final map = Map<String, dynamic>.from(rawComparison);
+      comparison = PeriodComparisonStats(
+        spentChangePercent:
+            (map['spentChangePercent'] as num?)?.toDouble() ?? 0,
+        receivedChangePercent:
+            (map['receivedChangePercent'] as num?)?.toDouble() ?? 0,
+        netChangePercent: (map['netChangePercent'] as num?)?.toDouble() ?? 0,
+      );
+    }
+
+    return PeriodStatsEntity(
+      period: response['period'] as String? ?? '',
+      from: response['from'] as String? ?? '',
+      to: response['to'] as String? ?? '',
+      currency: response['currency'] as String? ?? 'PKR',
+      spent: (response['spent'] as num?)?.toDouble() ?? 0,
+      received: (response['received'] as num?)?.toDouble() ?? 0,
+      net: (response['net'] as num?)?.toDouble() ?? 0,
+      highestSpend: highlight(response['highestSpend']),
+      highestReceive: highlight(response['highestReceive']),
+      comparison: comparison,
+    );
   }
 
   Stream<List<TransactionEntity>> watchNeedsReview(String uid) {

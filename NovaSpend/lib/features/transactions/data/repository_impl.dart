@@ -1,6 +1,7 @@
 import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/transactions/data/datasource/firestore_transaction_datasource.dart';
+import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
@@ -35,6 +36,23 @@ class TransactionRepositoryImpl implements TransactionRepository {
         limit: limit,
         startAfter: startAfter,
         filter: filter,
+      );
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<PeriodStatsEntity> getPeriodStats({
+    required String period,
+    required String from,
+    required String to,
+  }) async {
+    try {
+      return await _datasource.getPeriodStats(
+        period: period,
+        from: from,
+        to: to,
       );
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
