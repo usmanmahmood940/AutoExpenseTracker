@@ -13,7 +13,7 @@ Follow section 6 (Migration order) — this package is **step 1, Phase A**.
 |-------|-------|-------|
 | A | Foundation: config, logging, errors, DB, migrations, health, Cloud Run + Supabase | **done** |
 | B | `/auth/*`, `/me`, `/me/devices` | **done (local)** |
-| C | Transactions, search, stats | not started |
+| C | Transactions, search, stats, categories, review | **done (local)** |
 | D | Ingest + workers | not started |
 
 ## Requirements
@@ -92,7 +92,8 @@ app/
 │   └── session.py     # async engine + request-scoped session
 └── services/          # business logic: otp, rate_limit, mailer,
                         # identity_toolkit, firebase_users, user_profile,
-                        # reset_session, devices
+                        # reset_session, devices, transactions, period_stats,
+                        # analytics, merchants, review, categories
 alembic/               # migrations
 tests/
 ```
@@ -116,6 +117,21 @@ tests/
 | PATCH | `/me` | Update profile/settings fields (only the ones sent). |
 | POST | `/me/devices` | Register an FCM token; moves it if another account already held it. |
 | DELETE | `/me/devices/{token}` | Unregister a token. Idempotent. |
+| GET | `/transactions` | List (date range, sort by date/amount, cursor, optional aggregates + filters). |
+| GET | `/transactions/search` | Merchant prefix or scan across merchant/category/bank. |
+| POST | `/transactions` | Manual create (optional `ingestion_id` to complete a `needs_parse` row). |
+| GET | `/transactions/{id}` | Detail. |
+| PATCH | `/transactions/{id}` | Update; also upserts a merchant category override. |
+| DELETE | `/transactions/{id}` | Soft delete (`status = deleted`). |
+| POST | `/transactions/{id}/review` | Mark reviewed (`status = active`, set `reviewed_at`). |
+| GET | `/period-stats` | Live SQL totals + highlights + week/month comparison. Replaces `getPeriodStats`. |
+| GET | `/analytics/summary` | Live SQL monthly summary (`year_month=YYYY-MM`). |
+| GET | `/analytics/summaries` | Recent months that have transactions (`limit`, default 6). |
+| GET | `/merchants/{key}` | Merchant spend summary. |
+| GET | `/merchants/{key}/transactions` | That merchant's transactions. |
+| GET | `/review` | `needs_review` txs + `needs_parse` / `duplicate` ingestions. |
+| GET | `/categories` | Seeded defaults + the caller's custom categories. |
+| POST | `/categories` | Create a custom user category. |
 
 Paths deliberately carry no `/v1` prefix, matching the API tables in the
 migration plan. `/auth/*` is public; everything else requires

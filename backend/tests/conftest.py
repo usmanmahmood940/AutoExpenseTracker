@@ -18,7 +18,8 @@ os.environ["DATABASE_URL"] = os.environ.get(
 )
 os.environ["LOG_LEVEL"] = "WARNING"
 
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,10 +29,13 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.api import deps
 from app.core.config import get_settings
+from app.core.firebase import FirebaseIdentity
 from app.db.models import Base
 from app.db.session import dispose_engine, get_sessionmaker
 from app.main import create_app
+from app.services.categories import seed_default_categories
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -42,6 +46,9 @@ def schema() -> None:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.drop_all)
                 await conn.run_sync(Base.metadata.create_all)
+            maker = async_sessionmaker(bind=engine, expire_on_commit=False)
+            async with maker() as db:
+                await seed_default_categories(db)
         finally:
             await engine.dispose()
 
@@ -52,6 +59,20 @@ def schema() -> None:
 def client() -> TestClient:
     # Used as a context manager by tests so startup/shutdown hooks run.
     return TestClient(create_app())
+
+
+@pytest.fixture
+def api_client() -> Generator[TestClient, None, None]:
+    """Authenticated client with a Postgres profile already created."""
+    uid = f"uid-{uuid4().hex[:12]}"
+    email = f"{uid}@example.com"
+    app = create_app()
+    app.dependency_overrides[deps.get_current_identity] = lambda: FirebaseIdentity(
+        uid=uid, email=email, email_verified=True, claims={}
+    )
+    with TestClient(app) as client:
+        assert client.get("/me").status_code == 200
+        yield client
 
 
 @pytest.fixture

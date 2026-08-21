@@ -2,7 +2,8 @@
 PY := .venv/bin
 DB_DEV := novaspend_dev
 DB_TEST := novaspend_test
-PG_BIN := /opt/homebrew/opt/postgresql@16/bin
+# Apple Silicon Homebrew uses /opt/homebrew; Intel uses /usr/local.
+PG_BIN := $(shell test -d /opt/homebrew/opt/postgresql@16/bin && echo /opt/homebrew/opt/postgresql@16/bin || echo /usr/local/opt/postgresql@16/bin)
 
 .PHONY: help venv install run test lint fmt check migrate revision downgrade db-up db-shell reset deploy
 

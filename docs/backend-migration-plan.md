@@ -202,15 +202,15 @@ token minted by `verify-reset-otp`) and `auth_rate_limits`.
 
 ---
 
-### Phase C — Transactions & stats APIs (week 2–4)
+### Phase C — Transactions & stats APIs (week 2–4) — **done (local)**
 
 **Schema (align with current Firestore fields where possible)**
 
-- `transactions`
-- `raw_ingestions`
-- `categories` (global + user) — **seed the default set in this phase** (migration or seed script)
-- `merchant_category_overrides`
-- `monthly_summaries` — optional here; Phase D populates it
+- [x] `transactions`
+- [x] `raw_ingestions`
+- [x] `categories` (global + user) — **seed the default set in this phase** (migration or seed script)
+- [x] `merchant_category_overrides`
+- [ ] `monthly_summaries` — optional here; Phase D populates it. `GET /analytics/summary` is live SQL.
 
 Seeding categories in C matters because Home tiles resolve colors through `CategoryColorBinder`, which streams categories today. If the table is empty until the Flutter categories screen is cut over (last), migrated Home screens lose their colors.
 
@@ -218,24 +218,27 @@ Seeding categories in C matters because Home tiles resolve colors through `Categ
 
 | Method | Path | Replaces |
 |--------|------|----------|
-| GET | `/transactions` | `listTransactions` (dateFrom/dateTo, sortBy, orderBy, cursor/offset) |
-| GET | `/transactions/{id}` | detail |
-| PATCH | `/transactions/{id}` | update |
-| DELETE | `/transactions/{id}` | soft delete |
-| POST | `/transactions/{id}/review` | mark reviewed |
-| GET | `/transactions/search` | Firestore search |
-| GET | `/period-stats` | `getPeriodStats` — **live SQL over `transactions`**, no worker dependency |
-| GET | `/analytics/summary` | monthly summary reads (live SQL now, materialized later) |
-| GET | `/merchants/{key}` | merchant summary |
-| GET | `/merchants/{key}/transactions` | merchant list |
-| GET | `/review` | needs_review + ingestions |
-| GET/POST | `/categories` | category datasources |
+| GET | `/transactions` | `listTransactions` (dateFrom/dateTo, sortBy, orderBy, cursor) ✅ |
+| GET | `/transactions/{id}` | detail ✅ |
+| PATCH | `/transactions/{id}` | update ✅ |
+| DELETE | `/transactions/{id}` | soft delete ✅ |
+| POST | `/transactions/{id}/review` | mark reviewed ✅ |
+| GET | `/transactions/search` | Firestore search ✅ |
+| GET | `/period-stats` | `getPeriodStats` — **live SQL over `transactions`**, no worker dependency ✅ |
+| GET | `/analytics/summary` | monthly summary reads (live SQL now, materialized later) ✅ |
+| GET | `/merchants/{key}` | merchant summary ✅ |
+| GET | `/merchants/{key}/transactions` | merchant list ✅ |
+| GET | `/review` | needs_review + ingestions ✅ |
+| GET/POST | `/categories` | category datasources ✅ |
 
 **SQL advantage:** `WHERE date BETWEEN … ORDER BY amount DESC LIMIT …` works natively.
 
 **Compute stats live in this phase.** `getPeriodStats` scans transactions today, so plain SQL reproduces it. Do not make C's exit criteria depend on materialized `monthly_summaries`, or C blocks on the Phase D workers.
 
-**Exit criteria:** All list/search/stats behaviors match current app via curl/Swagger, using seeded categories and hand-inserted transaction rows.
+**Also shipped with C (needed by Review / Insights, not a separate phase):**
+`POST /transactions` (manual create + optional `ingestion_id`) and `GET /analytics/summaries`. Amount sort **with** a date range is allowed (the SQL advantage over Firestore).
+
+**Exit criteria:** All list/search/stats behaviors match current app via curl/Swagger, using seeded categories and hand-inserted transaction rows. ✅ Verified locally (`make check`); not yet deployed to Cloud Run.
 
 ---
 
@@ -467,7 +470,7 @@ Only after backend auth is solid:
 
 ## 10. Security checklist
 
-- [x] All product routes require verified token (`/me`, `/me/devices` — Phase C's product routes will follow the same `CurrentUser` dependency)
+- [x] All product routes require verified token (`CurrentUser` on `/me`, `/transactions`, `/period-stats`, `/analytics`, `/merchants`, `/review`, `/categories`)
 - [ ] Webhook routes use shared secret / signed requests (Phase D)
 - [x] Rate limit `/auth/login`, OTP, forgot-password
 - [x] Passwords never logged
