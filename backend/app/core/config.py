@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     login_limit_per_ip: int = 30
     rate_limit_window_minutes: int = 15
 
+    gemini_api_key: str | None = None
+    ingest_shared_secret: str | None = None
+    cron_secret: str | None = None
+    confidence_review_threshold: float = 0.8
+
     min_password_length: int = 6
 
     # NoDecode: accept a comma-separated string instead of pydantic-settings'

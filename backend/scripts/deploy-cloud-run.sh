@@ -96,8 +96,12 @@ lines = [
     f"OTP_HASH_SECRET: {yq(otp_hash_secret)}",
     f"RESEND_API_KEY: {yq(resend_api_key)}",
     f"RESEND_FROM_EMAIL: {yq(resend_from_email)}",
-    "",
 ]
+for name in ("GEMINI_API_KEY", "CRON_SECRET", "INGEST_SHARED_SECRET"):
+    value = (env.get(name) or "").strip().strip('"').strip("'")
+    if value:
+        lines.append(f"{name}: {yq(value)}")
+lines.append("")
 out.write_text("\n".join(lines))
 out.chmod(0o600)
 
@@ -125,7 +129,7 @@ gcloud run deploy "$SERVICE" \
   --cpu=1 \
   --min-instances=0 \
   --max-instances=5 \
-  --timeout=60 \
+  --timeout=120 \
   --clear-secrets \
   --env-vars-file="$ENV_FILE" \
   --quiet

@@ -32,6 +32,18 @@ def _to_domain(record: firebase_auth.UserRecord) -> FirebaseUser:
     )
 
 
+async def get_by_uid(uid: str) -> FirebaseUser | None:
+    app = firebase.require_app()
+
+    def _fetch() -> FirebaseUser | None:
+        try:
+            return _to_domain(firebase_auth.get_user(uid, app=app))
+        except firebase_auth.UserNotFoundError:
+            return None
+
+    return await run_in_threadpool(_fetch)
+
+
 async def get_by_email(email: str) -> FirebaseUser | None:
     app = firebase.require_app()
 
