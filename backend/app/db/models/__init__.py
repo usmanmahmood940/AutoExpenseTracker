@@ -21,6 +21,7 @@ from app.db.models.enums import (
     TransactionType,
 )
 from app.db.models.merchant_override import MerchantCategoryOverride
+from app.db.models.monthly_summary import MonthlySummary
 from app.db.models.password_reset_session import PasswordResetSession
 from app.db.models.raw_ingestion import RawIngestion
 from app.db.models.transaction import Transaction
@@ -38,6 +39,7 @@ __all__ = [
     "IngestionSource",
     "IngestionStatus",
     "MerchantCategoryOverride",
+    "MonthlySummary",
     "OtpPurpose",
     "PasswordResetSession",
     "PeriodKind",

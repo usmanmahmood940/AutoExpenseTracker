@@ -246,11 +246,11 @@ Seeding categories in C matters because Home tiles resolve colors through `Categ
 
 Build and verify these against **dev**. Production Shortcuts keep hitting `ingestTransactionForUser` until the Phase F freeze window.
 
-- [ ] `POST /ingest` (or `/webhooks/sms`) — port `ingestTransactionForUser` (Gemini, dedup, normalize)
-- [ ] Auth for webhook (`X-User-Id` or signed secret — document in `docs/webhooks.md`)
-- [ ] Worker/cron: recompute period summaries (replace `onUserTransactionWritten`)
-- [ ] Worker: send FCM on new tx (replace `onUserTransactionCreatedNotify`) using Admin messaging + `devices` table
-- [ ] Worker: OTP/doc cleanup (replace `cleanupExpiredAuthDocs`)
+- [x] `POST /ingest` (or `/webhooks/sms`) — port `ingestTransactionForUser` (Gemini, dedup, normalize)
+- [x] Auth for webhook (`X-User-Id` or signed secret — document in `docs/webhooks.md`)
+- [x] Worker/cron: recompute period summaries (replace `onUserTransactionWritten`)
+- [x] Worker: send FCM on new tx (replace `onUserTransactionCreatedNotify`) using Admin messaging + `devices` table
+- [x] Worker: OTP/doc cleanup (replace `cleanupExpiredAuthDocs`)
 
 **Leave `onUserTransactionCreatedNotify` deployed.** The Postgres push worker only becomes the sole notify path after the app registers tokens via `POST /me/devices` (Phase E step 1) and production has cut over. Until then the two paths cover different data sources, so disabling the trigger early means no push for production users.
 
@@ -471,7 +471,7 @@ Only after backend auth is solid:
 ## 10. Security checklist
 
 - [x] All product routes require verified token (`CurrentUser` on `/me`, `/transactions`, `/period-stats`, `/analytics`, `/merchants`, `/review`, `/categories`)
-- [ ] Webhook routes use shared secret / signed requests (Phase D)
+- [x] Webhook routes use `X-User-Id` (Function parity) and optional `X-Ingest-Secret` (Phase D)
 - [x] Rate limit `/auth/login`, OTP, forgot-password
 - [x] Passwords never logged
 - [x] Change-password revokes other sessions
@@ -535,7 +535,7 @@ Record answers in this section when decided:
 
 ## 14. Related docs
 
-- `docs/webhooks.md` — update ingest URL when Phase D ships  
+- `docs/webhooks.md` — Function URL (prod) and FastAPI `POST /ingest` (dev)  
 - `docs/mvp-revamp-prd.md` / `docs/mvp-revamp-tasks.md` — product context  
 - `.cursor/rules/novaspend-architecture.mdc` — keep Flutter layer boundaries when adding API datasources  
 

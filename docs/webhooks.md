@@ -73,9 +73,11 @@ Project: `auto-expense-tracker-2026`
 
 ---
 
-## `ingestTransactionForUser`
+## `ingestTransactionForUser` (legacy Cloud Function)
 
 Identifies the user via Firebase Auth UID (`X-User-Id` or `?uid=`). Writes under `users/{uid}/…`.
+
+Production Shortcuts keep hitting this URL until the Phase F freeze. The FastAPI equivalent is below.
 
 ### URL
 
@@ -135,8 +137,66 @@ Create at least one user in **Firebase Console → Authentication** before testi
 
 ---
 
+## FastAPI `POST /ingest` (Phase D, dev/staging)
+
+Same request and response bodies as the Function. Production Shortcuts stay on the Function until Phase F.
+
+### URL
+
+Local:
+
+```
+http://127.0.0.1:8000/ingest
+```
+
+Alias: `POST /webhooks/sms`. After a Cloud Run deploy the host is the service URL (not localhost).
+
+### Headers
+
+```http
+Content-Type: application/json
+X-User-Id: YOUR_FIREBASE_AUTH_UID
+```
+
+UID can also be passed as `?uid=`. If `INGEST_SHARED_SECRET` is set on the API, also send:
+
+```http
+X-Ingest-Secret: THE_SHARED_SECRET
+```
+
+Unset (the default, matching today's Function) means UID-only auth.
+
+### Writes
+
+- Postgres `users` (created on first ingest if missing)
+- `raw_ingestions`
+- `transactions` (unless duplicate / parse failed)
+- `monthly_summaries` for that month (recomputed from SQL)
+- FCM to tokens in `devices` (register via `POST /me/devices`)
+
+### Example
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: YOUR_FIREBASE_AUTH_UID" \
+  -d '{
+    "raw": "PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (DHA PHASE VIII BR LHR) on 06-Jul-2026 at 11:27 TID:387522",
+    "source": "ios_shortcut",
+    "bank": "HBL",
+    "receivedAt": "2026-07-06T11:27:00+05:00"
+  }' \
+  http://127.0.0.1:8000/ingest
+```
+
+Requires `GEMINI_API_KEY` in `backend/.env` for a real parse. Without it the row is stored as `needs_parse`.
+
+---
+
 ## Local testing
 
 ```bash
 USER_ID=your-firebase-uid npm run test:ingest --prefix functions
+# FastAPI (Gemini stubbed in pytest; for a live parse use make run + the curl above):
+cd backend && make test
 ```

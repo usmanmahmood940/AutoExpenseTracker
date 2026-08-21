@@ -5,7 +5,8 @@ from Firestore and Cloud Functions. Firebase stays the identity provider (it
 stores passwords and issues ID tokens) and the push transport (FCM).
 
 Plan of record: [`../docs/backend-migration-plan.md`](../docs/backend-migration-plan.md).
-Follow section 6 (Migration order) — this package is **step 1, Phase A**.
+Follow section 6 (Migration order) — this package currently covers **steps 1–4
+(Phases A–D) locally**. Production Flutter/Shortcuts still use Firestore.
 
 ## Status
 
@@ -14,7 +15,7 @@ Follow section 6 (Migration order) — this package is **step 1, Phase A**.
 | A | Foundation: config, logging, errors, DB, migrations, health, Cloud Run + Supabase | **done** |
 | B | `/auth/*`, `/me`, `/me/devices` | **done (local)** |
 | C | Transactions, search, stats, categories, review | **done (local)** |
-| D | Ingest + workers | not started |
+| D | Ingest + workers | **done (local)** |
 
 ## Requirements
 
@@ -68,9 +69,13 @@ All settings come from the environment (`.env` locally). See
   signup/forgot-password. Leave them unset locally: the OTP is logged
   (`email_not_sent_dev_fallback`) instead of emailed, so Swagger can drive the
   whole signup/reset flow with no Resend account.
-- `OTP_HASH_SECRET` should be set even locally — unset, a random key is
-  generated per process, so restarting the server (or `--reload` picking up an
-  unrelated change) invalidates every outstanding OTP.
+- `GEMINI_API_KEY` is required for a real SMS parse on `POST /ingest`. Unset,
+  ingest still writes a `raw_ingestions` row with `needs_parse`.
+- `CRON_SECRET` protects `/internal/jobs/*`. Unset is allowed only when
+  `ENVIRONMENT=local`. Point Cloud Scheduler at those URLs after a dev deploy
+  (`0 3 1 * *` Asia/Karachi for cleanup, matching `cleanupExpiredAuthDocs`).
+- `INGEST_SHARED_SECRET` is optional extra webhook auth. Unset keeps Function
+  parity (`X-User-Id` only).
 
 ## Layout
 
@@ -90,10 +95,12 @@ app/
 │   ├── base.py        # DeclarativeBase, mixins, naming convention
 │   ├── models/
 │   └── session.py     # async engine + request-scoped session
-└── services/          # business logic: otp, rate_limit, mailer,
-                        # identity_toolkit, firebase_users, user_profile,
-                        # reset_session, devices, transactions, period_stats,
-                        # analytics, merchants, review, categories
+├── services/          # business logic: otp, rate_limit, mailer,
+│                      # identity_toolkit, firebase_users, user_profile,
+│                      # reset_session, devices, transactions, period_stats,
+│                      # analytics, merchants, review, categories, ingest,
+│                      # gemini, push
+└── workers/           # cleanup-auth, monthly_summaries recompute
 alembic/               # migrations
 tests/
 ```
@@ -131,11 +138,14 @@ tests/
 | GET | `/merchants/{key}/transactions` | That merchant's transactions. |
 | GET | `/review` | `needs_review` txs + `needs_parse` / `duplicate` ingestions. |
 | GET | `/categories` | Seeded defaults + the caller's custom categories. |
-| POST | `/categories` | Create a custom user category. |
+| POST | `/ingest` | SMS/email webhook. Auth is `X-User-Id` (Firebase UID), not Bearer. Same JSON as the Cloud Function. Alias: `POST /webhooks/sms`. |
+| POST | `/internal/jobs/cleanup-auth` | Delete expired OTPs / reset sessions / stale rate limits. `X-Cron-Secret` when `CRON_SECRET` is set. |
+| POST | `/internal/jobs/recompute-summaries` | Rebuild `monthly_summaries` from live SQL. |
 
 Paths deliberately carry no `/v1` prefix, matching the API tables in the
-migration plan. `/auth/*` is public; everything else requires
-`Authorization: Bearer <Firebase ID token>`.
+migration plan. `/auth/*` is public. `POST /ingest` authenticates with
+`X-User-Id` (and optional `X-Ingest-Secret`). Job routes use `X-Cron-Secret`.
+Everything else requires `Authorization: Bearer <Firebase ID token>`.
 
 ## Conventions
 
@@ -237,4 +247,4 @@ For Cloud SQL you would add `--add-cloudsql-instances` and use a socket URL:
 - [x] Secrets live in `backend/.env` locally and as Cloud Run env vars (Secret Manager not used for now)
 - [x] Rate limiting on auth routes (Phase B) — sliding-window limits on OTP send/verify and login, per email and per IP; see `app/services/rate_limit.py`
 - [ ] Set `OTP_HASH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `FIREBASE_WEB_API_KEY` before Phase B goes to dev/staging/prod (see Configuration above)
-- [ ] A cleanup job for expired `auth_otps` / `password_reset_sessions` / `auth_rate_limits` rows (Phase D worker territory; harmless but unbounded until then)
+- [x] A cleanup job for expired `auth_otps` / `password_reset_sessions` / `auth_rate_limits` rows (`POST /internal/jobs/cleanup-auth`)

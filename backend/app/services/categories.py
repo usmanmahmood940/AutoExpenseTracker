@@ -60,6 +60,21 @@ async def list_categories(
     return list(result.scalars().all())
 
 
+async def allowed_category_names(
+    session: AsyncSession, *, user_id: uuid.UUID
+) -> list[str]:
+    rows = await list_categories(session, user_id=user_id)
+    names: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        key = row.name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(row.name)
+    return names
+
+
 def _slugify(name: str) -> str:
     slug = _SLUG_STRIP.sub("_", name.strip().lower()).strip("_")
     return slug or "category"

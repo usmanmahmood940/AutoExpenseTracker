@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -45,6 +45,13 @@ class RawIngestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "user_id",
             "status",
             "received_at",
+        ),
+        Index(
+            "uq_raw_ingestions_user_idempotency",
+            "user_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
         ),
         enum_check("source", IngestionSource, "ingestion_source"),
         enum_check("status", IngestionStatus, "ingestion_status"),

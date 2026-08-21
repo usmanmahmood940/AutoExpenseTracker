@@ -18,6 +18,8 @@ from app.api.routes import (
     auth,
     categories,
     health,
+    ingest,
+    jobs,
     me,
     merchants,
     period_stats,
@@ -89,6 +91,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(me.router)
+    app.include_router(ingest.router)
+    app.include_router(jobs.router)
     app.include_router(transactions.router)
     app.include_router(period_stats.router)
     app.include_router(analytics.router)
