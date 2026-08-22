@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
+import 'package:nova_spend/core/di/injection.dart';
+import 'package:nova_spend/core/http/api_client.dart';
+import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
 import 'package:nova_spend/features/auth/presentation/auth_service.dart';
 import 'package:nova_spend/features/auth/presentation/pages/auth_page.dart';
 import 'package:nova_spend/features/auth/presentation/pages/lock_gate.dart';
@@ -17,7 +20,12 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  final AuthService _authService = AuthService();
+  late final AuthService _authService = AuthService(
+    apiClient: sl.isRegistered<ApiClient>() ? sl<ApiClient>() : null,
+    backendAuth: sl.isRegistered<BackendAuthDatasource>()
+        ? sl<BackendAuthDatasource>()
+        : null,
+  );
   bool _verifiedOnce = false;
   bool _profileKickoffDone = false;
   bool _forceAuthPage = false;
@@ -65,7 +73,15 @@ class _AuthGateState extends State<AuthGate> {
           }
           _verifiedOnce = false;
           _profileKickoffDone = false;
-          return const AuthPage();
+          return AuthPage(
+            authService: AuthService(
+              apiClient:
+                  sl.isRegistered<ApiClient>() ? sl<ApiClient>() : null,
+              backendAuth: sl.isRegistered<BackendAuthDatasource>()
+                  ? sl<BackendAuthDatasource>()
+                  : null,
+            ),
+          );
         }
 
         if (!_verifiedOnce && !AppConstants.kSkipEmailVerificationCheck) {
@@ -105,7 +121,7 @@ class _AuthGateState extends State<AuthGate> {
     try {
       await _authService.ensureUserProfile();
     } catch (_) {
-      // Non-blocking.
+      // Non-blocking — GET /me or CF ensureUserProfile.
     }
   }
 }

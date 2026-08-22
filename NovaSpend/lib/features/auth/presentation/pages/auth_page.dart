@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/forms/validators.dart';
+import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
 import 'package:nova_spend/features/auth/presentation/auth_error_mapper.dart';
@@ -473,6 +474,7 @@ class _AuthPageState extends State<AuthPage> {
 
   String _mapError(Object e) {
     final l10n = context.l10n;
+    if (e is ApiException) return e.message;
     if (e is CloudFunctionsHttpException) return e.message;
     if (e is FirebaseAuthException) {
       return AuthErrorMapper.friendlyAuthError(l10n, e.code, e.message);

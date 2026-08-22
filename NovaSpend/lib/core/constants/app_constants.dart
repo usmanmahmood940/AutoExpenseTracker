@@ -5,8 +5,23 @@ class AppConstants {
   static const String projectId = 'auto-expense-tracker-2026';
   static const String region = 'asia-south1';
 
-  static const String ingestForUserUrl =
-      'https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransactionForUser';
+  /// FastAPI (Cloud Run) base URL for Phase E+.
+  static const String apiBaseUrl =
+      'https://novaspend-api-h7asbihbya-el.a.run.app';
+
+  /// When true, product screens and auth OTP/login/reset use FastAPI
+  /// instead of Firestore / Cloud Functions.
+  /// Disable with `--dart-define=USE_BACKEND_V1=false`.
+  static const bool kUseBackendV1 = bool.fromEnvironment(
+    'USE_BACKEND_V1',
+    defaultValue: true,
+  );
+
+  /// Dev Shortcuts should hit FastAPI `/ingest`. Production stays on the
+  /// Cloud Function until the Phase F freeze.
+  static String get ingestForUserUrl => kUseBackendV1
+      ? '$apiBaseUrl/ingest'
+      : 'https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransactionForUser';
 
   /// Used by Identity Toolkit `createAuthUri` email existence checks.
   static const String productionSiteUrl =

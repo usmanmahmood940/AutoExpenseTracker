@@ -5,17 +5,21 @@ from Firestore and Cloud Functions. Firebase stays the identity provider (it
 stores passwords and issues ID tokens) and the push transport (FCM).
 
 Plan of record: [`../docs/backend-migration-plan.md`](../docs/backend-migration-plan.md).
-Follow section 6 (Migration order) — this package currently covers **steps 1–4
-(Phases A–D) locally**. Production Flutter/Shortcuts still use Firestore.
+Follow section 6 (Migration order) — this package currently covers **steps 1–5
+(Phases A–D + the Firestore → Postgres copy script)**. Flutter Phase E talks to
+Cloud Run by default; production Shortcuts still use the Cloud Function until
+Phase F.
 
 ## Status
 
 | Phase | Scope | State |
 |-------|-------|-------|
 | A | Foundation: config, logging, errors, DB, migrations, health, Cloud Run + Supabase | **done** |
-| B | `/auth/*`, `/me`, `/me/devices` | **done (local)** |
-| C | Transactions, search, stats, categories, review | **done (local)** |
-| D | Ingest + workers | **done (local)** |
+| B | `/auth/*`, `/me`, `/me/devices` | **done (deployed)** |
+| C | Transactions, search, stats, categories, review | **done (deployed)** |
+| D | Ingest + workers | **done (deployed)** |
+| E | Flutter ApiClient (dev) | **done** (needs step 5 data before Home looks real) |
+| F | Prod migrate + freeze + cutover | **not started** |
 
 ## Requirements
 
@@ -72,8 +76,9 @@ All settings come from the environment (`.env` locally). See
 - `GEMINI_API_KEY` is required for a real SMS parse on `POST /ingest`. Unset,
   ingest still writes a `raw_ingestions` row with `needs_parse`.
 - `CRON_SECRET` protects `/internal/jobs/*`. Unset is allowed only when
-  `ENVIRONMENT=local`. Point Cloud Scheduler at those URLs after a dev deploy
-  (`0 3 1 * *` Asia/Karachi for cleanup, matching `cleanupExpiredAuthDocs`).
+  `ENVIRONMENT=local`. After a Cloud Run deploy: `make scheduler` (03:00 and
+  03:15 Asia/Karachi).
+- Firestore → Postgres copy (plan §6 step 5): `make migrate-firestore SUPABASE=1 DRY_RUN=1` then the same without `DRY_RUN`.
 - `INGEST_SHARED_SECRET` is optional extra webhook auth. Unset keeps Function
   parity (`X-User-Id` only).
 
@@ -208,11 +213,22 @@ normal environment variable (no Secret Manager).
 make deploy
 ```
 
-Live service (Phase B):
+Live service (Phases A–D):
 
 - https://novaspend-api-h7asbihbya-el.a.run.app/health  
 - https://novaspend-api-h7asbihbya-el.a.run.app/docs  
-- Auth: `/auth/signup/otp`, `/auth/signup`, `/auth/login`, … and `/me`  
+- Auth: `/auth/*`, `/me`, `/me/devices`  
+- Product: `/transactions`, `/period-stats`, `/analytics/*`, `/categories`, `/merchants/*`, `/review`  
+- Ingest/jobs: `/ingest`, `/internal/jobs/*`  
+
+Copy Firestore history into that database (step 5) before expecting Home to
+show existing transactions:
+
+```bash
+make migrate-firestore SUPABASE=1 DRY_RUN=1
+make migrate-firestore SUPABASE=1
+make scheduler    # optional; daily cleanup + summary recompute
+```
 
 
 `make deploy` runs [`scripts/deploy-cloud-run.sh`](scripts/deploy-cloud-run.sh):

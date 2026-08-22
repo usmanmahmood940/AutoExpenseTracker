@@ -1,23 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:get_it/get_it.dart';
+import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/services/biometric_service.dart';
 import 'package:nova_spend/core/services/export_service.dart';
+import 'package:nova_spend/core/services/firebase_user_account_service.dart';
 import 'package:nova_spend/core/services/notification_service.dart';
 import 'package:nova_spend/core/services/push_notification_service.dart';
+import 'package:nova_spend/features/analytics/data/datasource/backend_analytics_datasource.dart';
 import 'package:nova_spend/features/analytics/data/datasource/firestore_analytics_datasource.dart';
 import 'package:nova_spend/features/analytics/data/repository_impl.dart';
 import 'package:nova_spend/features/analytics/domain/repositories/analytics_repository.dart';
 import 'package:nova_spend/features/analytics/presentation/provider/insights_provider.dart';
+import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
 import 'package:nova_spend/features/auth/data/datasource/firebase_auth_datasource.dart';
 import 'package:nova_spend/features/auth/data/repository_impl.dart';
 import 'package:nova_spend/features/auth/domain/repositories/auth_repository.dart';
-import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
-import 'package:nova_spend/core/services/firebase_user_account_service.dart';
 import 'package:nova_spend/features/auth/domain/services/user_account_service.dart';
+import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/categories/data/datasource/backend_category_datasource.dart';
 import 'package:nova_spend/features/categories/data/datasource/firestore_category_datasource.dart';
 import 'package:nova_spend/features/categories/data/repository_impl.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
+import 'package:nova_spend/features/merchants/data/datasource/backend_merchant_datasource.dart';
 import 'package:nova_spend/features/merchants/data/datasource/firestore_merchant_datasource.dart';
 import 'package:nova_spend/features/merchants/data/repository_impl.dart';
 import 'package:nova_spend/features/merchants/domain/repositories/merchant_repository.dart';
@@ -35,6 +40,7 @@ import 'package:nova_spend/features/settings/data/repository_impl.dart';
 import 'package:nova_spend/features/settings/domain/repositories/settings_repository.dart';
 import 'package:nova_spend/features/settings/presentation/provider/review_provider.dart';
 import 'package:nova_spend/features/settings/presentation/provider/settings_provider.dart';
+import 'package:nova_spend/features/transactions/data/datasource/backend_transaction_datasource.dart';
 import 'package:nova_spend/features/transactions/data/datasource/firestore_transaction_datasource.dart';
 import 'package:nova_spend/features/transactions/data/repository_impl.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
@@ -62,18 +68,41 @@ Future<void> configureDependencies({
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
 
+  // Phase E: FastAPI client (Bearer = Firebase ID token).
+  sl.registerLazySingleton(() => ApiClient());
+  sl.registerLazySingleton(
+    () => BackendAuthDatasource(api: sl()),
+  );
+  sl.registerLazySingleton(
+    () => BackendTransactionDatasource(api: sl()),
+  );
+  sl.registerLazySingleton(
+    () => BackendMerchantDatasource(api: sl()),
+  );
+  sl.registerLazySingleton(
+    () => BackendCategoryDatasource(api: sl()),
+  );
+  sl.registerLazySingleton(
+    () => BackendAnalyticsDatasource(api: sl()),
+  );
+
   // Services
   sl.registerLazySingleton(() => NotificationService());
   sl.registerLazySingleton(() => BiometricService());
   sl.registerLazySingleton(() => ExportService());
-  sl.registerLazySingleton(() => PushNotificationService());
+  sl.registerLazySingleton(
+    () => PushNotificationService(backendAuth: sl()),
+  );
 
   // Auth
   sl.registerLazySingleton(
     () => FirebaseAuthDatasource(auth: sl()),
   );
   sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(datasource: sl()),
+    () => AuthRepositoryImpl(
+      datasource: sl(),
+      backendAuth: sl(),
+    ),
   );
   sl.registerLazySingleton<UserAccountService>(
     () => FirebaseUserAccountService(auth: sl()),
@@ -87,7 +116,10 @@ Future<void> configureDependencies({
     () => FirestoreTransactionDatasource(firestore: sl()),
   );
   sl.registerLazySingleton<TransactionRepository>(
-    () => TransactionRepositoryImpl(datasource: sl()),
+    () => TransactionRepositoryImpl(
+      datasource: sl(),
+      backend: sl(),
+    ),
   );
   sl.registerLazySingleton(() => GetTransactionsPage(sl()));
   sl.registerLazySingleton(() => GetPeriodStats(sl()));
@@ -107,7 +139,10 @@ Future<void> configureDependencies({
     () => FirestoreCategoryDatasource(firestore: sl()),
   );
   sl.registerLazySingleton<CategoryRepository>(
-    () => CategoryRepositoryImpl(datasource: sl()),
+    () => CategoryRepositoryImpl(
+      datasource: sl(),
+      backend: sl(),
+    ),
   );
 
   // Analytics
@@ -115,7 +150,10 @@ Future<void> configureDependencies({
     () => FirestoreAnalyticsDatasource(firestore: sl()),
   );
   sl.registerLazySingleton<AnalyticsRepository>(
-    () => AnalyticsRepositoryImpl(datasource: sl()),
+    () => AnalyticsRepositoryImpl(
+      datasource: sl(),
+      backend: sl(),
+    ),
   );
   sl.registerFactory(() => InsightsProvider(repository: sl()));
 
@@ -124,7 +162,10 @@ Future<void> configureDependencies({
     () => FirestoreMerchantDatasource(firestore: sl()),
   );
   sl.registerLazySingleton<MerchantRepository>(
-    () => MerchantRepositoryImpl(datasource: sl()),
+    () => MerchantRepositoryImpl(
+      datasource: sl(),
+      backend: sl(),
+    ),
   );
   sl.registerLazySingleton(() => GetMerchantSummary(sl()));
   sl.registerLazySingleton(() => GetMerchantTransactions(sl()));
@@ -144,6 +185,7 @@ Future<void> configureDependencies({
     () => SearchRepositoryImpl(
       firestoreDatasource: sl(),
       recentSearchesDatasource: sl(),
+      backend: sl(),
     ),
   );
   sl.registerLazySingleton(() => SearchTransactions(sl()));

@@ -6,30 +6,80 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:nova_spend/core/constants/app_constants.dart';
+import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
+import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
 import 'package:nova_spend/firebase_options.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
-/// Firebase Auth + Cloud Functions auth orchestration used by [AuthPage].
+/// Firebase Auth + backend (or Cloud Functions) orchestration used by [AuthPage].
 class AuthService {
-  AuthService({
+  factory AuthService({
     FirebaseAuth? auth,
     http.Client? httpClient,
     CloudFunctionsHttpClient? functionsClient,
+    ApiClient? apiClient,
+    BackendAuthDatasource? backendAuth,
     GoogleSignIn? googleSignIn,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _http = httpClient ?? http.Client(),
-        _ownsHttp = httpClient == null && functionsClient == null,
-        _functions = functionsClient ??
-            CloudFunctionsHttpClient(client: httpClient ?? http.Client()),
+  }) {
+    final sharedHttp = httpClient ?? http.Client();
+    final ownsHttp = httpClient == null &&
+        functionsClient == null &&
+        apiClient == null &&
+        backendAuth == null;
+
+    ApiClient? api = apiClient;
+    var ownsApi = false;
+    BackendAuthDatasource? backend = backendAuth;
+    if (backend == null && AppConstants.kUseBackendV1) {
+      if (api == null) {
+        api = ApiClient(client: sharedHttp);
+        ownsApi = true;
+      }
+      backend = BackendAuthDatasource(api: api);
+    }
+
+    return AuthService._(
+      auth: auth ?? FirebaseAuth.instance,
+      http: sharedHttp,
+      ownsHttp: ownsHttp,
+      functions: functionsClient ?? CloudFunctionsHttpClient(client: sharedHttp),
+      api: api,
+      ownsApi: ownsApi,
+      backend: backend,
+      googleSignIn: googleSignIn,
+    );
+  }
+
+  AuthService._({
+    required FirebaseAuth auth,
+    required http.Client http,
+    required bool ownsHttp,
+    required CloudFunctionsHttpClient functions,
+    required ApiClient? api,
+    required bool ownsApi,
+    required BackendAuthDatasource? backend,
+    GoogleSignIn? googleSignIn,
+  })  : _auth = auth,
+        _http = http,
+        _ownsHttp = ownsHttp,
+        _functions = functions,
+        _api = api,
+        _ownsApi = ownsApi,
+        _backend = backend,
         _googleSignIn = googleSignIn;
 
   final FirebaseAuth _auth;
   final http.Client _http;
   final bool _ownsHttp;
+  final bool _ownsApi;
   final CloudFunctionsHttpClient _functions;
+  final ApiClient? _api;
+  final BackendAuthDatasource? _backend;
   final GoogleSignIn? _googleSignIn;
   bool _googleInitialized = false;
+
+  bool get usesBackend => _backend != null;
 
   User? get currentUser => _auth.currentUser;
 
@@ -41,6 +91,19 @@ class AuthService {
       email: email.trim(),
       password: password,
     );
+  }
+
+  /// Backend login (rate limits + profile) then Firebase session for AuthGate.
+  Future<UserCredential> loginWithBackend({
+    required String email,
+    required String password,
+  }) async {
+    final backend = _backend;
+    if (backend == null) {
+      return signIn(email: email, password: password);
+    }
+    await backend.login(email: email, password: password);
+    return signIn(email: email, password: password);
   }
 
   Future<UserCredential> signInWithGoogle() async {
@@ -102,13 +165,28 @@ class AuthService {
     return _auth.signInWithCredential(oauth);
   }
 
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    final backend = _backend;
+    if (backend != null && _auth.currentUser != null) {
+      try {
+        await backend.logout();
+      } catch (_) {
+        // Still clear the local Firebase session.
+      }
+    }
+    await _auth.signOut();
+  }
 
   Future<void> reloadCurrentUser() async {
     await _auth.currentUser?.reload();
   }
 
   Future<void> sendEmailOtp({required String email}) async {
+    final backend = _backend;
+    if (backend != null) {
+      await backend.sendSignupOtp(email: email);
+      return;
+    }
     await _functions.call(
       'sendEmailOtp',
       data: {'email': email.trim()},
@@ -120,6 +198,15 @@ class AuthService {
     required String password,
     required String code,
   }) async {
+    final backend = _backend;
+    if (backend != null) {
+      await backend.completeSignup(
+        email: email,
+        password: password,
+        code: code,
+      );
+      return;
+    }
     await _functions.call(
       'completeEmailOtpSignup',
       data: {
@@ -131,6 +218,11 @@ class AuthService {
   }
 
   Future<void> sendPasswordResetOtp({required String email}) async {
+    final backend = _backend;
+    if (backend != null) {
+      await backend.forgotPassword(email: email);
+      return;
+    }
     await _functions.call(
       'sendPasswordResetOtp',
       data: {'email': email.trim()},
@@ -141,6 +233,10 @@ class AuthService {
     required String email,
     required String code,
   }) async {
+    final backend = _backend;
+    if (backend != null) {
+      return backend.verifyResetOtp(email: email, code: code);
+    }
     final result = await _functions.call(
       'verifyPasswordResetOtp',
       data: {
@@ -162,6 +258,14 @@ class AuthService {
     required String resetToken,
     required String newPassword,
   }) async {
+    final backend = _backend;
+    if (backend != null) {
+      await backend.resetPassword(
+        resetToken: resetToken,
+        newPassword: newPassword,
+      );
+      return;
+    }
     await _functions.call(
       'completePasswordReset',
       data: {
@@ -172,10 +276,19 @@ class AuthService {
   }
 
   Future<void> ensureUserProfile() async {
+    final backend = _backend;
+    if (backend != null) {
+      await backend.getMe();
+      return;
+    }
     await _functions.call('ensureUserProfile', requireAuth: true);
   }
 
   Future<bool> isEmailAlreadyInUse(String email) async {
+    // Backend signup OTP enforces existence; Identity Toolkit createAuthUri is
+    // unreliable when email enumeration protection is on.
+    if (_backend != null) return false;
+
     final apiKey = DefaultFirebaseOptions.currentPlatform.apiKey;
     final uri = Uri.parse(
       'https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=$apiKey',
@@ -215,6 +328,9 @@ class AuthService {
 
   void dispose() {
     _functions.dispose();
+    if (_ownsApi) {
+      _api?.dispose();
+    }
     if (_ownsHttp) {
       _http.close();
     }

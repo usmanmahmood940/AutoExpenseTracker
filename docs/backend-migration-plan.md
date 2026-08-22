@@ -165,7 +165,7 @@ Gating rules (these prevent the common ordering mistakes):
 
 ---
 
-### Phase B — Auth APIs (week 1–2) — **done (local)**
+### Phase B — Auth APIs (week 1–2) — **done (deployed)**
 
 Backend owns the surface; Firebase stores credentials.
 
@@ -198,11 +198,11 @@ token minted by `verify-reset-otp`) and `auth_rate_limits`.
 
 **Why `/me/devices` ships here, not in Phase D:** the Phase D push worker reads the `devices` table, but today Flutter writes `fcmTokens` onto the Firestore user doc (`PushNotificationService`) and `onUserTransactionCreatedNotify` reads it from there. The endpoint must exist (and the app must populate it) before the Postgres worker can become the only notification path, or push goes silent.
 
-**Exit criteria:** Swagger can signup → login → `/me` → change password → forgot/reset without Flutter. ✅ Verified locally (`backend/README.md` → Endpoints); not yet deployed to Cloud Run/Supabase.
+**Exit criteria:** Swagger can signup → login → `/me` → change password → forgot/reset without Flutter. ✅ Verified locally and on Cloud Run.
 
 ---
 
-### Phase C — Transactions & stats APIs (week 2–4) — **done (local)**
+### Phase C — Transactions & stats APIs (week 2–4) — **done (deployed)**
 
 **Schema (align with current Firestore fields where possible)**
 
@@ -238,11 +238,11 @@ Seeding categories in C matters because Home tiles resolve colors through `Categ
 **Also shipped with C (needed by Review / Insights, not a separate phase):**
 `POST /transactions` (manual create + optional `ingestion_id`) and `GET /analytics/summaries`. Amount sort **with** a date range is allowed (the SQL advantage over Firestore).
 
-**Exit criteria:** All list/search/stats behaviors match current app via curl/Swagger, using seeded categories and hand-inserted transaction rows. ✅ Verified locally (`make check`); not yet deployed to Cloud Run.
+**Exit criteria:** All list/search/stats behaviors match current app via curl/Swagger, using seeded categories and hand-inserted transaction rows. ✅ Verified locally (`make check`); deployed to Cloud Run + Supabase (2026-08-21).
 
 ---
 
-### Phase D — Ingest & workers (week 3–5, dev/staging only)
+### Phase D — Ingest & workers (week 3–5, dev/staging only) — **done (deployed)**
 
 Build and verify these against **dev**. Production Shortcuts keep hitting `ingestTransactionForUser` until the Phase F freeze window.
 
@@ -250,33 +250,40 @@ Build and verify these against **dev**. Production Shortcuts keep hitting `inges
 - [x] Auth for webhook (`X-User-Id` or signed secret — document in `docs/webhooks.md`)
 - [x] Worker/cron: recompute period summaries (replace `onUserTransactionWritten`)
 - [x] Worker: send FCM on new tx (replace `onUserTransactionCreatedNotify`) using Admin messaging + `devices` table
-- [x] Worker: OTP/doc cleanup (replace `cleanupExpiredAuthDocs`)
+- [x] Worker: OTP/doc cleanup (replace `cleanupExpiredAuthDocs`) — `make scheduler` creates the Cloud Scheduler jobs
 
 **Leave `onUserTransactionCreatedNotify` deployed.** The Postgres push worker only becomes the sole notify path after the app registers tokens via `POST /me/devices` (Phase E step 1) and production has cut over. Until then the two paths cover different data sources, so disabling the trigger early means no push for production users.
 
-**Exit criteria:** on dev, a Shortcut/SMS call creates Postgres rows, aggregates recompute, and the worker sends push to a device registered through `/me/devices`.
+**Exit criteria:** on dev, a Shortcut/SMS call creates Postgres rows, aggregates recompute, and the worker sends push to a device registered through `/me/devices`. ✅ APIs + workers deployed to Cloud Run (2026-08-21); Cloud Scheduler + full ingest/push smoke still optional before Flutter cutover.
 
 ---
 
 ### Phase E — Flutter API client (week 4–6, can overlap D)
 
+**Pre-E checklist (2026-08-21):** steps 1–4 are live on Cloud Run + Supabase
+`https://novaspend-api-h7asbihbya-el.a.run.app/docs`). Step 5 ran 2026-08-21
+(`make migrate-firestore SUPABASE=1`): 4 users, 343 transactions, 45 ingestions,
+9 monthly summaries copied into Supabase. Re-run is idempotent.
+
 **Runs against the dev/staging Cloud Run URL with dev data already migrated ([§6](#6-migration-order-checklist-you-can-follow) step 5).** A migrated screen pointed at an empty database looks identical to a broken screen, which makes this phase impossible to verify otherwise. It can overlap Phase D, but not Phase C — the screens need those APIs.
 
-- [ ] Add `ApiClient` (Dio/http) + secure token storage
-- [ ] Feature datasources call FastAPI instead of Firestore/Functions
-- [ ] Auth UI → `/auth/*` only (stop product flows on Firebase Auth SDK)
-- [ ] Feature flags / remote config optional: `use_backend_v1=true` for staged rollout
-- [ ] Keep architecture: `presentation → domain → data` (new remote datasource)
+- [x] Add `ApiClient` (Dio/http) + secure token storage
+- [x] Feature datasources call FastAPI instead of Firestore/Functions
+- [x] Auth UI → `/auth/*` only (stop product flows on Firebase Auth SDK) — email/password OTP paths; Google/Apple still Firebase
+- [x] Feature flags / remote config optional: `use_backend_v1=true` for staged rollout (`AppConstants.kUseBackendV1`, default on)
+- [x] Keep architecture: `presentation → domain → data` (new remote datasource)
 
 **Order inside Flutter (cutover order)**
 
-1. Auth + `/me` + FCM token → `POST /me/devices`
-2. Home — period stats **and** transactions list in one flag (`HomeProvider` loads both together; a half-migrated Home is extra work for no benefit)
-3. Search
-4. Merchant
-5. Review — only meaningful once new ingestions land in Postgres, so either enable dual-write ingest first or accept that it shows only backend-era items on dev
-6. Categories / settings — the *screens* go last; category *data* was already seeded in Phase C
-7. Confirm client-triggered ingest paths (if any) target the new URL
+1. Auth + `/me` + FCM token → `POST /me/devices` ✅ (2026-08-21)
+2. Home — period stats **and** transactions list in one flag (`HomeProvider` loads both together; a half-migrated Home is extra work for no benefit) ✅
+3. Search ✅
+4. Merchant ✅
+5. Review ✅
+6. Categories / settings — the *screens* go last; category *data* was already seeded in Phase C ✅ (`GET/POST /categories`, Settings webhook → `/ingest`)
+7. Confirm client-triggered ingest paths (if any) target the new URL ✅ (Settings copies FastAPI `/ingest` when `kUseBackendV1`)
+
+**Exit criteria:** App works against **dev** Cloud Run with Firestore reads disabled for migrated features. ✅ Code path: `kUseBackendV1` (default true) routes product screens through FastAPI. Step 5 data migrate is still required for Home to show historical Firestore rows.
 
 **Exit criteria:** App works against **dev** Cloud Run with Firestore reads disabled for migrated features.
 
@@ -286,8 +293,8 @@ Build and verify these against **dev**. Production Shortcuts keep hitting `inges
 
 **Do not skip backups.** Run the same migration script twice: once against **dev** (before Phase E, [§6](#6-migration-order-checklist-you-can-follow) step 5) and once against **production** here.
 
-1. Export Firestore collections (or Admin SDK dump script).
-2. Transform → Postgres (preserve IDs or map `firestore_id` → uuid).
+1. Export Firestore collections (or Admin SDK dump script) — `scripts/migrate_firestore.py` reads live via Admin SDK.
+2. Transform → Postgres (UUID document ids kept; Firestore auto-ids → UUIDv5).
 3. Migrate users: ensure every Firebase Auth user has a Postgres `users` row (`firebase_uid`).
 4. Migrate transactions, ingestions, categories, overrides, summaries, settings.
 5. Validate counts + spot-check amounts per uid.
@@ -324,7 +331,7 @@ Steps 1–9 touch **dev/staging only**. Production keeps running on Firestore/Fu
 | 2 | Phase B auth APIs **+ `/me/devices`** | dev | Swagger signup → login → `/me` works |
 | 3 | Phase C transactions/search/stats APIs **+ seed categories** | dev | Swagger list/search/stats works on live SQL |
 | 4 | Phase D ingest + workers | dev | Dev ingest → Postgres rows, aggregates, push |
-| 5 | Migrate **dev** Firestore → Postgres (same script you'll use in prod) | dev | Dev DB has realistic data |
+| 5 | Migrate **dev** Firestore → Postgres (same script you'll use in prod) | dev | Ran 2026-08-21: 4 users, 343 txs, 45 ingestions, 9 summaries on Supabase |
 | 6 | Flutter: `ApiClient` + Auth + `/me` + device registration | dev | Login/signup on API, token in `devices` |
 | 7 | Flutter: Home (stats **and** list, one flag) | dev | No `listTransactions` / `getPeriodStats` calls |
 | 8 | Flutter: search, merchant, review, categories, settings screens | dev | No client Firestore for those |
@@ -528,8 +535,8 @@ Record answers in this section when decided:
 |----------|--------|------|
 | Postgres host | **Dev:** local Homebrew Postgres 16. **Staging/prod (Cloud Run):** Supabase Postgres | 2026-08-21 |
 | Token strategy | **Pass-through Firebase ID tokens.** `/auth/login` and `/auth/signup` return the Identity Toolkit `idToken`/`refreshToken` pair as-is; the client sends `idToken` as the Bearer token and refreshes it the normal Identity Toolkit way. No backend-issued session token. | 2026-08-21 |
-| ID strategy | _TBD_ for transactions. `users` needs no decision: `firebase_uid` is the Firestore document id | 2026-08-20 |
-| Dual-write | _TBD_ — decide before Phase D ingest | |
+| ID strategy | Keep Firestore UUID document ids. Auto-ids (`doc()`) become a stable UUIDv5 (`app.services.firestore_migrate.stable_uuid`) so a second run is idempotent. `users.firebase_uid` is the Firestore user doc id. | 2026-08-21 |
+| Dual-write | **No.** Freeze-window cutover (Phase F): migrate, then flip Flutter + Shortcuts together. Dev copies data with `make migrate-firestore SUPABASE=1` instead of dual-writing ingest. | 2026-08-21 |
 
 ---
 

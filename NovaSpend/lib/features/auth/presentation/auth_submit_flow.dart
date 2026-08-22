@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/app_error_mapper.dart';
+import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 import 'package:nova_spend/features/auth/presentation/auth_error_mapper.dart';
 import 'package:nova_spend/features/auth/presentation/auth_service.dart';
@@ -62,6 +63,11 @@ class AuthSubmitFlow {
           e.message,
         ),
       );
+    } on ApiException catch (e) {
+      if (e.isEmailExists) {
+        return AuthSubmitOutcome(errorText: l10n.authEmailInUse);
+      }
+      return AuthSubmitOutcome(errorText: e.message);
     } on CloudFunctionsHttpException catch (e) {
       return AuthSubmitOutcome(errorText: e.message);
     } catch (e) {
@@ -74,7 +80,9 @@ class AuthSubmitFlow {
     required String password,
     required AppLocalizations l10n,
   }) async {
-    final credential = await _auth.signIn(email: email, password: password);
+    final credential = AppConstants.kUseBackendV1
+        ? await _auth.loginWithBackend(email: email, password: password)
+        : await _auth.signIn(email: email, password: password);
     final user = credential.user;
     if (user == null) {
       return AuthSubmitOutcome(errorText: l10n.authWrongCredentials);
@@ -116,6 +124,11 @@ class AuthSubmitFlow {
 
     try {
       await _auth.sendEmailOtp(email: email);
+    } on ApiException catch (e) {
+      if (e.isEmailExists) {
+        return AuthSubmitOutcome(errorText: l10n.authEmailInUse);
+      }
+      rethrow;
     } on CloudFunctionsHttpException catch (e) {
       if (_isEmailInUseMessage(e.message)) {
         return AuthSubmitOutcome(errorText: l10n.authEmailInUse);

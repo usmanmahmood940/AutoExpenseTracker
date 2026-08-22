@@ -5,7 +5,7 @@ DB_TEST := novaspend_test
 # Apple Silicon Homebrew uses /opt/homebrew; Intel uses /usr/local.
 PG_BIN := $(shell test -d /opt/homebrew/opt/postgresql@16/bin && echo /opt/homebrew/opt/postgresql@16/bin || echo /usr/local/opt/postgresql@16/bin)
 
-.PHONY: help venv install run test lint fmt check migrate revision downgrade db-up db-shell reset deploy
+.PHONY: help venv install run test lint fmt check migrate revision downgrade db-up db-shell reset deploy migrate-firestore scheduler
 
 help: ## Show available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -53,6 +53,15 @@ db-shell: ## psql into the dev database
 
 deploy: ## Deploy to Cloud Run (reads SUPABASE_DATABASE_URL from .env)
 	bash scripts/deploy-cloud-run.sh
+
+migrate-firestore: ## Copy Firestore → Postgres. DRY_RUN=1 SUPABASE=1 UID=...
+	$(PY)/python scripts/migrate_firestore.py \
+		$(if $(filter 1 true yes,$(DRY_RUN)),--dry-run) \
+		$(if $(filter 1 true yes,$(SUPABASE)),--supabase) \
+		$(if $(UID),--uid $(UID))
+
+scheduler: ## Create Cloud Scheduler jobs for cleanup + summary recompute
+	bash scripts/setup-cloud-scheduler.sh
 
 reset: ## Drop and recreate the dev schema
 	$(PY)/alembic downgrade base

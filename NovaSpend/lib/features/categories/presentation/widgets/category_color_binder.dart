@@ -9,7 +9,7 @@ import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dar
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
 
-/// Watches Firestore default categories and exposes their colors to the tree.
+/// Watches default categories (API or Firestore) and exposes their colors.
 class CategoryColorBinder extends StatefulWidget {
   const CategoryColorBinder({required this.child, super.key});
 

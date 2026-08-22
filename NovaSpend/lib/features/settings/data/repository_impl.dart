@@ -1,3 +1,4 @@
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/features/settings/data/datasource/settings_datasource.dart';
 import 'package:nova_spend/features/settings/domain/entities/sync_meta_entity.dart';
 import 'package:nova_spend/features/settings/domain/repositories/settings_repository.dart';
@@ -14,6 +15,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   @override
   Stream<SyncMetaEntity?> watchSyncMeta(String uid) {
+    if (AppConstants.kUseBackendV1) {
+      return Stream<SyncMetaEntity?>.value(null);
+    }
     return _firestore.watchSyncMeta(uid);
   }
 
