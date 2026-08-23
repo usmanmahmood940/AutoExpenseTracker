@@ -1,5 +1,9 @@
 /**
  * Cloud Functions entry point.
+ *
+ * Phase F dual-run: these stay deployed as a rollback target. Flutter and
+ * Shortcuts now hit FastAPI. Firestore triggers go idle once ingest writes
+ * Postgres only. Do not delete until §6 step 12.
  */
 
 import { setGlobalOptions } from 'firebase-functions/v2';

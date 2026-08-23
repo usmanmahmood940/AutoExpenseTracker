@@ -274,6 +274,7 @@ async def migrate(args: argparse.Namespace) -> int:
                     await session.rollback()
                 else:
                     await session.commit()
+        await _print_count_check(db, uids, maker)
     finally:
         await dispose_engine()
 
@@ -289,6 +290,43 @@ async def migrate(args: argparse.Namespace) -> int:
     if len(counts.errors) > 20:
         print(f"  … {len(counts.errors) - 20} more", file=sys.stderr)
     return 0
+
+
+async def _print_count_check(db: object, uids: list[str], maker: object) -> None:
+    """Compare Firestore vs Postgres totals after the copy (Phase F step 5)."""
+    from sqlalchemy import func, select
+
+    from app.db.models.monthly_summary import MonthlySummary
+    from app.db.models.raw_ingestion import RawIngestion
+    from app.db.models.transaction import Transaction
+    from app.db.models.user import User
+
+    fs_tx = fs_ing = fs_sum = 0
+    for uid in uids:
+        txs = db.collection("users").document(uid).collection("transactions")
+        fs_tx += len(list(txs.stream()))
+        fs_ing += len(
+            list(db.collection("users").document(uid).collection("raw_ingestions").stream())
+        )
+        fs_sum += len(
+            list(db.collection("users").document(uid).collection("monthlySummaries").stream())
+        )
+
+    async with maker() as session:
+        pg_users = (await session.execute(select(func.count()).select_from(User))).scalar_one()
+        pg_tx = (await session.execute(select(func.count()).select_from(Transaction))).scalar_one()
+        pg_ing = (await session.execute(select(func.count()).select_from(RawIngestion))).scalar_one()
+        pg_sum = (
+            await session.execute(select(func.count()).select_from(MonthlySummary))
+        ).scalar_one()
+
+    print(
+        "count_check "
+        f"firestore_users={len(uids)} pg_users={pg_users} "
+        f"firestore_tx={fs_tx} pg_tx={pg_tx} "
+        f"firestore_ing={fs_ing} pg_ing={pg_ing} "
+        f"firestore_summaries={fs_sum} pg_summaries={pg_sum}"
+    )
 
 
 def main() -> None:

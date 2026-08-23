@@ -77,7 +77,7 @@ Project: `auto-expense-tracker-2026`
 
 Identifies the user via Firebase Auth UID (`X-User-Id` or `?uid=`). Writes under `users/{uid}/…`.
 
-Production Shortcuts keep hitting this URL until the Phase F freeze. The FastAPI equivalent is below.
+**Legacy.** Shortcuts now use FastAPI `POST /ingest` (Phase F, 2026-08-23). Keep this Function deployed for rollback only.
 
 ### URL
 
@@ -137,9 +137,9 @@ Create at least one user in **Firebase Console → Authentication** before testi
 
 ---
 
-## FastAPI `POST /ingest` (Phase D, dev/staging)
+## FastAPI `POST /ingest` (live)
 
-Same request and response bodies as the Function. Production Shortcuts stay on the Function until Phase F.
+Same request and response bodies as the Function. This is the Shortcut webhook as of Phase F (2026-08-23).
 
 ### URL
 

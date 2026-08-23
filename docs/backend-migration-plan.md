@@ -1,6 +1,6 @@
 # NovaSpend Backend & Firebase Migration Plan
 
-**Status:** Planning document (follow in order)  
+**Status:** Phase F dual-run (2026-08-23) — traffic on FastAPI + Supabase; Firebase idle as rollback  
 **Target stack:** FastAPI (Cloud Run) + PostgreSQL (Cloud SQL or Supabase) + Firebase Auth (identity) + FCM (push delivery)  
 **App:** NovaSpend (Flutter)
 
@@ -244,7 +244,7 @@ Seeding categories in C matters because Home tiles resolve colors through `Categ
 
 ### Phase D — Ingest & workers (week 3–5, dev/staging only) — **done (deployed)**
 
-Build and verify these against **dev**. Production Shortcuts keep hitting `ingestTransactionForUser` until the Phase F freeze window.
+Build and verify these against **dev**. Shortcuts now hit `POST /ingest` (Phase F freeze, 2026-08-23). `ingestTransactionForUser` stays deployed for rollback.
 
 - [x] `POST /ingest` (or `/webhooks/sms`) — port `ingestTransactionForUser` (Gemini, dedup, normalize)
 - [x] Auth for webhook (`X-User-Id` or signed secret — document in `docs/webhooks.md`)
@@ -305,12 +305,12 @@ If you want a longer, lower-risk transition, have `ingestTransactionForUser` wri
 
 **Freeze window — everything below happens in one session, in this order**
 
-- [ ] Announce short write freeze or accept last-minute delta sync
-- [ ] Final incremental sync
-- [ ] Validate counts again post-sync
-- [ ] Flip Flutter **and** Shortcuts/webhook to backend URLs **together**
-- [ ] Switch push to the Postgres worker; stop `onUserTransactionCreatedNotify`
-- [ ] Monitor errors 48–72h
+- [x] Announce short write freeze or accept last-minute delta sync — last-minute delta accepted (Shortcut already on `/ingest`)
+- [x] Final incremental sync — `make migrate-firestore SUPABASE=1` on 2026-08-23 (+1 tx; 400 already present)
+- [x] Validate counts again post-sync — users 4=4; tx Firestore 345 / Postgres 346 (Postgres ahead from live ingest); summaries 9=9. Ingestions 47 vs 7 (old rows skipped on unique/FK; new ingest writes Postgres)
+- [x] Flip Flutter **and** Shortcuts/webhook to backend URLs **together** — Flutter `kUseBackendV1` default on; Shortcut webhook updated by owner
+- [x] Switch push to the Postgres worker; stop `onUserTransactionCreatedNotify` — `POST /ingest` calls `notify_new_transaction` (`devices` table). Firestore trigger stays **deployed but idle** (no new Firestore writes). Do not delete until step 12
+- [ ] Monitor errors 48–72h — **started 2026-08-23** (step 11)
 
 Flipping Shortcuts before the migration would split history: new transactions in Postgres, everything older in Firestore, and a migration that then has to special-case the gap or double-count it. Flipping Flutter before the migration shows users an empty app.
 
@@ -335,9 +335,9 @@ Steps 1–9 touch **dev/staging only**. Production keeps running on Firestore/Fu
 | 6 | Flutter: `ApiClient` + Auth + `/me` + device registration | dev | Login/signup on API, token in `devices` |
 | 7 | Flutter: Home (stats **and** list, one flag) | dev | No `listTransactions` / `getPeriodStats` calls |
 | 8 | Flutter: search, merchant, review, categories, settings screens | dev | No client Firestore for those |
-| 9 | Point **dev** Shortcuts/webhook at new ingest URL; rehearse the cutover | dev | Full app works end-to-end on backend |
-| 10 | **Production:** migrate data → validate → freeze → flip Flutter + Shortcuts + push together | **prod** | Live on backend ([§5 Phase F](#phase-f--data-migration--production-cutover-week-67)) |
-| 11 | Dual-run monitoring (Firebase idle, as rollback) | prod | Stable 3–7 days |
+| 9 | Point **dev** Shortcuts/webhook at new ingest URL; rehearse the cutover | dev | Owner updated Shortcut + verified Home history (2026-08-23) |
+| 10 | **Production:** migrate data → validate → freeze → flip Flutter + Shortcuts + push together | **prod** | Live on backend 2026-08-23 ([§5 Phase F](#phase-f--data-migration--production-cutover-week-67)) |
+| 11 | Dual-run monitoring (Firebase idle, as rollback) | prod | **In progress** — keep Functions deployed 3–7 days |
 | 12 | Firebase cleanup ([§8](#8-post-migration-firebase-cleanup)) | prod | Unused services removed/disabled |
 
 **Optional dual-write**, if chosen, starts a few days *before* step 10 — not at step 11.

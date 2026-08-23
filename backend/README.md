@@ -5,10 +5,9 @@ from Firestore and Cloud Functions. Firebase stays the identity provider (it
 stores passwords and issues ID tokens) and the push transport (FCM).
 
 Plan of record: [`../docs/backend-migration-plan.md`](../docs/backend-migration-plan.md).
-Follow section 6 (Migration order) — this package currently covers **steps 1–5
-(Phases A–D + the Firestore → Postgres copy script)**. Flutter Phase E talks to
-Cloud Run by default; production Shortcuts still use the Cloud Function until
-Phase F.
+Follow section 6 (Migration order). Phases A–F freeze are done (2026-08-23):
+Flutter + Shortcuts hit this service; Firestore/Functions stay deployed as
+rollback for a few days (step 11).
 
 ## Status
 
@@ -19,7 +18,7 @@ Phase F.
 | C | Transactions, search, stats, categories, review | **done (deployed)** |
 | D | Ingest + workers | **done (deployed)** |
 | E | Flutter ApiClient (dev) | **done** (needs step 5 data before Home looks real) |
-| F | Prod migrate + freeze + cutover | **not started** |
+| F | Prod migrate + freeze + cutover | **dual-run** (step 11) |
 
 ## Requirements
 
