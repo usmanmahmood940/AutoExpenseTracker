@@ -31,7 +31,6 @@ class SearchRepositoryImpl implements SearchRepository {
   }) async {
     try {
       if (AppConstants.kUseBackendV1 && _backend != null) {
-        if (!query.hasActiveFilters) return const [];
         return await _backend.search(
           text: query.text.trim(),
           limit: limit,

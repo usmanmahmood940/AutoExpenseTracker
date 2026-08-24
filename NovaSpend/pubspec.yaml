@@ -90,6 +90,7 @@ flutter:
     - assets/icons/icon_clock.svg
     - assets/icons/icon_calendar.svg
     - assets/icons/icon_sort.svg
+    - assets/icons/icon_empty_state.svg
     - assets/icons/icon_nav_home.svg
     - assets/icons/icon_nav_transactions.svg
     - assets/icons/icon_nav_insights.svg

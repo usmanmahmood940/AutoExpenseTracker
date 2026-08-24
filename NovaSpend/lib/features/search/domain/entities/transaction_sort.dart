@@ -13,6 +13,10 @@ enum TransactionSort {
 
   bool get isDefault => this == defaultSort;
 
+  /// Day headers (Spent / Net) only make sense for date-ordered lists.
+  bool get groupsByDay =>
+      this == dateNewest || this == dateOldest;
+
   int compare(TransactionEntity a, TransactionEntity b) {
     switch (this) {
       case TransactionSort.dateNewest:

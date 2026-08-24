@@ -32,6 +32,9 @@ class SearchQuery extends Equatable {
   bool get hasActiveFilters =>
       hasText || hasDateRange || debitsOnly || creditsOnly || subscriptionsOnly;
 
+  /// True when Reset all should show (filters or a non-default sort).
+  bool get hasResettableState => hasActiveFilters || !sort.isDefault;
+
   String? get typeFilter {
     if (debitsOnly && !creditsOnly) return 'debit';
     if (creditsOnly && !debitsOnly) return 'credit';

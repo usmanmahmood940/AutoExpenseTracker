@@ -22,8 +22,6 @@ class FirestoreSearchDatasource {
     int limit = 50,
     TransactionEntity? startAfter,
   }) async {
-    if (!query.hasActiveFilters) return const [];
-
     // Prefer indexed merchant prefix when text-only (or text + soft filters).
     if (query.hasText &&
         !query.subscriptionsOnly &&

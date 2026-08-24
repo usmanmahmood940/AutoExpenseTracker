@@ -13,7 +13,7 @@ enum DateRangePreset {
   custom,
 }
 
-/// Inclusive calendar date range (date-only, local).
+  /// Inclusive calendar date range (date-only, local).
 class DateRangeValue {
   const DateRangeValue({
     required this.preset,
@@ -24,6 +24,16 @@ class DateRangeValue {
   final DateRangePreset preset;
   final DateTime from;
   final DateTime to;
+
+  bool sameAs({
+    DateRangePreset? preset,
+    DateTime? from,
+    DateTime? to,
+  }) {
+    if (this.preset != preset || from == null || to == null) return false;
+    return _dateOnly(this.from) == _dateOnly(from) &&
+        _dateOnly(this.to) == _dateOnly(to);
+  }
 
   /// Formats like `Aug 4 – Aug 10, 2026`, or `Aug 4, 2026` for a single day.
   String formatSubtitle() {

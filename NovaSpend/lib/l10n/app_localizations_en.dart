@@ -64,6 +64,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityChipDate => 'Date';
 
   @override
+  String get activityResetAll => 'Reset all';
+
+  @override
   String get sortBySheetTitle => 'Sort by';
 
   @override
@@ -152,6 +155,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchNoResults => 'No transactions match your search';
+
+  @override
+  String get searchNoResultsTitle => 'No transactions found';
+
+  @override
+  String get searchNoResultsHint =>
+      'Please change the date, your filters or try different keywords';
 
   @override
   String searchResultsCount(String count) {
@@ -363,6 +373,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homePeriodEmpty => 'No transactions in this period';
+
+  @override
+  String get homePeriodEmptyHint => 'Try a different day, week, or month.';
 
   @override
   String get homeDayGroupSpent => 'Spent ';

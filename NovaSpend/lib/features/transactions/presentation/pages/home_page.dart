@@ -9,6 +9,7 @@ import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
+import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/period_overview_card.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
@@ -17,6 +18,8 @@ import 'package:nova_spend/core/widgets/stat_highlight_card.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
+import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
+import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
 import 'package:nova_spend/features/settings/presentation/pages/review_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
@@ -309,24 +312,24 @@ class _HomeBody extends StatelessWidget {
       return _stateBox(context, Text(l10n.errorLoadFailed));
     }
     if (home.items.isEmpty) {
-      return _emptyState(context, l10n);
+      return EmptyStateView(
+        title: l10n.homeEmpty,
+        message: l10n.homeEmptyHint,
+        actionLabel: l10n.homeEmptySetupCta,
+        onActionTap: () => MainShellScope.selectSettingsTab(context),
+      );
     }
     if (home.periodItems.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Highlights(home: home),
-          const SizedBox(height: AppSpacing.lg),
-          Center(
-            child: Text(
-              l10n.homePeriodEmpty,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.55),
-              ),
-              textAlign: TextAlign.center,
-            ),
+          const SizedBox(height: _sectionGap),
+          SectionHeader(title: l10n.homeRecentTransactions),
+          EmptyStateView(
+            title: l10n.homePeriodEmpty,
+            message: l10n.homePeriodEmptyHint,
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           ),
         ],
       );
@@ -341,7 +344,7 @@ class _HomeBody extends StatelessWidget {
           title: l10n.homeRecentTransactions,
           actionLabel: home.hasMore ? l10n.homeViewAll : null,
           onActionTap: home.hasMore
-              ? () => MainShellScope.selectTransactionsTab(context)
+              ? () => _openActivityForPeriod(context, home.period)
               : null,
         ),
         const SizedBox(height: _Highlights._headerGap),
@@ -349,7 +352,7 @@ class _HomeBody extends StatelessWidget {
         if (home.periodHasMore) ...[
           const SizedBox(height: AppSpacing.lg),
           _ShowMoreButton(
-            onPressed: () => MainShellScope.selectTransactionsTab(context),
+            onPressed: () => _openActivityForPeriod(context, home.period),
           ),
         ],
       ],
@@ -459,6 +462,16 @@ String _truncate(String value, int maxChars) {
   trimmed = trimmed.trim();
   if (trimmed.length <= maxChars) return trimmed;
   return trimmed.substring(0, maxChars);
+}
+
+void _openActivityForPeriod(BuildContext context, HomePeriod period) {
+  final preset = switch (period) {
+    HomePeriod.today => DateRangePreset.today,
+    HomePeriod.thisWeek => DateRangePreset.thisWeek,
+    HomePeriod.thisMonth => DateRangePreset.thisMonth,
+  };
+  context.read<SearchProvider>().setDateRange(resolveDateRange(preset));
+  MainShellScope.selectTransactionsTab(context);
 }
 
 Widget _dayGroups(
@@ -579,32 +592,6 @@ class _ShowMoreButton extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _emptyState(BuildContext context, AppLocalizations l10n) {
-  final theme = Theme.of(context);
-  return Padding(
-    padding: const EdgeInsets.only(top: AppSpacing.xxl),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(l10n.homeEmpty, style: theme.textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          l10n.homeEmptyHint,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        FilledButton.tonal(
-          onPressed: () => MainShellScope.selectSettingsTab(context),
-          child: Text(l10n.homeEmptySetupCta),
-        ),
-      ],
-    ),
-  );
 }
 
 Widget _stateBox(BuildContext context, Widget child) {

@@ -1,0 +1,57 @@
+---
+description: NovaSpend bottom sheet UI/UX — DateRangeSheet is the reference
+globs: NovaSpend/lib/**/*sheet*.dart,NovaSpend/lib/**/presentation/widgets/**/*.dart
+alwaysApply: false
+---
+
+# NovaSpend bottom sheets
+
+**Canonical reference:** `NovaSpend/lib/features/search/presentation/widgets/date_range_sheet.dart` (+ `date_range_calendar.dart` for inline pickers). Match this chrome and interaction model when building new sheets.
+
+## Shell
+
+```dart
+showModalBottomSheet<T>(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  backgroundColor: Colors.transparent,
+  builder: (_) => MySheet(...),
+);
+```
+
+- Sheet body: `AppColors.surface(brightness)`, top radius **28**, `clipBehavior: Clip.antiAlias`.
+- Drag handle: 40×4, `AppColors.border` @ ~55% opacity, pill radius.
+- Cap height (~90% screen) with `Flexible` + `SingleChildScrollView` for long content; keep primary actions **outside** the scroll (pinned footer).
+- Padding: `AppSpacing.md` sides/bottom, `AppSpacing.sm` top.
+
+## Header
+
+- Title left (`titleLarge` ~18–20 / w700) + **circular close** top-right.
+- Close: `AppColors.neutralFill` circle, `Icons.close_rounded`, `Navigator.pop()` with no result (dismiss ≠ apply/clear).
+
+## Option rows (selectable lists)
+
+- Selected fill: `AppColors.navActiveFill(brightness)`; label/icon: `AppColors.primaryStrong`.
+- Leading icon in a **40px circle**: selected → same fill as row + **solid accent border**; unselected → soft `neutralFill` + `border`.
+- Trailing selected mark: **filled accent circle** with white `Icons.check_rounded` (not a bare check glyph).
+- Subtitles for context (dates, hints); single-day ranges use one date, not `A – A`.
+- Allow **tap-selected-again to deselect** when the filter is optional.
+
+## Footer actions
+
+- Primary: `FilledButton`, `AppColors.primaryStrong`, height **52**, `AppRadius.md`.
+- Override theme padding — use **horizontal-only** padding + `minimumSize`/`maximumSize` height 52 + `height: 1.2` on label so text is not clipped.
+- Secondary **Clear** (`TextButton`) only when a filter is already applied; return a distinct cleared result (not the same as dismiss).
+- Prefer a small result type: applied / cleared / `null` dismissed.
+
+## Motion & expand-in-place
+
+- Tokens: `AppMotion.fast/normal/slow` + `AppMotion.standard`.
+- Expanding sections (e.g. custom picker): soft **fade + slide-up + slight scale**; one **single** `animateTo(maxScrollExtent)` after layout — do **not** multi-jump scroll during size animation (causes flicker).
+- Inline pickers beat stacked platform `showDatePicker` dialogs when choosing ranges.
+
+## Tokens & copy
+
+- Colors/spacing/radius from `AppColors` / `AppSpacing` / `AppRadius` only — no feature-local palettes.
+- All strings via `context.l10n` / ARB keys.

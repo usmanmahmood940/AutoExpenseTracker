@@ -202,6 +202,12 @@ abstract class AppLocalizations {
   /// **'Date'**
   String get activityChipDate;
 
+  /// No description provided for @activityResetAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset all'**
+  String get activityResetAll;
+
   /// No description provided for @sortBySheetTitle.
   ///
   /// In en, this message translates to:
@@ -381,6 +387,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No transactions match your search'**
   String get searchNoResults;
+
+  /// No description provided for @searchNoResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions found'**
+  String get searchNoResultsTitle;
+
+  /// No description provided for @searchNoResultsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please change the date, your filters or try different keywords'**
+  String get searchNoResultsHint;
 
   /// No description provided for @searchResultsCount.
   ///
@@ -771,6 +789,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No transactions in this period'**
   String get homePeriodEmpty;
+
+  /// No description provided for @homePeriodEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different day, week, or month.'**
+  String get homePeriodEmptyHint;
 
   /// No description provided for @homeDayGroupSpent.
   ///

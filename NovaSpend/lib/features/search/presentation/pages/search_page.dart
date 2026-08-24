@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:nova_spend/core/di/injection.dart';
+import 'package:nova_spend/core/currency/app_currency_controller.dart';
+import 'package:nova_spend/core/currency/app_currency_scope.dart';
+import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
-import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
+import 'package:nova_spend/core/utils/date_labels.dart';
+import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
@@ -14,7 +17,9 @@ import 'package:nova_spend/features/search/domain/entities/date_range_preset.dar
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/search/presentation/widgets/date_range_sheet.dart';
 import 'package:nova_spend/features/search/presentation/widgets/sort_by_sheet.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/day_group_header.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -33,14 +38,7 @@ class SearchPage extends StatelessWidget {
       );
     }
 
-    return ChangeNotifierProvider(
-      create: (_) {
-        final p = sl<SearchProvider>();
-        p.start(uid);
-        return p;
-      },
-      child: const _SearchView(),
-    );
+    return const _SearchView();
   }
 }
 
@@ -89,17 +87,42 @@ class _SearchViewState extends State<_SearchView> {
                     AppSpacing.md,
                     AppSpacing.sm,
                   ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      l10n.feedTitle,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.02 * 24,
-                        color: theme.colorScheme.onSurface,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.feedTitle,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.02 * 24,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (provider.query.hasResettableState)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            provider.resetAllFilters();
+                            _controller.clear();
+                            setState(() {});
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.xs,
+                            ),
+                            child: Text(
+                              l10n.activityResetAll,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryStrong,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Padding(
@@ -310,42 +333,18 @@ class _SearchViewState extends State<_SearchView> {
                             child: Center(child: Text(l10n.errorLoadFailed)),
                           )
                         else if (!provider.hasSearched)
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Column(
-                              children: [
-                                Text(
-                                  l10n.searchEmptyTitle,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  l10n.searchEmptyHint,
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.55),
-                                      ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
+                          EmptyStateView(
+                            title: l10n.searchEmptyTitle,
+                            message: l10n.searchEmptyHint,
                           )
                         else if (provider.results.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Center(
-                              child: Text(
-                                l10n.searchNoResults,
-                                style: Theme.of(context).textTheme.bodyLarge,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                          EmptyStateView(
+                            title: provider.query.hasActiveFilters
+                                ? l10n.searchNoResultsTitle
+                                : l10n.feedEmpty,
+                            message: provider.query.hasActiveFilters
+                                ? l10n.searchNoResultsHint
+                                : l10n.feedEmptyHint,
                           )
                         else ...[
                           Padding(
@@ -364,36 +363,13 @@ class _SearchViewState extends State<_SearchView> {
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.md,
                             ),
-                            child: TransactionGroupCard(
-                              children: [
-                                for (final tx in provider.results)
-                                  TransactionListTile(
-                                    transaction: tx,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute<void>(
-                                          builder: (_) => TransactionDetailPage(
-                                            transaction: tx,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    onMerchantTap: tx.merchant.isEmpty
-                                        ? null
-                                        : () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute<void>(
-                                                builder: (_) => MerchantPage(
-                                                  merchantNormalized:
-                                                      tx.resolvedMerchantKey,
-                                                  displayName: tx.merchant,
-                                                ),
-                                              ),
-                                            );
-                                          },
+                            child: provider.query.sort.groupsByDay
+                                ? _ResultsDayGroups(
+                                    results: provider.results,
+                                  )
+                                : _ResultsFlatList(
+                                    results: provider.results,
                                   ),
-                              ],
-                            ),
                           ),
                           if (provider.isLoadingMore)
                             const Padding(
@@ -480,6 +456,128 @@ class _SearchViewState extends State<_SearchView> {
       DateRangePreset.custom => l10n.dateRangeCustom,
     };
   }
+}
+
+/// Flat results list (amount / merchant sorts — no day headers).
+class _ResultsFlatList extends StatelessWidget {
+  const _ResultsFlatList({required this.results});
+
+  final List<TransactionEntity> results;
+
+  @override
+  Widget build(BuildContext context) {
+    return TransactionGroupCard(
+      children: [
+        for (final tx in results) _resultTile(context, tx),
+      ],
+    );
+  }
+}
+
+/// Day-grouped results with Spent / Net summaries (same pattern as Home).
+/// Only used when sorting by date newest / oldest.
+class _ResultsDayGroups extends StatelessWidget {
+  const _ResultsDayGroups({required this.results});
+
+  final List<TransactionEntity> results;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final money = AppCurrencyScope.of(context);
+    final grouped = _groupByDayPreservingOrder(results);
+    final days = grouped.keys.toList();
+    if (days.isEmpty) return const SizedBox.shrink();
+
+    return TransactionGroupCard.grouped(
+      sections: [
+        for (final day in days)
+          _daySection(
+            context,
+            l10n,
+            day: day,
+            txs: grouped[day]!,
+            money: money,
+          ),
+      ],
+    );
+  }
+}
+
+Widget _resultTile(BuildContext context, TransactionEntity tx) {
+  return TransactionListTile(
+    transaction: tx,
+    onTap: () {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TransactionDetailPage(transaction: tx),
+        ),
+      );
+    },
+    onMerchantTap: tx.merchant.isEmpty
+        ? null
+        : () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MerchantPage(
+                  merchantNormalized: tx.resolvedMerchantKey,
+                  displayName: tx.merchant,
+                ),
+              ),
+            );
+          },
+  );
+}
+
+/// Groups by `transactionDate`, keeping day and within-day order from [items]
+/// (so the active sort still applies).
+Map<String, List<TransactionEntity>> _groupByDayPreservingOrder(
+  List<TransactionEntity> items,
+) {
+  final map = <String, List<TransactionEntity>>{};
+  for (final t in items) {
+    map.putIfAbsent(t.transactionDate, () => []).add(t);
+  }
+  return map;
+}
+
+TransactionGroupSection _daySection(
+  BuildContext context,
+  AppLocalizations l10n, {
+  required String day,
+  required List<TransactionEntity> txs,
+  required AppCurrencyController money,
+}) {
+  final spent = txs
+      .where((t) => t.type != 'credit')
+      .fold<double>(0, (sum, t) => sum + t.amount);
+  final received = txs
+      .where((t) => t.type == 'credit')
+      .fold<double>(0, (sum, t) => sum + t.amount);
+  final summary = dayGroupSummary(
+    spent: spent,
+    received: received,
+    spentPrefix: l10n.homeDayGroupSpent,
+    netPrefix: l10n.homeDayGroupNet,
+    formatMoney: money.formatMoney,
+  );
+
+  return TransactionGroupSection(
+    header: DayGroupHeader(
+      label: relativeDayLabel(
+        day,
+        today: l10n.homePeriodToday,
+        yesterday: l10n.commonYesterday,
+      ),
+      summaryPrefix: summary.prefix,
+      summaryAmount: summary.amount,
+      summaryAmountColor: summary.amountColor,
+      embedded: true,
+    ),
+    children: [
+      for (final tx in txs) _resultTile(context, tx),
+    ],
+  );
 }
 
 class _ActivityToolbarIcon extends StatelessWidget {

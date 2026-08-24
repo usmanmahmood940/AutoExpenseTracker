@@ -31,12 +31,29 @@ class SearchProvider extends ChangeNotifier {
   Timer? _debounce;
 
   Future<void> start(String uid) async {
+    if (_uid == uid) return;
     _uid = uid;
     recentSearches = await _searchRepository.getRecentSearches();
     notifyListeners();
   }
 
+  /// Loads the Activity list once if it has never been fetched.
+  /// Does not clear filters — tab switches keep the last query.
+  void ensureLoaded() {
+    if (_uid == null || hasSearched) return;
+    unawaited(runSearch(saveRecent: false));
+  }
+
+  /// Clears search text, date range, sort, and other filters, then reloads.
+  void resetAllFilters() {
+    if (query == SearchQuery.empty && hasSearched) return;
+    query = SearchQuery.empty;
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
   void setText(String text) {
+    if (query.text == text) return;
     query = query.copyWith(text: text);
     notifyListeners();
     _debounce?.cancel();
@@ -52,6 +69,13 @@ class SearchProvider extends ChangeNotifier {
   }
 
   void setDateRange(DateRangeValue range) {
+    if (range.sameAs(
+      preset: query.datePreset,
+      from: query.dateFrom,
+      to: query.dateTo,
+    )) {
+      return;
+    }
     query = query.copyWith(
       datePreset: range.preset,
       dateFrom: range.from,
@@ -62,6 +86,7 @@ class SearchProvider extends ChangeNotifier {
   }
 
   void clearDateRange() {
+    if (!query.hasDateRange) return;
     query = query.copyWith(clearDateRange: true);
     notifyListeners();
     unawaited(runSearch(saveRecent: false));
@@ -74,9 +99,7 @@ class SearchProvider extends ChangeNotifier {
       results = sortTransactions(results, sort);
     }
     notifyListeners();
-    if (query.hasActiveFilters) {
-      unawaited(runSearch(saveRecent: false));
-    }
+    unawaited(runSearch(saveRecent: false));
   }
 
   void toggleDebits() {
@@ -122,16 +145,6 @@ class SearchProvider extends ChangeNotifier {
     final uid = _uid;
     if (uid == null) return;
 
-    if (!query.hasActiveFilters) {
-      results = [];
-      hasSearched = false;
-      hasMore = false;
-      error = null;
-      isLoading = false;
-      notifyListeners();
-      return;
-    }
-
     isLoading = true;
     hasSearched = true;
     error = null;
@@ -158,11 +171,7 @@ class SearchProvider extends ChangeNotifier {
 
   Future<void> loadMore() async {
     final uid = _uid;
-    if (uid == null ||
-        isLoadingMore ||
-        !hasMore ||
-        results.isEmpty ||
-        !query.hasActiveFilters) {
+    if (uid == null || isLoadingMore || !hasMore || results.isEmpty) {
       return;
     }
 

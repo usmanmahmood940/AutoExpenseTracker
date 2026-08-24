@@ -69,6 +69,10 @@ color: AppColors.border(brightness)   // fields, dividers, handles
 
 ## Layout patterns
 
+### Bottom sheets
+
+Canonical UI/UX: `date_range_sheet.dart` (Transactions date filter). Follow `.cursor/rules/novaspend-bottom-sheets.mdc` for shell, header/close, option rows, Clear/Apply footer, and expand motion.
+
 ### Large balance at top
 
 - Primary screens (home, analytics) lead with `BalanceHeader`: large amount (`displayLarge` / 36–48 sp), muted label above, accent only on positive/trend indicators.
