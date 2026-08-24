@@ -92,6 +92,21 @@ class SearchProvider extends ChangeNotifier {
     unawaited(runSearch(saveRecent: false));
   }
 
+  void setCategories(List<String> categories) {
+    final next = List<String>.unmodifiable([...categories]..sort());
+    if (listEquals(query.categories, next)) return;
+    query = query.copyWith(categories: next, clearCategories: next.isEmpty);
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
+  void clearCategories() {
+    if (!query.hasCategories) return;
+    query = query.copyWith(clearCategories: true);
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
   void setSort(TransactionSort sort) {
     if (query.sort == sort) return;
     query = query.copyWith(sort: sort);
@@ -151,7 +166,7 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final page = await _searchTransactions(uid: uid, query: query, limit: 50);
+      final page = await _searchTransactions(uid: uid, query: query, limit: 10);
       results = sortTransactions(page, query.sort);
       hasMore = page.length >= 50;
 

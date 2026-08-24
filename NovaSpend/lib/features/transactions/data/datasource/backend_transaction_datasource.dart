@@ -25,10 +25,12 @@ class BackendTransactionDatasource {
       final query = compactQuery({
         'limit': '$limit',
         'cursor': startAfter?.id,
-        'date_from': dateFrom ??
+        'date_from':
+            dateFrom ??
             (filter?.dateFrom != null ? isoDate(filter!.dateFrom!) : null),
         'date_to':
-            dateTo ?? (filter?.dateTo != null ? isoDate(filter!.dateTo!) : null),
+            dateTo ??
+            (filter?.dateTo != null ? isoDate(filter!.dateTo!) : null),
         'sort_by': sortBy,
         'order_by': orderBy,
         'type': filter?.type,
@@ -47,13 +49,16 @@ class BackendTransactionDatasource {
       final rawItems = response['items'];
       final items = rawItems is List
           ? rawItems
-              .whereType<Map>()
-              .map((item) => transactionFromApi(Map<String, dynamic>.from(item)))
-              .toList()
+                .whereType<Map>()
+                .map(
+                  (item) => transactionFromApi(Map<String, dynamic>.from(item)),
+                )
+                .toList()
           : <TransactionEntity>[];
       return TransactionsPage(
         items: items,
-        hasMore: response['has_more'] == true ||
+        hasMore:
+            response['has_more'] == true ||
             (response['next_cursor'] is String &&
                 (response['next_cursor'] as String).isNotEmpty),
         totalCount: (response['total_count'] as num?)?.toInt() ?? items.length,
@@ -72,11 +77,7 @@ class BackendTransactionDatasource {
     try {
       final response = await _api.get(
         '/period-stats',
-        query: compactQuery({
-          'period': period,
-          'from': from,
-          'to': to,
-        }),
+        query: compactQuery({'period': period, 'from': from, 'to': to}),
         requireAuth: true,
       );
       return periodStatsFromApi(response);
@@ -104,10 +105,7 @@ class BackendTransactionDatasource {
 
   Future<void> markReviewed(String transactionId) async {
     try {
-      await _api.post(
-        '/transactions/$transactionId/review',
-        requireAuth: true,
-      );
+      await _api.post('/transactions/$transactionId/review', requireAuth: true);
     } on ApiException catch (e) {
       throw e.toDataException();
     }
@@ -175,7 +173,7 @@ class BackendTransactionDatasource {
         .toList();
   }
 
-    Future<int> getPendingReviewCount() async {
+  Future<int> getPendingReviewCount() async {
     final queue = await getReviewQueue();
     return (queue['pending_count'] as num?)?.toInt() ?? 0;
   }
@@ -193,10 +191,7 @@ class BackendTransactionDatasource {
     try {
       await _api.put(
         _overridePath(merchantKey),
-        body: {
-          'category': category,
-          'display_name': displayName,
-        },
+        body: {'category': category, 'display_name': displayName},
         requireAuth: true,
       );
     } on ApiException catch (e) {
@@ -235,6 +230,7 @@ class BackendTransactionDatasource {
     String? dateTo,
     String? type,
     bool subscriptionsOnly = false,
+    List<String>? categories,
   }) async {
     try {
       final response = await _api.get(
@@ -247,6 +243,9 @@ class BackendTransactionDatasource {
           'date_to': dateTo,
           'type': type,
           'subscriptions_only': subscriptionsOnly ? 'true' : null,
+          'categories': categories == null || categories.isEmpty
+              ? null
+              : categories.join(','),
         }),
         requireAuth: true,
       );

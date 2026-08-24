@@ -15,9 +15,9 @@ class BackendCategoryDatasource {
       final raw = json['items'];
       final items = raw is List
           ? raw
-              .whereType<Map>()
-              .map((item) => categoryFromApi(Map<String, dynamic>.from(item)))
-              .toList()
+                .whereType<Map>()
+                .map((item) => categoryFromApi(Map<String, dynamic>.from(item)))
+                .toList()
           : <CategoryEntity>[];
       items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       _cache = items;
@@ -37,6 +37,10 @@ class BackendCategoryDatasource {
     yield items.where((c) => !c.isDefault).toList();
   }
 
+  Stream<List<CategoryEntity>> watchAll() async* {
+    yield await listCategories();
+  }
+
   Future<String> createCustom({
     required String name,
     required String type,
@@ -46,12 +50,7 @@ class BackendCategoryDatasource {
     try {
       final created = await _api.post(
         '/categories',
-        body: {
-          'name': name.trim(),
-          'type': type,
-          'icon': icon,
-          'color': color,
-        },
+        body: {'name': name.trim(), 'type': type, 'icon': icon, 'color': color},
         requireAuth: true,
       );
       _cache = null;

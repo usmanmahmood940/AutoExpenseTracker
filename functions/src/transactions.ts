@@ -9,7 +9,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { db } from './admin';
 import { COLLECTIONS } from './schema';
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 100;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

@@ -26,7 +26,8 @@ class FirestoreSearchDatasource {
     if (query.hasText &&
         !query.subscriptionsOnly &&
         query.typeFilter == null &&
-        !query.hasDateRange) {
+        !query.hasDateRange &&
+        !query.hasCategories) {
       try {
         final prefix = normalizeMerchantKey(query.text);
         if (prefix.isNotEmpty) {
@@ -198,6 +199,10 @@ class FirestoreSearchDatasource {
         query.dateTo!.day,
       );
       if (day.isBefore(from) || day.isAfter(to)) return false;
+    }
+
+    if (query.hasCategories && !query.categories.contains(tx.category)) {
+      return false;
     }
 
     if (query.hasText) {

@@ -8,8 +8,9 @@ import 'package:nova_spend/core/widgets/category_color_scope.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
+import 'package:nova_spend/features/categories/presentation/widgets/category_catalog_scope.dart';
 
-/// Watches default categories (API or Firestore) and exposes their colors.
+/// Fetches the category catalog once at sign-in and exposes colors + the list.
 class CategoryColorBinder extends StatefulWidget {
   const CategoryColorBinder({required this.child, super.key});
 
@@ -23,6 +24,7 @@ class _CategoryColorBinderState extends State<CategoryColorBinder> {
   StreamSubscription<List<CategoryEntity>>? _sub;
   String? _uid;
   Map<String, String> _hexByKey = const {};
+  List<CategoryEntity> _categories = const [];
 
   @override
   void didChangeDependencies() {
@@ -33,21 +35,32 @@ class _CategoryColorBinderState extends State<CategoryColorBinder> {
     _sub?.cancel();
     _sub = null;
     if (uid == null) {
-      if (_hexByKey.isNotEmpty) {
-        setState(() => _hexByKey = const {});
+      if (_hexByKey.isNotEmpty || _categories.isNotEmpty) {
+        setState(() {
+          _hexByKey = const {};
+          _categories = const [];
+        });
       }
       return;
     }
-    _sub = sl<CategoryRepository>().watchDefaults().listen(
-      (categories) {
-        if (!mounted) return;
-        setState(() => _hexByKey = _indexColors(categories));
-      },
-      onError: (_) {
-        if (!mounted) return;
-        setState(() => _hexByKey = const {});
-      },
-    );
+    _sub = sl<CategoryRepository>()
+        .watchAll(uid)
+        .listen(
+          (categories) {
+            if (!mounted) return;
+            setState(() {
+              _categories = categories;
+              _hexByKey = _indexColors(categories);
+            });
+          },
+          onError: (_) {
+            if (!mounted) return;
+            setState(() {
+              _hexByKey = const {};
+              _categories = const [];
+            });
+          },
+        );
   }
 
   @override
@@ -58,7 +71,10 @@ class _CategoryColorBinderState extends State<CategoryColorBinder> {
 
   @override
   Widget build(BuildContext context) {
-    return CategoryColorScope(hexByKey: _hexByKey, child: widget.child);
+    return CategoryCatalogScope(
+      categories: _categories,
+      child: CategoryColorScope(hexByKey: _hexByKey, child: widget.child),
+    );
   }
 }
 

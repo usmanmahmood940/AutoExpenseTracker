@@ -15,7 +15,7 @@ class AppCurrencyController extends ChangeNotifier {
   final Future<void> Function(String currency)? remoteSync;
 
   String _currency = kDefaultCurrency;
-  bool _showDecimals = true;
+  bool _showDecimals = false;
 
   String get currency => _currency;
   bool get showDecimals => _showDecimals;
@@ -23,7 +23,7 @@ class AppCurrencyController extends ChangeNotifier {
   Future<void> load() async {
     final code = _prefs.getString(AppConstants.currencyPreferenceKey);
     _currency = normalizeCurrency(code);
-    _showDecimals = _prefs.getBool(AppConstants.showDecimalsPreferenceKey) ?? true;
+    _showDecimals = _prefs.getBool(AppConstants.showDecimalsPreferenceKey) ?? false;
     notifyListeners();
   }
 

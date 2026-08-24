@@ -158,6 +158,42 @@ def test_search_prefix_and_scan(api_client: TestClient) -> None:
     assert len(by_bank["items"]) == 3
 
 
+def test_search_by_categories(api_client: TestClient) -> None:
+    _post_tx(
+        api_client,
+        merchant="KFC",
+        amount=100,
+        tx_date="2026-03-01",
+        category="Food & Dining",
+    )
+    _post_tx(
+        api_client,
+        merchant="PSO",
+        amount=200,
+        tx_date="2026-03-02",
+        category="Fuel",
+    )
+    _post_tx(
+        api_client,
+        merchant="Daraz",
+        amount=300,
+        tx_date="2026-03-03",
+        category="Shopping",
+    )
+
+    food = api_client.get(
+        "/transactions/search",
+        params={"categories": "Food & Dining"},
+    ).json()
+    assert [item["merchant"] for item in food["items"]] == ["KFC"]
+
+    multi = api_client.get(
+        "/transactions/search",
+        params={"categories": "Food & Dining,Fuel"},
+    ).json()
+    assert {item["merchant"] for item in multi["items"]} == {"KFC", "PSO"}
+
+
 def test_user_isolation() -> None:
     created = None
     uid_a = f"uid-{uuid.uuid4().hex[:12]}"

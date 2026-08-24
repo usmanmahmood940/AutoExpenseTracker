@@ -202,6 +202,24 @@ abstract class AppLocalizations {
   /// **'Date'**
   String get activityChipDate;
 
+  /// No description provided for @activityChipCategoryCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} categories'**
+  String activityChipCategoryCount(int count);
+
+  /// No description provided for @categorySheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select categories'**
+  String get categorySheetTitle;
+
+  /// No description provided for @categorySheetAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All categories'**
+  String get categorySheetAll;
+
   /// No description provided for @activityResetAll.
   ///
   /// In en, this message translates to:
@@ -937,13 +955,13 @@ abstract class AppLocalizations {
   /// No description provided for @feedFilterTypeDebit.
   ///
   /// In en, this message translates to:
-  /// **'Expense'**
+  /// **'Debit'**
   String get feedFilterTypeDebit;
 
   /// No description provided for @feedFilterTypeCredit.
   ///
   /// In en, this message translates to:
-  /// **'Income'**
+  /// **'Credit'**
   String get feedFilterTypeCredit;
 
   /// No description provided for @feedFilterAmountMin.
@@ -1369,13 +1387,13 @@ abstract class AppLocalizations {
   /// No description provided for @insightsSpent.
   ///
   /// In en, this message translates to:
-  /// **'Spent'**
+  /// **'Debit'**
   String get insightsSpent;
 
   /// No description provided for @insightsIncome.
   ///
   /// In en, this message translates to:
-  /// **'Income'**
+  /// **'Credit'**
   String get insightsIncome;
 
   /// No description provided for @insightsNet.
@@ -1411,7 +1429,7 @@ abstract class AppLocalizations {
   /// No description provided for @insightsCashFlow.
   ///
   /// In en, this message translates to:
-  /// **'Income vs expense'**
+  /// **'Credit vs Debit'**
   String get insightsCashFlow;
 
   /// No description provided for @insightsEmpty.

@@ -15,9 +15,11 @@ import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/categories/presentation/widgets/category_catalog_scope.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
+import 'package:nova_spend/features/search/presentation/widgets/category_filter_sheet.dart';
 import 'package:nova_spend/features/search/presentation/widgets/date_range_sheet.dart';
 import 'package:nova_spend/features/search/presentation/widgets/sort_by_sheet.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -263,11 +265,16 @@ class _SearchViewState extends State<_SearchView> {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: _ActivityFilterChip(
-                            label: l10n.activityChipAllCategories,
+                            label: _categoryChipLabel(l10n, provider),
+                            emphasized: provider.query.hasCategories,
+                            onTap: () =>
+                                _openCategoryFilterSheet(context, provider),
                             leading: Icon(
                               Icons.category_outlined,
                               size: 16,
-                              color: theme.colorScheme.onSurface,
+                              color: provider.query.hasCategories
+                                  ? AppColors.primaryStrong
+                                  : theme.colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -358,12 +365,7 @@ class _SearchViewState extends State<_SearchView> {
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.md,
                             ),
-                            child: Text(
-                              l10n.searchResultsCount(
-                                '${provider.results.length}',
-                              ),
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
+                            child: _ResultsCountRow(results: provider.results),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           Padding(
@@ -371,12 +373,8 @@ class _SearchViewState extends State<_SearchView> {
                               horizontal: AppSpacing.md,
                             ),
                             child: provider.query.sort.groupsByDay
-                                ? _ResultsDayGroups(
-                                    results: provider.results,
-                                  )
-                                : _ResultsFlatList(
-                                    results: provider.results,
-                                  ),
+                                ? _ResultsDayGroups(results: provider.results)
+                                : _ResultsFlatList(results: provider.results),
                           ),
                           if (provider.error != null)
                             Padding(
@@ -458,6 +456,30 @@ class _SearchViewState extends State<_SearchView> {
     provider.setDateRange(range);
   }
 
+  Future<void> _openCategoryFilterSheet(
+    BuildContext context,
+    SearchProvider provider,
+  ) async {
+    final selected = await CategoryFilterSheet.show(
+      context,
+      categories: CategoryCatalogScope.of(context),
+      initialSelected: provider.query.categories,
+    );
+    if (selected == null || !mounted) return;
+    if (selected.cleared) {
+      provider.clearCategories();
+      return;
+    }
+    provider.setCategories(selected.categories);
+  }
+
+  String _categoryChipLabel(AppLocalizations l10n, SearchProvider provider) {
+    final selected = provider.query.categories;
+    if (selected.isEmpty) return l10n.activityChipAllCategories;
+    if (selected.length == 1) return selected.first;
+    return l10n.activityChipCategoryCount(selected.length);
+  }
+
   String _dateChipLabel(AppLocalizations l10n, SearchProvider provider) {
     final preset = provider.query.datePreset;
     if (preset == null) return l10n.activityChipDate;
@@ -475,6 +497,73 @@ class _SearchViewState extends State<_SearchView> {
   }
 }
 
+/// Results count on the left, Spent / Net for the loaded list on the right.
+class _ResultsCountRow extends StatelessWidget {
+  const _ResultsCountRow({required this.results});
+
+  final List<TransactionEntity> results;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final money = AppCurrencyScope.of(context);
+    final muted = Color.lerp(
+      theme.colorScheme.onSurfaceVariant,
+      theme.colorScheme.onSurface,
+      1,
+    )!;
+    final totals = _spendTotals(results);
+    final summary = dayGroupSummary(
+      spent: totals.spent,
+      received: totals.received,
+      spentPrefix: l10n.homeDayGroupSpent,
+      netPrefix: l10n.homeDayGroupNet,
+      formatMoney: money.formatMoney,
+    );
+    final showSummary =
+        summary.prefix != null &&
+        summary.amount != null &&
+        summary.amount!.isNotEmpty;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            l10n.searchResultsCount('${results.length}'),
+            style: theme.textTheme.titleMedium,
+          ),
+        ),
+        if (showSummary)
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: summary.prefix,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: muted,
+                  ),
+                ),
+                TextSpan(
+                  text: summary.amount,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.05 * 13,
+                    color: summary.amountColor ?? muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// Flat results list (amount / merchant sorts — no day headers).
 class _ResultsFlatList extends StatelessWidget {
   const _ResultsFlatList({required this.results});
@@ -484,9 +573,7 @@ class _ResultsFlatList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TransactionGroupCard(
-      children: [
-        for (final tx in results) _resultTile(context, tx),
-      ],
+      children: [for (final tx in results) _resultTile(context, tx)],
     );
   }
 }
@@ -558,6 +645,19 @@ Map<String, List<TransactionEntity>> _groupByDayPreservingOrder(
   return map;
 }
 
+({double spent, double received}) _spendTotals(List<TransactionEntity> txs) {
+  var spent = 0.0;
+  var received = 0.0;
+  for (final t in txs) {
+    if (t.type == 'credit') {
+      received += t.amount;
+    } else {
+      spent += t.amount;
+    }
+  }
+  return (spent: spent, received: received);
+}
+
 TransactionGroupSection _daySection(
   BuildContext context,
   AppLocalizations l10n, {
@@ -565,15 +665,10 @@ TransactionGroupSection _daySection(
   required List<TransactionEntity> txs,
   required AppCurrencyController money,
 }) {
-  final spent = txs
-      .where((t) => t.type != 'credit')
-      .fold<double>(0, (sum, t) => sum + t.amount);
-  final received = txs
-      .where((t) => t.type == 'credit')
-      .fold<double>(0, (sum, t) => sum + t.amount);
+  final totals = _spendTotals(txs);
   final summary = dayGroupSummary(
-    spent: spent,
-    received: received,
+    spent: totals.spent,
+    received: totals.received,
     spentPrefix: l10n.homeDayGroupSpent,
     netPrefix: l10n.homeDayGroupNet,
     formatMoney: money.formatMoney,
@@ -591,9 +686,7 @@ TransactionGroupSection _daySection(
       summaryAmountColor: summary.amountColor,
       embedded: true,
     ),
-    children: [
-      for (final tx in txs) _resultTile(context, tx),
-    ],
+    children: [for (final tx in txs) _resultTile(context, tx)],
   );
 }
 

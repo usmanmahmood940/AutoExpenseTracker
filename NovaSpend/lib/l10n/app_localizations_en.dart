@@ -64,6 +64,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityChipDate => 'Date';
 
   @override
+  String activityChipCategoryCount(int count) {
+    return '$count categories';
+  }
+
+  @override
+  String get categorySheetTitle => 'Select categories';
+
+  @override
+  String get categorySheetAll => 'All categories';
+
+  @override
   String get activityResetAll => 'Reset all';
 
   @override
@@ -463,10 +474,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get feedFilterTypeAll => 'All';
 
   @override
-  String get feedFilterTypeDebit => 'Expense';
+  String get feedFilterTypeDebit => 'Debit';
 
   @override
-  String get feedFilterTypeCredit => 'Income';
+  String get feedFilterTypeCredit => 'Credit';
 
   @override
   String get feedFilterAmountMin => 'Min amount';
@@ -689,10 +700,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsThisMonth => 'This month';
 
   @override
-  String get insightsSpent => 'Spent';
+  String get insightsSpent => 'Debit';
 
   @override
-  String get insightsIncome => 'Income';
+  String get insightsIncome => 'Credit';
 
   @override
   String get insightsNet => 'Net';
@@ -710,7 +721,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsTopMerchants => 'Top merchants';
 
   @override
-  String get insightsCashFlow => 'Income vs expense';
+  String get insightsCashFlow => 'Credit vs Debit';
 
   @override
   String get insightsEmpty => 'No summary for this month yet';

@@ -43,6 +43,10 @@ class FirestoreCategoryDatasource {
         });
   }
 
+  Stream<List<CategoryEntity>> watchAll(String uid) {
+    return watchDefaults();
+  }
+
   Future<String> createCustom({
     required String uid,
     required String name,

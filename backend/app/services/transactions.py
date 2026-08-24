@@ -243,6 +243,7 @@ async def search_transactions(
     date_to: date | None,
     tx_type: TransactionType | None,
     subscriptions_only: bool,
+    categories: list[str] | None = None,
 ) -> dict[str, Any]:
     if date_from and date_to and date_from > date_to:
         raise BadRequestError(
@@ -251,12 +252,14 @@ async def search_transactions(
         )
 
     needle = text.strip()
+    category_names = [name for name in (categories or []) if name]
     use_prefix = (
         bool(needle)
         and not subscriptions_only
         and tx_type is None
         and date_from is None
         and date_to is None
+        and not category_names
     )
     prefix = normalize_merchant_key(needle) if use_prefix else ""
 
@@ -269,6 +272,8 @@ async def search_transactions(
         stmt = stmt.where(Transaction.type == tx_type)
     if subscriptions_only:
         stmt = stmt.where(Transaction.is_recurring.is_(True))
+    if category_names:
+        stmt = stmt.where(Transaction.category.in_(category_names))
 
     if use_prefix:
         escaped = _escape_like(prefix)

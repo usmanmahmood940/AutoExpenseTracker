@@ -30,6 +30,12 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   @override
+  Stream<List<CategoryEntity>> watchAll(String uid) {
+    if (_useBackend) return _backend!.watchAll();
+    return _datasource.watchAll(uid);
+  }
+
+  @override
   Future<String> createCustom({
     required String uid,
     required String name,

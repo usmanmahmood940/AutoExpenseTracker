@@ -12,6 +12,7 @@ class SearchQuery extends Equatable {
     this.debitsOnly = false,
     this.creditsOnly = false,
     this.subscriptionsOnly = false,
+    this.categories = const [],
   });
 
   final String text;
@@ -23,14 +24,24 @@ class SearchQuery extends Equatable {
   final bool creditsOnly;
   final bool subscriptionsOnly;
 
+  /// Display names of selected categories. Empty means all categories.
+  final List<String> categories;
+
   static const empty = SearchQuery();
 
   bool get hasText => text.trim().isNotEmpty;
 
   bool get hasDateRange => dateFrom != null && dateTo != null;
 
+  bool get hasCategories => categories.isNotEmpty;
+
   bool get hasActiveFilters =>
-      hasText || hasDateRange || debitsOnly || creditsOnly || subscriptionsOnly;
+      hasText ||
+      hasDateRange ||
+      hasCategories ||
+      debitsOnly ||
+      creditsOnly ||
+      subscriptionsOnly;
 
   /// True when Reset all should show (filters or a non-default sort).
   bool get hasResettableState => hasActiveFilters || !sort.isDefault;
@@ -51,6 +62,8 @@ class SearchQuery extends Equatable {
     bool? debitsOnly,
     bool? creditsOnly,
     bool? subscriptionsOnly,
+    List<String>? categories,
+    bool clearCategories = false,
   }) {
     return SearchQuery(
       text: text ?? this.text,
@@ -61,6 +74,7 @@ class SearchQuery extends Equatable {
       debitsOnly: debitsOnly ?? this.debitsOnly,
       creditsOnly: creditsOnly ?? this.creditsOnly,
       subscriptionsOnly: subscriptionsOnly ?? this.subscriptionsOnly,
+      categories: clearCategories ? const [] : (categories ?? this.categories),
     );
   }
 
@@ -74,5 +88,6 @@ class SearchQuery extends Equatable {
     debitsOnly,
     creditsOnly,
     subscriptionsOnly,
+    categories,
   ];
 }

@@ -38,6 +38,7 @@ class SearchRepositoryImpl implements SearchRepository {
           dateTo: query.dateTo != null ? isoDate(query.dateTo!) : null,
           type: query.typeFilter,
           subscriptionsOnly: query.subscriptionsOnly,
+          categories: query.hasCategories ? query.categories : null,
         );
       }
       return await _firestore.search(

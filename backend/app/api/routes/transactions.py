@@ -29,6 +29,13 @@ router = APIRouter(tags=["transactions"])
 Limit = Annotated[int, Query(ge=1, le=100)]
 
 
+def _split_categories(raw: str | None) -> list[str] | None:
+    if not raw:
+        return None
+    names = [part.strip() for part in raw.split(",") if part.strip()]
+    return names or None
+
+
 class TransactionCreateRequest(BaseModel):
     amount: Decimal = Field(gt=0)
     merchant: str = Field(min_length=1, max_length=200)
@@ -76,6 +83,7 @@ async def search_transactions(
     date_to: date | None = None,
     type: TransactionType | None = None,
     subscriptions_only: bool = False,
+    categories: str | None = None,
 ) -> SearchListOut:
     page = await tx_service.search_transactions(
         session,
@@ -87,6 +95,7 @@ async def search_transactions(
         date_to=date_to,
         tx_type=type,
         subscriptions_only=subscriptions_only,
+        categories=_split_categories(categories),
     )
     return SearchListOut(
         items=[TransactionOut.model_validate(item) for item in page["items"]],
