@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
+import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
@@ -10,6 +11,7 @@ import 'package:nova_spend/features/auth/presentation/auth_service.dart';
 import 'package:nova_spend/features/auth/presentation/pages/auth_page.dart';
 import 'package:nova_spend/features/auth/presentation/pages/lock_gate.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
+import 'package:provider/provider.dart';
 
 /// Routes signed-out users to [AuthPage] and signed-in users to [LockGate].
 class AuthGate extends StatefulWidget {
@@ -119,7 +121,15 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _ensureProfile() async {
     try {
-      await _authService.ensureUserProfile();
+      final profile = await _authService.fetchProfile();
+      if (profile == null) {
+        await _authService.ensureUserProfile();
+        return;
+      }
+      if (!mounted) return;
+      final code = profile['default_currency']?.toString();
+      if (code == null || code.isEmpty) return;
+      await context.read<AppCurrencyController>().applyFromServer(code);
     } catch (_) {
       // Non-blocking — GET /me or CF ensureUserProfile.
     }

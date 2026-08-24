@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
@@ -7,9 +7,13 @@ import '../utils/money_format.dart' as money;
 
 /// Persists and exposes the user's money display preferences.
 class AppCurrencyController extends ChangeNotifier {
-  AppCurrencyController(this._prefs);
+  AppCurrencyController(this._prefs, {this.remoteSync});
 
   final SharedPreferences _prefs;
+
+  /// When set (Phase E backend), [setCurrency] also PATCHes `/me`.
+  final Future<void> Function(String currency)? remoteSync;
+
   String _currency = kDefaultCurrency;
   bool _showDecimals = true;
 
@@ -23,10 +27,26 @@ class AppCurrencyController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Apply the profile currency from `GET /me` without calling the API again.
+  Future<void> applyFromServer(String currency) async {
+    final next = normalizeCurrency(currency);
+    if (next == _currency) return;
+    _currency = next;
+    await _prefs.setString(AppConstants.currencyPreferenceKey, _currency);
+    notifyListeners();
+  }
+
   Future<void> setCurrency(String currency) async {
     _currency = normalizeCurrency(currency);
     await _prefs.setString(AppConstants.currencyPreferenceKey, _currency);
     notifyListeners();
+    final sync = remoteSync;
+    if (sync == null) return;
+    try {
+      await sync(_currency);
+    } catch (e, st) {
+      debugPrint('PATCH /me default_currency failed: $e\n$st');
+    }
   }
 
   Future<void> setShowDecimals(bool value) async {

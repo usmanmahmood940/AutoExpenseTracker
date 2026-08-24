@@ -284,6 +284,13 @@ class AuthService {
     await _functions.call('ensureUserProfile', requireAuth: true);
   }
 
+  /// Postgres profile from `GET /me`, or null on the Cloud Functions path.
+  Future<Map<String, dynamic>?> fetchProfile() async {
+    final backend = _backend;
+    if (backend == null) return null;
+    return backend.getMe();
+  }
+
   Future<bool> isEmailAlreadyInUse(String email) async {
     // Backend signup OTP enforces existence; Identity Toolkit createAuthUri is
     // unreliable when email enumeration protection is on.

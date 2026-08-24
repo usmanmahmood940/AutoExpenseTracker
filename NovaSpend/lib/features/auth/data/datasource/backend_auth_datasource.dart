@@ -103,6 +103,19 @@ class BackendAuthDatasource {
     return _api.get('/me', requireAuth: true);
   }
 
+  Future<Map<String, dynamic>> updateMe({
+    String? displayName,
+    String? defaultCurrency,
+    String? timezone,
+  }) {
+    final body = <String, dynamic>{
+      if (displayName != null) 'display_name': displayName,
+      if (defaultCurrency != null) 'default_currency': defaultCurrency,
+      if (timezone != null) 'timezone': timezone,
+    };
+    return _api.patch('/me', body: body, requireAuth: true);
+  }
+
   Future<void> registerDevice({
     required String fcmToken,
     required String platform,

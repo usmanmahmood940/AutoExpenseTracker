@@ -193,3 +193,11 @@ class CategoryOut(BaseModel):
     is_default: bool
     created_at: datetime
     updated_at: datetime
+
+
+class MerchantOverrideOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    merchant_key: str
+    display_name: str
+    category: str

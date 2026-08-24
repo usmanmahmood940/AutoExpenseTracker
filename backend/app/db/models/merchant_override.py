@@ -1,8 +1,9 @@
 """merchant_category_overrides — per-user "this merchant is always X".
 
 Applied on ingest (Phase D) after Gemini parse so user corrections compound.
-Phase C writes a row whenever a transaction's category is PATCHed, matching
-the Firestore `upsertMerchantCategoryOverride` call the detail screen makes.
+The transaction detail "Remember this merchant" toggle writes these rows
+explicitly (`PUT/DELETE /merchants/{key}/category-override`). A transaction
+PATCH does not create an override by itself.
 """
 
 from __future__ import annotations

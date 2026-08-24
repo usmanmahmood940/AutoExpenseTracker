@@ -1,4 +1,4 @@
-"""Merchant summary + transaction list. Port of FirestoreMerchantDatasource."""
+"""Merchant summary, transaction list, and category overrides."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from datetime import date
 from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import BadRequestError, NotFoundError
 from app.db.models.enums import TransactionType
+from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services.merchant_key import normalize_merchant_key
@@ -104,3 +106,82 @@ async def list_merchant_transactions(
         "next_cursor": str(items[-1].id) if has_more and items else None,
         "has_more": has_more,
     }
+
+
+def _normalized_key(merchant_key: str) -> str:
+    key = normalize_merchant_key(merchant_key)
+    if not key:
+        raise BadRequestError("merchant_key is required.", code="merchant_required")
+    return key
+
+
+async def get_category_override(
+    session: AsyncSession, *, user_id: uuid.UUID, merchant_key: str
+) -> MerchantCategoryOverride:
+    key = _normalized_key(merchant_key)
+    result = await session.execute(
+        select(MerchantCategoryOverride).where(
+            MerchantCategoryOverride.user_id == user_id,
+            MerchantCategoryOverride.merchant_key == key,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise NotFoundError(
+            "No category override for this merchant.",
+            code="override_not_found",
+        )
+    return row
+
+
+async def upsert_category_override(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    merchant_key: str,
+    category: str,
+    display_name: str | None,
+) -> MerchantCategoryOverride:
+    key = _normalized_key(merchant_key)
+    name = (display_name or merchant_key).strip() or key
+    resolved_category = category.strip()
+    if not resolved_category:
+        raise BadRequestError("category is required.", code="category_required")
+
+    result = await session.execute(
+        select(MerchantCategoryOverride).where(
+            MerchantCategoryOverride.user_id == user_id,
+            MerchantCategoryOverride.merchant_key == key,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        row = MerchantCategoryOverride(
+            user_id=user_id,
+            merchant_key=key,
+            display_name=name,
+            category=resolved_category,
+        )
+        session.add(row)
+    else:
+        row.display_name = name
+        row.category = resolved_category
+    await session.commit()
+    await session.refresh(row)
+    return row
+
+
+async def delete_category_override(
+    session: AsyncSession, *, user_id: uuid.UUID, merchant_key: str
+) -> None:
+    key = _normalized_key(merchant_key)
+    result = await session.execute(
+        select(MerchantCategoryOverride).where(
+            MerchantCategoryOverride.user_id == user_id,
+            MerchantCategoryOverride.merchant_key == key,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is not None:
+        await session.delete(row)
+        await session.commit()

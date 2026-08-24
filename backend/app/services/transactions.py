@@ -23,7 +23,6 @@ from app.db.models.enums import (
     TransactionStatus,
     TransactionType,
 )
-from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.raw_ingestion import RawIngestion
 from app.db.models.transaction import Transaction
 from app.db.seeds.categories import FALLBACK_CATEGORY_NAME
@@ -396,13 +395,6 @@ async def create_transaction(
             "idempotency_key": ingestion.idempotency_key,
         }
 
-    await _upsert_override(
-        session,
-        user_id=user_id,
-        merchant_key=tx.merchant_normalized,
-        display_name=tx.merchant,
-        category=tx.category,
-    )
     await session.commit()
     await session.refresh(tx)
     return tx
@@ -461,13 +453,6 @@ async def update_transaction(
     ):
         tx.category_source = "user"
 
-    await _upsert_override(
-        session,
-        user_id=user_id,
-        merchant_key=tx.merchant_normalized,
-        display_name=tx.merchant,
-        category=tx.category,
-    )
     await session.commit()
     await session.refresh(tx)
     return tx
@@ -492,34 +477,3 @@ async def mark_reviewed(
     await session.commit()
     await session.refresh(tx)
     return tx
-
-
-async def _upsert_override(
-    session: AsyncSession,
-    *,
-    user_id: uuid.UUID,
-    merchant_key: str,
-    display_name: str,
-    category: str,
-) -> None:
-    if not merchant_key:
-        return
-    result = await session.execute(
-        select(MerchantCategoryOverride).where(
-            MerchantCategoryOverride.user_id == user_id,
-            MerchantCategoryOverride.merchant_key == merchant_key,
-        )
-    )
-    row = result.scalar_one_or_none()
-    if row is None:
-        session.add(
-            MerchantCategoryOverride(
-                user_id=user_id,
-                merchant_key=merchant_key,
-                display_name=display_name,
-                category=category,
-            )
-        )
-        return
-    row.display_name = display_name
-    row.category = category

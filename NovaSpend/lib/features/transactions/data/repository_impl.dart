@@ -228,12 +228,15 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String displayName,
     required String category,
   }) async {
-    if (_useBackend) {
-      // Ingest applies category from the transaction PATCH; no client override
-      // table API yet.
-      return;
-    }
     try {
+      if (_useBackend) {
+        await _backend!.upsertMerchantCategoryOverride(
+          merchantKey: merchantKey,
+          displayName: displayName,
+          category: category,
+        );
+        return;
+      }
       await _datasource.upsertMerchantCategoryOverride(
         uid: uid,
         merchantKey: merchantKey,
@@ -250,8 +253,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String uid,
     required String merchantKey,
   }) async {
-    if (_useBackend) return null;
     try {
+      if (_useBackend) {
+        return await _backend!.getMerchantCategoryOverride(merchantKey);
+      }
       return await _datasource.getMerchantCategoryOverride(
         uid: uid,
         merchantKey: merchantKey,
@@ -266,8 +271,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String uid,
     required String merchantKey,
   }) async {
-    if (_useBackend) return;
     try {
+      if (_useBackend) {
+        await _backend!.deleteMerchantCategoryOverride(merchantKey);
+        return;
+      }
       await _datasource.deleteMerchantCategoryOverride(
         uid: uid,
         merchantKey: merchantKey,

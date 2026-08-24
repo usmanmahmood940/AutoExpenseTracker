@@ -1,3 +1,4 @@
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
@@ -175,9 +176,56 @@ class BackendTransactionDatasource {
         .toList();
   }
 
-  Future<int> getPendingReviewCount() async {
+    Future<int> getPendingReviewCount() async {
     final queue = await getReviewQueue();
     return (queue['pending_count'] as num?)?.toInt() ?? 0;
+  }
+
+  String _overridePath(String merchantKey) {
+    final key = normalizeMerchantKey(merchantKey);
+    return '/merchants/${Uri.encodeComponent(key)}/category-override';
+  }
+
+  Future<void> upsertMerchantCategoryOverride({
+    required String merchantKey,
+    required String displayName,
+    required String category,
+  }) async {
+    try {
+      await _api.put(
+        _overridePath(merchantKey),
+        body: {
+          'category': category,
+          'display_name': displayName,
+        },
+        requireAuth: true,
+      );
+    } on ApiException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
+  Future<String?> getMerchantCategoryOverride(String merchantKey) async {
+    try {
+      final json = await _api.get(
+        _overridePath(merchantKey),
+        requireAuth: true,
+      );
+      final category = json['category']?.toString();
+      if (category == null || category.trim().isEmpty) return null;
+      return category;
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      throw ServerException(e.message);
+    }
+  }
+
+  Future<void> deleteMerchantCategoryOverride(String merchantKey) async {
+    try {
+      await _api.delete(_overridePath(merchantKey), requireAuth: true);
+    } on ApiException catch (e) {
+      throw ServerException(e.message);
+    }
   }
 
   Future<List<TransactionEntity>> search({

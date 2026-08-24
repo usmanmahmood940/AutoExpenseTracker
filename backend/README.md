@@ -132,7 +132,7 @@ tests/
 | GET | `/transactions/search` | Merchant prefix or scan across merchant/category/bank. |
 | POST | `/transactions` | Manual create (optional `ingestion_id` to complete a `needs_parse` row). |
 | GET | `/transactions/{id}` | Detail. |
-| PATCH | `/transactions/{id}` | Update; also upserts a merchant category override. |
+| PATCH | `/transactions/{id}` | Update fields. Does **not** create a merchant override. |
 | DELETE | `/transactions/{id}` | Soft delete (`status = deleted`). |
 | POST | `/transactions/{id}/review` | Mark reviewed (`status = active`, set `reviewed_at`). |
 | GET | `/period-stats` | Live SQL totals + highlights + week/month comparison. Replaces `getPeriodStats`. |
@@ -140,8 +140,12 @@ tests/
 | GET | `/analytics/summaries` | Recent months that have transactions (`limit`, default 6). |
 | GET | `/merchants/{key}` | Merchant spend summary. |
 | GET | `/merchants/{key}/transactions` | That merchant's transactions. |
+| GET | `/merchants/{key}/category-override` | Saved "remember this merchant" category. `404` if none. |
+| PUT | `/merchants/{key}/category-override` | Remember a category for ingest. |
+| DELETE | `/merchants/{key}/category-override` | Forget the saved category. Idempotent. |
 | GET | `/review` | `needs_review` txs + `needs_parse` / `duplicate` ingestions. |
 | GET | `/categories` | Seeded defaults + the caller's custom categories. |
+| POST | `/categories` | Create a custom user category. |
 | POST | `/ingest` | SMS/email webhook. Auth is `X-User-Id` (Firebase UID), not Bearer. Same JSON as the Cloud Function. Alias: `POST /webhooks/sms`. |
 | POST | `/internal/jobs/cleanup-auth` | Delete expired OTPs / reset sessions / stale rate limits. `X-Cron-Secret` when `CRON_SECRET` is set. |
 | POST | `/internal/jobs/recompute-summaries` | Rebuild `monthly_summaries` from live SQL. |

@@ -51,6 +51,32 @@ void main() {
     client.dispose();
   });
 
+  test('put sends JSON body', () async {
+    late http.Request captured;
+    final client = ApiClient(
+      client: MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode({'category': 'Fuel'}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+      baseUrl: 'https://api.example.com',
+      idTokenFetcher: () async => 'tok',
+    );
+
+    final result = await client.put(
+      '/merchants/kfc/category-override',
+      body: {'category': 'Fuel'},
+      requireAuth: true,
+    );
+
+    expect(captured.method, 'PUT');
+    expect(result['category'], 'Fuel');
+    client.dispose();
+  });
+
   test('throws ApiException with detail and code', () async {
     final client = ApiClient(
       client: MockClient((request) async {
