@@ -5,8 +5,11 @@ enum DateRangePreset {
   today,
   yesterday,
   thisWeek,
+  lastWeek,
   thisMonth,
   lastMonth,
+  last3Months,
+  thisYear,
   custom,
 }
 
@@ -22,8 +25,11 @@ class DateRangeValue {
   final DateTime from;
   final DateTime to;
 
-  /// Formats like `Aug 4 – Aug 10, 2026`.
+  /// Formats like `Aug 4 – Aug 10, 2026`, or `Aug 4, 2026` for a single day.
   String formatSubtitle() {
+    if (from.year == to.year && from.month == to.month && from.day == to.day) {
+      return DateFormat('MMM d, y').format(from);
+    }
     final sameYear = from.year == to.year;
     final left = DateFormat('MMM d').format(from);
     final right = sameYear
@@ -53,6 +59,11 @@ DateRangeValue resolveDateRange(
       final start = today.subtract(Duration(days: today.weekday - 1));
       final end = start.add(const Duration(days: 6));
       return DateRangeValue(preset: preset, from: start, to: end);
+    case DateRangePreset.lastWeek:
+      final thisWeekStart = today.subtract(Duration(days: today.weekday - 1));
+      final start = thisWeekStart.subtract(const Duration(days: 7));
+      final end = thisWeekStart.subtract(const Duration(days: 1));
+      return DateRangeValue(preset: preset, from: start, to: end);
     case DateRangePreset.thisMonth:
       final start = DateTime(today.year, today.month, 1);
       final end = DateTime(today.year, today.month + 1, 0);
@@ -60,6 +71,14 @@ DateRangeValue resolveDateRange(
     case DateRangePreset.lastMonth:
       final start = DateTime(today.year, today.month - 1, 1);
       final end = DateTime(today.year, today.month, 0);
+      return DateRangeValue(preset: preset, from: start, to: end);
+    case DateRangePreset.last3Months:
+      final start = DateTime(today.year, today.month - 2, 1);
+      final end = DateTime(today.year, today.month + 1, 0);
+      return DateRangeValue(preset: preset, from: start, to: end);
+    case DateRangePreset.thisYear:
+      final start = DateTime(today.year, 1, 1);
+      final end = DateTime(today.year, 12, 31);
       return DateRangeValue(preset: preset, from: start, to: end);
     case DateRangePreset.custom:
       final from = _dateOnly(customFrom ?? today);

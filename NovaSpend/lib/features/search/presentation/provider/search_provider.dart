@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/domain/entities/search_query.dart';
+import 'package:nova_spend/features/search/domain/entities/transaction_sort.dart';
 import 'package:nova_spend/features/search/domain/repositories/search_repository.dart';
 import 'package:nova_spend/features/search/domain/usecases/search_transactions.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -66,6 +67,18 @@ class SearchProvider extends ChangeNotifier {
     unawaited(runSearch(saveRecent: false));
   }
 
+  void setSort(TransactionSort sort) {
+    if (query.sort == sort) return;
+    query = query.copyWith(sort: sort);
+    if (results.isNotEmpty) {
+      results = sortTransactions(results, sort);
+    }
+    notifyListeners();
+    if (query.hasActiveFilters) {
+      unawaited(runSearch(saveRecent: false));
+    }
+  }
+
   void toggleDebits() {
     final next = !query.debitsOnly;
     query = query.copyWith(
@@ -126,7 +139,7 @@ class SearchProvider extends ChangeNotifier {
 
     try {
       final page = await _searchTransactions(uid: uid, query: query, limit: 50);
-      results = page;
+      results = sortTransactions(page, query.sort);
       hasMore = page.length >= 50;
 
       if (saveRecent && query.hasText) {
@@ -167,7 +180,10 @@ class SearchProvider extends ChangeNotifier {
         hasMore = false;
       } else {
         final existing = results.map((e) => e.id).toSet();
-        results = [...results, ...more.where((t) => !existing.contains(t.id))];
+        results = sortTransactions([
+          ...results,
+          ...more.where((t) => !existing.contains(t.id)),
+        ], query.sort);
         hasMore = more.length >= 50;
       }
     } catch (e) {

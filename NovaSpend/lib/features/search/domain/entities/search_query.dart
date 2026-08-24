@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
+import 'package:nova_spend/features/search/domain/entities/transaction_sort.dart';
 
 class SearchQuery extends Equatable {
   const SearchQuery({
@@ -7,6 +8,7 @@ class SearchQuery extends Equatable {
     this.datePreset,
     this.dateFrom,
     this.dateTo,
+    this.sort = TransactionSort.defaultSort,
     this.debitsOnly = false,
     this.creditsOnly = false,
     this.subscriptionsOnly = false,
@@ -16,6 +18,7 @@ class SearchQuery extends Equatable {
   final DateRangePreset? datePreset;
   final DateTime? dateFrom;
   final DateTime? dateTo;
+  final TransactionSort sort;
   final bool debitsOnly;
   final bool creditsOnly;
   final bool subscriptionsOnly;
@@ -41,6 +44,7 @@ class SearchQuery extends Equatable {
     DateTime? dateFrom,
     DateTime? dateTo,
     bool clearDateRange = false,
+    TransactionSort? sort,
     bool? debitsOnly,
     bool? creditsOnly,
     bool? subscriptionsOnly,
@@ -50,6 +54,7 @@ class SearchQuery extends Equatable {
       datePreset: clearDateRange ? null : (datePreset ?? this.datePreset),
       dateFrom: clearDateRange ? null : (dateFrom ?? this.dateFrom),
       dateTo: clearDateRange ? null : (dateTo ?? this.dateTo),
+      sort: sort ?? this.sort,
       debitsOnly: debitsOnly ?? this.debitsOnly,
       creditsOnly: creditsOnly ?? this.creditsOnly,
       subscriptionsOnly: subscriptionsOnly ?? this.subscriptionsOnly,
@@ -62,6 +67,7 @@ class SearchQuery extends Equatable {
     datePreset,
     dateFrom,
     dateTo,
+    sort,
     debitsOnly,
     creditsOnly,
     subscriptionsOnly,

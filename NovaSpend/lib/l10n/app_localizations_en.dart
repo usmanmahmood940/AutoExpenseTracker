@@ -64,16 +64,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityChipDate => 'Date';
 
   @override
+  String get sortBySheetTitle => 'Sort by';
+
+  @override
+  String get sortByDateNewest => 'Date (newest)';
+
+  @override
+  String get sortByDateOldest => 'Date (oldest)';
+
+  @override
+  String get sortByAmountHighest => 'Amount (Highest)';
+
+  @override
+  String get sortByAmountLowest => 'Amount (Lowest)';
+
+  @override
+  String get sortByMerchantAz => 'Merchant (A-Z)';
+
+  @override
+  String get sortByMerchantZa => 'Merchant (Z-A)';
+
+  @override
+  String get sortByDefaultBadge => 'Default';
+
+  @override
   String get dateRangeSheetTitle => 'Select date range';
 
   @override
+  String get dateRangeLastWeek => 'Last week';
+
+  @override
   String get dateRangeLastMonth => 'Last month';
+
+  @override
+  String get dateRangeLast3Months => 'Last 3 months';
+
+  @override
+  String get dateRangeThisYear => 'This year';
 
   @override
   String get dateRangeCustom => 'Custom range';
 
   @override
   String get dateRangeApply => 'Apply';
+
+  @override
+  String get dateRangeStartLabel => 'Start';
+
+  @override
+  String get dateRangeEndLabel => 'End';
+
+  @override
+  String get dateRangePickStartHint => 'Tap a day to set the start';
+
+  @override
+  String get dateRangePickEndHint => 'Tap a day to set the end';
+
+  @override
+  String get dateRangePreviousMonth => 'Previous month';
+
+  @override
+  String get dateRangeNextMonth => 'Next month';
+
+  @override
+  String get dateRangePreviousYear => 'Previous year';
+
+  @override
+  String get dateRangeNextYear => 'Next year';
+
+  @override
+  String get dateRangeSelectMonthYear => 'Select month and year';
 
   @override
   String get searchFilterDebits => 'Debits';

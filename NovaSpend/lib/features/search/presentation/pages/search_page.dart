@@ -13,6 +13,7 @@ import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.d
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/search/presentation/widgets/date_range_sheet.dart';
+import 'package:nova_spend/features/search/presentation/widgets/sort_by_sheet.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
@@ -112,12 +113,16 @@ class _SearchViewState extends State<_SearchView> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _ActivityToolbarIcon(
+                        emphasized: !provider.query.sort.isDefault,
+                        onTap: () => _openSortBySheet(context, provider),
                         child: SvgPicture.asset(
                           'assets/icons/icon_sort.svg',
                           width: 22,
                           height: 22,
-                          colorFilter: const ColorFilter.mode(
-                            AppColors.primaryStrong,
+                          colorFilter: ColorFilter.mode(
+                            !provider.query.sort.isDefault
+                                ? AppColors.primaryStrong
+                                : theme.colorScheme.onSurface,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -425,6 +430,18 @@ class _SearchViewState extends State<_SearchView> {
     );
   }
 
+  Future<void> _openSortBySheet(
+    BuildContext context,
+    SearchProvider provider,
+  ) async {
+    final selected = await SortBySheet.show(
+      context,
+      initial: provider.query.sort,
+    );
+    if (selected == null || !mounted) return;
+    provider.setSort(selected);
+  }
+
   Future<void> _openDateRangeSheet(
     BuildContext context,
     SearchProvider provider,
@@ -439,7 +456,13 @@ class _SearchViewState extends State<_SearchView> {
         : null;
     final selected = await DateRangeSheet.show(context, initial: initial);
     if (selected == null || !mounted) return;
-    provider.setDateRange(selected);
+    if (selected.cleared) {
+      provider.clearDateRange();
+      return;
+    }
+    final range = selected.range;
+    if (range == null) return;
+    provider.setDateRange(range);
   }
 
   String _dateChipLabel(AppLocalizations l10n, SearchProvider provider) {
@@ -449,34 +472,56 @@ class _SearchViewState extends State<_SearchView> {
       DateRangePreset.today => l10n.homePeriodToday,
       DateRangePreset.yesterday => l10n.commonYesterday,
       DateRangePreset.thisWeek => l10n.homePeriodThisWeek,
+      DateRangePreset.lastWeek => l10n.dateRangeLastWeek,
       DateRangePreset.thisMonth => l10n.homePeriodThisMonth,
       DateRangePreset.lastMonth => l10n.dateRangeLastMonth,
+      DateRangePreset.last3Months => l10n.dateRangeLast3Months,
+      DateRangePreset.thisYear => l10n.dateRangeThisYear,
       DateRangePreset.custom => l10n.dateRangeCustom,
     };
   }
 }
 
 class _ActivityToolbarIcon extends StatelessWidget {
-  const _ActivityToolbarIcon({required this.child});
+  const _ActivityToolbarIcon({
+    required this.child,
+    this.emphasized = false,
+    this.onTap,
+  });
 
   final Widget child;
+  final bool emphasized;
+  final VoidCallback? onTap;
 
   static const double size = _ActivitySearchRow.height;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final accent = AppColors.primaryStrong;
 
     return SizedBox(
       width: (size * 85) / 100,
       height: size,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.card(brightness),
+      child: Material(
+        color: emphasized
+            ? AppColors.navActiveFill(brightness)
+            : AppColors.card(brightness),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: AppColors.cardBorder(brightness)),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: emphasized ? accent : AppColors.cardBorder(brightness),
+              ),
+            ),
+            child: Center(child: child),
+          ),
         ),
-        child: Center(child: child),
       ),
     );
   }
@@ -518,7 +563,7 @@ class _ActivityFilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
               color: emphasized
-                  ? AppColors.border(brightness).withValues(alpha: 0.35)
+                  ? AppColors.primaryStrong
                   : AppColors.cardBorder(brightness),
             ),
           ),

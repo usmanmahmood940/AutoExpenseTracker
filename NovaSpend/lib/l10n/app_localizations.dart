@@ -202,17 +202,83 @@ abstract class AppLocalizations {
   /// **'Date'**
   String get activityChipDate;
 
+  /// No description provided for @sortBySheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortBySheetTitle;
+
+  /// No description provided for @sortByDateNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Date (newest)'**
+  String get sortByDateNewest;
+
+  /// No description provided for @sortByDateOldest.
+  ///
+  /// In en, this message translates to:
+  /// **'Date (oldest)'**
+  String get sortByDateOldest;
+
+  /// No description provided for @sortByAmountHighest.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (Highest)'**
+  String get sortByAmountHighest;
+
+  /// No description provided for @sortByAmountLowest.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (Lowest)'**
+  String get sortByAmountLowest;
+
+  /// No description provided for @sortByMerchantAz.
+  ///
+  /// In en, this message translates to:
+  /// **'Merchant (A-Z)'**
+  String get sortByMerchantAz;
+
+  /// No description provided for @sortByMerchantZa.
+  ///
+  /// In en, this message translates to:
+  /// **'Merchant (Z-A)'**
+  String get sortByMerchantZa;
+
+  /// No description provided for @sortByDefaultBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get sortByDefaultBadge;
+
   /// No description provided for @dateRangeSheetTitle.
   ///
   /// In en, this message translates to:
   /// **'Select date range'**
   String get dateRangeSheetTitle;
 
+  /// No description provided for @dateRangeLastWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Last week'**
+  String get dateRangeLastWeek;
+
   /// No description provided for @dateRangeLastMonth.
   ///
   /// In en, this message translates to:
   /// **'Last month'**
   String get dateRangeLastMonth;
+
+  /// No description provided for @dateRangeLast3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 3 months'**
+  String get dateRangeLast3Months;
+
+  /// No description provided for @dateRangeThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get dateRangeThisYear;
 
   /// No description provided for @dateRangeCustom.
   ///
@@ -225,6 +291,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply'**
   String get dateRangeApply;
+
+  /// No description provided for @dateRangeStartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get dateRangeStartLabel;
+
+  /// No description provided for @dateRangeEndLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get dateRangeEndLabel;
+
+  /// No description provided for @dateRangePickStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a day to set the start'**
+  String get dateRangePickStartHint;
+
+  /// No description provided for @dateRangePickEndHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a day to set the end'**
+  String get dateRangePickEndHint;
+
+  /// No description provided for @dateRangePreviousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get dateRangePreviousMonth;
+
+  /// No description provided for @dateRangeNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get dateRangeNextMonth;
+
+  /// No description provided for @dateRangePreviousYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous year'**
+  String get dateRangePreviousYear;
+
+  /// No description provided for @dateRangeNextYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Next year'**
+  String get dateRangeNextYear;
+
+  /// No description provided for @dateRangeSelectMonthYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Select month and year'**
+  String get dateRangeSelectMonthYear;
 
   /// No description provided for @searchFilterDebits.
   ///
