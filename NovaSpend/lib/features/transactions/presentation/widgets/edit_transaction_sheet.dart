@@ -8,6 +8,7 @@ import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/utils/money_format.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/transaction_detail_provider.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
@@ -352,13 +353,9 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         ),
                       ),
                       child: provider.isSaving
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
+                          ? const AppLoader(
+                              size: AppLoaderSize.small,
+                              color: Colors.white,
                             )
                           : Text(l10n.transactionSave),
                     ),

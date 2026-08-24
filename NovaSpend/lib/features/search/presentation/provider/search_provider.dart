@@ -194,6 +194,7 @@ class SearchProvider extends ChangeNotifier {
           ...more.where((t) => !existing.contains(t.id)),
         ], query.sort);
         hasMore = more.length >= 50;
+        error = null;
       }
     } catch (e) {
       error = e.toString();

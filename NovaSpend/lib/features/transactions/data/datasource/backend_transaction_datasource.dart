@@ -1,5 +1,4 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
@@ -61,7 +60,7 @@ class BackendTransactionDatasource {
         totalAmount: (response['total_amount'] as num?)?.toDouble() ?? 0,
       );
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -82,7 +81,7 @@ class BackendTransactionDatasource {
       );
       return periodStatsFromApi(response);
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -99,7 +98,7 @@ class BackendTransactionDatasource {
         requireAuth: true,
       );
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -110,7 +109,7 @@ class BackendTransactionDatasource {
         requireAuth: true,
       );
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -118,7 +117,7 @@ class BackendTransactionDatasource {
     try {
       await _api.delete('/transactions/$transactionId', requireAuth: true);
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -137,7 +136,7 @@ class BackendTransactionDatasource {
       );
       return created['id']?.toString() ?? '';
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -145,7 +144,7 @@ class BackendTransactionDatasource {
     try {
       return await _api.get('/review', requireAuth: true);
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -201,7 +200,7 @@ class BackendTransactionDatasource {
         requireAuth: true,
       );
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -216,7 +215,7 @@ class BackendTransactionDatasource {
       return category;
     } on ApiException catch (e) {
       if (e.statusCode == 404) return null;
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -224,7 +223,7 @@ class BackendTransactionDatasource {
     try {
       await _api.delete(_overridePath(merchantKey), requireAuth: true);
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -258,7 +257,7 @@ class BackendTransactionDatasource {
           .map((item) => transactionFromApi(Map<String, dynamic>.from(item)))
           .toList();
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 }

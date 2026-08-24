@@ -1,5 +1,4 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
@@ -18,7 +17,7 @@ class BackendMerchantDatasource {
       final json = await _api.get('/merchants/$key', requireAuth: true);
       return merchantSummaryFromApi(json);
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -44,7 +43,7 @@ class BackendMerchantDatasource {
           .map((item) => transactionFromApi(Map<String, dynamic>.from(item)))
           .toList();
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 }

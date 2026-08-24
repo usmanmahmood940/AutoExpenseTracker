@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 
 void main() {
@@ -88,6 +89,29 @@ void main() {
     await client.call('ensureUserProfile', requireAuth: true);
     expect(captured.headers['X-Firebase-AppCheck'], 'app-check-token');
     expect(captured.headers['Authorization'], 'Bearer id-token');
+    client.dispose();
+  });
+
+  test('maps transport failures to a network CloudFunctionsHttpException',
+      () async {
+    final client = CloudFunctionsHttpClient(
+      client: MockClient((request) async {
+        throw Exception('Connection failed');
+      }),
+      projectId: 'demo-project',
+      region: 'asia-south1',
+      appCheckTokenFetcher: () async => null,
+      idTokenFetcher: () async => null,
+    );
+
+    expect(
+      () => client.call('sendEmailOtp'),
+      throwsA(
+        isA<CloudFunctionsHttpException>()
+            .having((e) => e.isNetwork, 'isNetwork', isTrue)
+            .having((e) => e.toDataException(), 'data', isA<NetworkException>()),
+      ),
+    );
     client.dispose();
   });
 }

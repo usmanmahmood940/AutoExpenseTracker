@@ -7,7 +7,10 @@ import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/balance_header.dart';
+import 'package:nova_spend/core/widgets/error_state_view.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/features/analytics/presentation/provider/insights_provider.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
@@ -23,7 +26,7 @@ class InsightsPage extends StatelessWidget {
     if (uid == null) {
       return AdaptiveScaffold(
         title: context.l10n.insightsTitle,
-        body: Center(child: Text(context.l10n.authLoading)),
+        body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
 
@@ -71,11 +74,18 @@ class _InsightsView extends StatelessWidget {
           ),
         ],
       ),
-      body: provider.isLoading
-          ? Center(child: Text(l10n.commonLoading))
-          : summary == null
+      body: provider.isLoading && summary == null
+          ? const _InsightsSkeleton()
+          : provider.error != null && summary == null
+              ? ErrorStateView(
+                  error: provider.error,
+                  onRetry: provider.retry,
+                )
+              : summary == null
               ? Center(child: Text(l10n.insightsEmpty))
-              : ListView(
+              : AppBusyContent(
+                  busy: provider.isLoading,
+                  child: ListView(
                   padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
                   children: [
                     BalanceHeader(
@@ -151,6 +161,7 @@ class _InsightsView extends StatelessWidget {
                       ),
                     ),
                   ],
+                  ),
                 ),
     );
   }
@@ -159,6 +170,95 @@ class _InsightsView extends StatelessWidget {
     final list = map.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return list.take(5).toList();
+  }
+}
+
+/// First-load placeholder mirroring the insights layout.
+class _InsightsSkeleton extends StatelessWidget {
+  const _InsightsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonPulse(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.xxl,
+        ),
+        children: [
+          const Center(child: SkeletonBox(width: 96, height: 12)),
+          const SizedBox(height: AppSpacing.smPlus),
+          const Center(child: SkeletonBox(width: 196, height: 34)),
+          const SizedBox(height: AppSpacing.lg),
+          const Row(
+            children: [
+              Expanded(child: _StatCardBones()),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(child: _StatCardBones()),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const SkeletonSectionHeader(titleWidth: 124),
+          const SizedBox(height: AppSpacing.sm),
+          SkeletonCard(
+            child: Column(
+              children: [
+                for (var i = 0; i < 4; i++) ...[
+                  if (i != 0) const SizedBox(height: AppSpacing.smPlus2),
+                  const _CategoryBarBones(),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const SkeletonSectionHeader(titleWidth: 148),
+          const SizedBox(height: AppSpacing.sm),
+          const SkeletonCardList(cardCount: 1, linesPerCard: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCardBones extends StatelessWidget {
+  const _StatCardBones();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SkeletonCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonBox(width: 64, height: 11),
+          SizedBox(height: AppSpacing.xs),
+          SkeletonBox(width: 96, height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryBarBones extends StatelessWidget {
+  const _CategoryBarBones();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            SkeletonBox(width: 104, height: 12),
+            Spacer(),
+            SkeletonBox(width: 56, height: 10),
+          ],
+        ),
+        SizedBox(height: AppSpacing.xs),
+        SkeletonBox(height: 8, radius: 4),
+      ],
+    );
   }
 }
 

@@ -5,6 +5,9 @@ import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
+import 'package:nova_spend/core/widgets/error_state_view.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/provider/merchant_provider.dart';
@@ -33,7 +36,7 @@ class MerchantPage extends StatelessWidget {
     if (uid == null) {
       return AdaptiveScaffold(
         title: title,
-        body: Center(child: Text(context.l10n.authLoading)),
+        body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
 
@@ -72,10 +75,13 @@ class _MerchantView extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: provider.isLoading
-          ? Center(child: Text(l10n.commonLoading))
+      body: provider.isLoading && provider.items.isEmpty
+          ? const _MerchantSkeleton()
           : provider.error != null && provider.items.isEmpty
-              ? Center(child: Text(l10n.errorLoadFailed))
+              ? ErrorStateView(
+                  error: provider.error,
+                  onRetry: provider.refresh,
+                )
               : RefreshIndicator(
                   onRefresh: provider.refresh,
                   child: NotificationListener<ScrollNotification>(
@@ -150,6 +156,19 @@ class _MerchantView extends StatelessWidget {
                             ),
                           ),
                         const SizedBox(height: AppSpacing.lg),
+                        if (provider.error != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.md,
+                              0,
+                              AppSpacing.md,
+                              AppSpacing.md,
+                            ),
+                            child: LoadErrorBanner(
+                              error: provider.error,
+                              onRetry: provider.refresh,
+                            ),
+                          ),
                         Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
@@ -237,13 +256,40 @@ class _MerchantView extends StatelessWidget {
         );
     }
     if (provider.isLoadingMore) {
-      widgets.add(
-        const Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      );
+      widgets.add(const AppListFooterLoader());
     }
     return widgets;
+  }
+}
+
+/// First-load placeholder mirroring the merchant header + transaction list.
+class _MerchantSkeleton extends StatelessWidget {
+  const _MerchantSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonPulse(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.xxl,
+        ),
+        children: const [
+          SkeletonBox(width: 180, height: 24),
+          SizedBox(height: AppSpacing.smPlus),
+          SkeletonBox(width: 148, height: 16),
+          SizedBox(height: AppSpacing.xs),
+          SkeletonBox(width: 112, height: 12),
+          SizedBox(height: AppSpacing.md),
+          SkeletonCard(child: SkeletonBox(width: 200, height: 14)),
+          SizedBox(height: AppSpacing.lg),
+          SkeletonSectionHeader(titleWidth: 132),
+          SizedBox(height: AppSpacing.sm),
+          SkeletonTransactionList(),
+        ],
+      ),
+    );
   }
 }

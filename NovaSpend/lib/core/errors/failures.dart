@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:nova_spend/core/errors/exceptions.dart';
 
 /// Base class for domain-level failures.
 abstract class Failure extends Equatable {
@@ -8,6 +9,25 @@ abstract class Failure extends Equatable {
 
   @override
   List<Object?> get props => [message];
+
+  @override
+  String toString() => message;
+}
+
+/// Maps data-layer exceptions to domain [Failure]s for repositories.
+Never throwAsFailure(Object error) {
+  if (error is Failure) throw error;
+  if (error is NetworkException) throw NetworkFailure(error.message);
+  if (error is AuthException) throw AuthFailure(error.message);
+  if (error is CacheException) throw CacheFailure(error.message);
+  if (error is ServerException) throw ServerFailure(error.message);
+  throw UnknownFailure(error.toString());
+}
+
+Stream<T> mapStreamFailures<T>(Stream<T> source) {
+  return source.handleError((Object error, StackTrace stackTrace) {
+    throwAsFailure(error);
+  });
 }
 
 class ServerFailure extends Failure {

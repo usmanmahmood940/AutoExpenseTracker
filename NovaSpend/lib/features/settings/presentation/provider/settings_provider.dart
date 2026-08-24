@@ -65,8 +65,9 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> exportCsv(String uid) async {
+  Future<bool> exportCsv(String uid) async {
     isExporting = true;
+    error = null;
     notifyListeners();
     try {
       final txs = <TransactionEntity>[];
@@ -84,8 +85,10 @@ class SettingsProvider extends ChangeNotifier {
         if (txs.length >= 5000) break;
       }
       await _exportService.exportTransactionsCsv(txs);
+      return true;
     } catch (e) {
       error = e.toString();
+      return false;
     } finally {
       isExporting = false;
       notifyListeners();

@@ -971,6 +971,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorLoadFailed => 'Could not load data';
 
   @override
+  String get errorLoadFailedHint => 'Check your connection and try again.';
+
+  @override
+  String get errorNetwork => 'No internet connection';
+
+  @override
+  String get errorRetry => 'Try again';
+
+  @override
   String get commonCancel => 'Cancel';
 
   @override

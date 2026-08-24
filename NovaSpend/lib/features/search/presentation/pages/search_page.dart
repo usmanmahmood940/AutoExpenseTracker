@@ -7,9 +7,12 @@ import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/empty_state_view.dart';
+import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
@@ -34,7 +37,7 @@ class SearchPage extends StatelessWidget {
     if (uid == null) {
       return AdaptiveScaffold(
         title: context.l10n.feedTitle,
-        body: Center(child: Text(context.l10n.authLoading)),
+        body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
 
@@ -323,14 +326,18 @@ class _SearchViewState extends State<_SearchView> {
                           const SizedBox(height: AppSpacing.lg),
                         ],
                         if (provider.isLoading)
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Center(child: Text(l10n.commonLoading)),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            child: SkeletonTransactionList(),
                           )
-                        else if (provider.error != null)
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Center(child: Text(l10n.errorLoadFailed)),
+                        else if (provider.error != null &&
+                            provider.results.isEmpty)
+                          ErrorStateView(
+                            error: provider.error,
+                            onRetry: () =>
+                                provider.runSearch(saveRecent: false),
                           )
                         else if (!provider.hasSearched)
                           EmptyStateView(
@@ -371,11 +378,21 @@ class _SearchViewState extends State<_SearchView> {
                                     results: provider.results,
                                   ),
                           ),
-                          if (provider.isLoadingMore)
-                            const Padding(
-                              padding: EdgeInsets.all(AppSpacing.md),
-                              child: Center(child: CircularProgressIndicator()),
+                          if (provider.error != null)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                AppSpacing.md,
+                                AppSpacing.md,
+                                0,
+                              ),
+                              child: LoadErrorBanner(
+                                error: provider.error,
+                                onRetry: provider.loadMore,
+                              ),
                             ),
+                          if (provider.isLoadingMore)
+                            const AppListFooterLoader(),
                         ],
                       ],
                     ),

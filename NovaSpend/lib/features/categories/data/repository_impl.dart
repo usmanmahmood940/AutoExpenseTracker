@@ -1,5 +1,4 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/categories/data/datasource/backend_category_datasource.dart';
 import 'package:nova_spend/features/categories/data/datasource/firestore_category_datasource.dart';
@@ -54,8 +53,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
         icon: icon,
         color: color,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 }

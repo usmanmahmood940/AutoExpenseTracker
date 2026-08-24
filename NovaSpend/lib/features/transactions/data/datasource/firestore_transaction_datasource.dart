@@ -121,7 +121,7 @@ class FirestoreTransactionDatasource {
         totalAmount: totalAmount,
       );
     } on CloudFunctionsHttpException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to load transactions');
     }
@@ -144,7 +144,7 @@ class FirestoreTransactionDatasource {
       );
       return _periodStatsFromResponse(response);
     } on CloudFunctionsHttpException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to load period stats');
     }

@@ -4,6 +4,9 @@ import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
+import 'package:nova_spend/core/widgets/error_state_view.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/settings/presentation/provider/review_provider.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
@@ -21,7 +24,7 @@ class ReviewPage extends StatelessWidget {
     if (uid == null) {
       return AdaptiveScaffold(
         title: context.l10n.reviewTitle,
-        body: Center(child: Text(context.l10n.authLoading)),
+        body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
 
@@ -50,8 +53,16 @@ class _ReviewView extends StatelessWidget {
 
     return AdaptiveScaffold(
       title: l10n.reviewTitle,
-      body: provider.isLoading
-          ? Center(child: Text(l10n.commonLoading))
+      body: provider.isLoading && empty
+          ? const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: SkeletonCardList(),
+            )
+          : provider.error != null && empty
+          ? ErrorStateView(
+              error: provider.error,
+              onRetry: provider.refresh,
+            )
           : empty
           ? Center(child: Text(l10n.reviewEmpty))
           : RefreshIndicator(
@@ -60,11 +71,9 @@ class _ReviewView extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   if (provider.error != null) ...[
-                    Text(
-                      provider.error!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                    LoadErrorBanner(
+                      error: provider.error,
+                      onRetry: provider.refresh,
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
@@ -137,11 +146,17 @@ class _ConfidenceCard extends StatelessWidget {
             Row(
               children: [
                 TextButton(
-                  onPressed: () => provider.confirm(transaction),
+                  onPressed: () => _runReviewAction(
+                    context,
+                    () => provider.confirm(transaction),
+                  ),
                   child: Text(l10n.reviewConfirm),
                 ),
                 TextButton(
-                  onPressed: () => provider.dismiss(transaction),
+                  onPressed: () => _runReviewAction(
+                    context,
+                    () => provider.dismiss(transaction),
+                  ),
                   child: Text(l10n.reviewDismiss),
                 ),
                 TextButton(
@@ -253,18 +268,21 @@ class _IngestionCard extends StatelessWidget {
       final date =
           '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final currency = AppCurrencyScope.of(context).currency;
-      await context.read<ReviewProvider>().completeManually(
-        ingestionId: ingestion.id,
-        fields: {
-          'merchant': merchant.text.trim(),
-          'amount': parsedAmount,
-          'type': type,
-          'category': category.trim().isEmpty
-              ? 'Uncategorized'
-              : category.trim(),
-          'transactionDate': date,
-          'currency': currency,
-        },
+      await _runReviewAction(
+        context,
+        () => context.read<ReviewProvider>().completeManually(
+          ingestionId: ingestion.id,
+          fields: {
+            'merchant': merchant.text.trim(),
+            'amount': parsedAmount,
+            'type': type,
+            'category': category.trim().isEmpty
+                ? 'Uncategorized'
+                : category.trim(),
+            'transactionDate': date,
+            'currency': currency,
+          },
+        ),
       );
     }
     merchant.dispose();
@@ -299,6 +317,18 @@ class _IngestionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+Future<void> _runReviewAction(
+  BuildContext context,
+  Future<bool> Function() action,
+) async {
+  final ok = await action();
+  if (!ok && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.errorGeneric)),
     );
   }
 }

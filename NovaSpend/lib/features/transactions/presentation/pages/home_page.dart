@@ -8,8 +8,10 @@ import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/empty_state_view.dart';
+import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/period_overview_card.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
@@ -51,7 +53,7 @@ class _HomePageState extends State<HomePage> {
     if (uid == null) {
       return AdaptiveScaffold(
         title: context.l10n.homeTitle,
-        body: Center(child: Text(context.l10n.authLoading)),
+        body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
 
@@ -309,7 +311,10 @@ class _HomeBody extends StatelessWidget {
       return const HomeFeedSkeleton();
     }
     if (home.error != null && home.items.isEmpty) {
-      return _stateBox(context, Text(l10n.errorLoadFailed));
+      return ErrorStateView(
+        error: home.error,
+        onRetry: home.refresh,
+      );
     }
     if (home.items.isEmpty) {
       return EmptyStateView(
@@ -323,6 +328,10 @@ class _HomeBody extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (home.error != null) ...[
+            LoadErrorBanner(error: home.error, onRetry: home.refresh),
+            const SizedBox(height: _sectionGap),
+          ],
           _Highlights(home: home),
           const SizedBox(height: _sectionGap),
           SectionHeader(title: l10n.homeRecentTransactions),
@@ -338,6 +347,10 @@ class _HomeBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (home.error != null) ...[
+          LoadErrorBanner(error: home.error, onRetry: home.refresh),
+          const SizedBox(height: _sectionGap),
+        ],
         _Highlights(home: home),
         const SizedBox(height: _sectionGap),
         SectionHeader(
@@ -592,13 +605,6 @@ class _ShowMoreButton extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _stateBox(BuildContext context, Widget child) {
-  return Padding(
-    padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * 0.2),
-    child: Center(child: child),
-  );
 }
 
 void _openDetail(BuildContext context, TransactionEntity tx) {

@@ -4,6 +4,7 @@ import 'package:nova_spend/core/forms/validators.dart';
 import 'package:nova_spend/core/locale/app_locale_scope.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/auth/presentation/widgets/or_divider.dart';
 import 'package:nova_spend/features/auth/presentation/widgets/social_sign_in_buttons.dart';
 import 'package:nova_spend/features/settings/presentation/pages/language_selection_page.dart';
@@ -120,11 +121,7 @@ class LoginSignupForm extends StatelessWidget {
                 suffixIcon: checkingEmail
                     ? const Padding(
                         padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                        child: AppLoader(size: AppLoaderSize.small),
                       )
                     : null,
               ),

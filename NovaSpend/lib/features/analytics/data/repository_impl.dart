@@ -1,4 +1,5 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
+import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/analytics/data/datasource/backend_analytics_datasource.dart';
 import 'package:nova_spend/features/analytics/data/datasource/firestore_analytics_datasource.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
@@ -18,8 +19,10 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
 
   @override
   Stream<MonthlySummaryEntity?> watchSummary(String uid, String yearMonth) {
-    if (_useBackend) return _backend!.watchSummary(yearMonth);
-    return _datasource.watchSummary(uid, yearMonth);
+    final source = _useBackend
+        ? _backend!.watchSummary(yearMonth)
+        : _datasource.watchSummary(uid, yearMonth);
+    return mapStreamFailures(source);
   }
 
   @override
@@ -27,9 +30,9 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     String uid, {
     int limit = 6,
   }) {
-    if (_useBackend) {
-      return _backend!.watchRecentSummaries(limit: limit);
-    }
-    return _datasource.watchRecentSummaries(uid, limit: limit);
+    final source = _useBackend
+        ? _backend!.watchRecentSummaries(limit: limit)
+        : _datasource.watchRecentSummaries(uid, limit: limit);
+    return mapStreamFailures(source);
   }
 }

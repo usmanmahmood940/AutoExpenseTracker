@@ -1,4 +1,3 @@
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
@@ -24,7 +23,7 @@ class BackendCategoryDatasource {
       _cache = items;
       return items;
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -58,7 +57,7 @@ class BackendCategoryDatasource {
       _cache = null;
       return created['id']?.toString() ?? '';
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 }

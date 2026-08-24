@@ -1,4 +1,3 @@
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
@@ -17,7 +16,7 @@ class BackendAnalyticsDatasource {
       );
       yield monthlySummaryFromApi(json);
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 
@@ -40,7 +39,7 @@ class BackendAnalyticsDatasource {
           .map((item) => monthlySummaryFromApi(Map<String, dynamic>.from(item)))
           .toList();
     } on ApiException catch (e) {
-      throw ServerException(e.message);
+      throw e.toDataException();
     }
   }
 }

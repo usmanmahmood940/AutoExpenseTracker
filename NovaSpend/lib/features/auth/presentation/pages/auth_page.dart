@@ -8,6 +8,7 @@ import 'package:nova_spend/core/forms/validators.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/auth/presentation/auth_error_mapper.dart';
 import 'package:nova_spend/features/auth/presentation/auth_service.dart';
 import 'package:nova_spend/features/auth/presentation/auth_submit_flow.dart';
@@ -531,13 +532,7 @@ class _AuthPageState extends State<AuthPage> {
                 child: body,
               ),
             ),
-            if (_isSubmitting)
-              const Positioned.fill(
-                child: ColoredBox(
-                  color: Color(0x66000000),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ),
+            if (_isSubmitting) const AppBlockingLoaderOverlay(),
           ],
         ),
       ),

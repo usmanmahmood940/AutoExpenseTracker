@@ -14,6 +14,7 @@ import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/settings/presentation/pages/currency_selection_page.dart';
 import 'package:nova_spend/features/settings/presentation/pages/language_selection_page.dart';
@@ -33,7 +34,7 @@ class SettingsPage extends StatelessWidget {
     if (uid == null) {
       return AdaptiveScaffold(
         title: context.l10n.settingsTitle,
-        body: Center(child: Text(context.l10n.authLoading)),
+        body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
 
@@ -279,13 +280,25 @@ class _SettingsView extends StatelessWidget {
                 onPressed: provider.isExporting
                     ? null
                     : () async {
-                        await provider.exportCsv(uid);
+                        final ok = await provider.exportCsv(uid);
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.settingsExportDone)),
-                        );
+                        if (ok) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.settingsExportDone)),
+                          );
+                        } else {
+                          await AppDialogs.showError(
+                            context,
+                            message: l10n.errorGeneric,
+                          );
+                        }
                       },
-                child: Text(l10n.settingsExport),
+                child: provider.isExporting
+                    ? const AppLoader(
+                        size: AppLoaderSize.small,
+                        color: Colors.white,
+                      )
+                    : Text(l10n.settingsExport),
               ),
             ],
           ),

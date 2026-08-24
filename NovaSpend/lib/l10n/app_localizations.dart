@@ -1882,6 +1882,24 @@ abstract class AppLocalizations {
   /// **'Could not load data'**
   String get errorLoadFailed;
 
+  /// No description provided for @errorLoadFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get errorLoadFailedHint;
+
+  /// No description provided for @errorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection'**
+  String get errorNetwork;
+
+  /// No description provided for @errorRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get errorRetry;
+
   /// No description provided for @commonCancel.
   ///
   /// In en, this message translates to:

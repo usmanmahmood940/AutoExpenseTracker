@@ -51,43 +51,64 @@ class ReviewProvider extends ChangeNotifier {
       duplicates = dups;
     } catch (e) {
       error = e.toString();
-      lowConfidence = [];
-      needsParse = [];
-      duplicates = [];
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> confirm(TransactionEntity tx) async {
+  Future<bool> confirm(TransactionEntity tx) async {
     final uid = _uid;
-    if (uid == null) return;
-    await _markReviewed(uid, tx.id);
-    lowConfidence = lowConfidence.where((item) => item.id != tx.id).toList();
-    notifyListeners();
+    if (uid == null) return false;
+    try {
+      await _markReviewed(uid, tx.id);
+      lowConfidence = lowConfidence.where((item) => item.id != tx.id).toList();
+      error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 
-  Future<void> dismiss(TransactionEntity tx) async {
+  Future<bool> dismiss(TransactionEntity tx) async {
     final uid = _uid;
-    if (uid == null) return;
-    await _repository.softDelete(uid, tx.id);
-    lowConfidence = lowConfidence.where((item) => item.id != tx.id).toList();
-    notifyListeners();
+    if (uid == null) return false;
+    try {
+      await _repository.softDelete(uid, tx.id);
+      lowConfidence = lowConfidence.where((item) => item.id != tx.id).toList();
+      error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 
-  Future<void> completeManually({
+  Future<bool> completeManually({
     required String ingestionId,
     required Map<String, dynamic> fields,
   }) async {
     final uid = _uid;
-    if (uid == null) return;
-    await _repository.createManualFromIngestion(
-      uid: uid,
-      ingestionId: ingestionId,
-      transactionFields: fields,
-    );
-    needsParse = needsParse.where((item) => item.id != ingestionId).toList();
-    notifyListeners();
+    if (uid == null) return false;
+    try {
+      await _repository.createManualFromIngestion(
+        uid: uid,
+        ingestionId: ingestionId,
+        transactionFields: fields,
+      );
+      needsParse = needsParse.where((item) => item.id != ingestionId).toList();
+      error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 }

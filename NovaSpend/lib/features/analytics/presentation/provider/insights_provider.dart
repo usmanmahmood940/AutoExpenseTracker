@@ -46,23 +46,27 @@ class InsightsProvider extends ChangeNotifier {
     final uid = _uid;
     if (uid == null) return;
     _summarySub?.cancel();
+    error = null;
     isLoading = true;
     notifyListeners();
 
     _summarySub = _repository.watchSummary(uid, yearMonth).listen(
       (value) {
         summary = value;
+        error = null;
         isLoading = false;
         notifyListeners();
       },
       onError: (Object e) {
         error = e.toString();
+        summary = null;
         isLoading = false;
         notifyListeners();
       },
     );
-
   }
+
+  void retry() => _listen();
 
   @override
   void dispose() {

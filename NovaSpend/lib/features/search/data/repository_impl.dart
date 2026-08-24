@@ -1,5 +1,4 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/search/data/datasource/firestore_search_datasource.dart';
@@ -47,8 +46,8 @@ class SearchRepositoryImpl implements SearchRepository {
         limit: limit,
         startAfter: startAfter,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 

@@ -1,5 +1,4 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/transactions/data/datasource/backend_transaction_datasource.dart';
 import 'package:nova_spend/features/transactions/data/datasource/firestore_transaction_datasource.dart';
@@ -68,8 +67,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         sortBy: sortBy,
         orderBy: orderBy,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -92,8 +91,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         from: from,
         to: to,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -109,8 +108,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         return;
       }
       await _datasource.updateTransaction(uid, transactionId, fields);
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -132,8 +131,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         return await _backend!.getNeedsReview(limit: limit);
       }
       return await _datasource.getNeedsReview(uid, limit: limit);
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -159,8 +158,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         return await _backend!.getIngestionsByStatus(status, limit: limit);
       }
       return await _datasource.getIngestionsByStatus(uid, status, limit: limit);
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -190,8 +189,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         ingestionId: ingestionId,
         transactionFields: transactionFields,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -203,8 +202,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         return;
       }
       await _datasource.markReviewed(uid, transactionId);
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -216,8 +215,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         return;
       }
       await _datasource.softDelete(uid, transactionId);
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -243,8 +242,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         displayName: displayName,
         category: category,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -261,8 +260,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         uid: uid,
         merchantKey: merchantKey,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -280,8 +279,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
         uid: uid,
         merchantKey: merchantKey,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 }

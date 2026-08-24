@@ -101,6 +101,7 @@ class MerchantProvider extends ChangeNotifier {
         final existingIds = items.map((e) => e.id).toSet();
         items = [...items, ...more.where((t) => !existingIds.contains(t.id))];
         hasMore = more.length >= 50;
+        error = null;
       }
     } catch (e) {
       error = e.toString();

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/services/biometric_service.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/settings/domain/repositories/settings_repository.dart';
 import 'package:nova_spend/features/settings/presentation/pages/main_shell_page.dart';
@@ -63,23 +64,14 @@ class _LockGateState extends State<LockGate> {
 
     if (auth.isLoading || _checking) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(context.l10n.commonLoading),
-            ],
-          ),
-        ),
+        body: AppPageLoader(label: context.l10n.commonLoading),
       );
     }
 
     if (!auth.isSignedIn) {
       // AuthGate should have already switched; keep a brief spinner.
       return Scaffold(
-        body: Center(child: Text(context.l10n.commonLoading)),
+        body: AppPageLoader(label: context.l10n.commonLoading),
       );
     }
 

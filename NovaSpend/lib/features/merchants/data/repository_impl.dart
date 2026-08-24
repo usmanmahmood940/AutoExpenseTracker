@@ -1,5 +1,4 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
-import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/merchants/data/datasource/backend_merchant_datasource.dart';
 import 'package:nova_spend/features/merchants/data/datasource/firestore_merchant_datasource.dart';
@@ -36,8 +35,8 @@ class MerchantRepositoryImpl implements MerchantRepository {
         merchantNormalized: merchantNormalized,
         displayNameHint: displayNameHint,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 
@@ -62,8 +61,8 @@ class MerchantRepositoryImpl implements MerchantRepository {
         limit: limit,
         startAfter: startAfter,
       );
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
+    } catch (e) {
+      throwAsFailure(e);
     }
   }
 }

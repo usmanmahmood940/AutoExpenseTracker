@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 
 void main() {
@@ -101,6 +102,26 @@ void main() {
       expect(e.code, 'email_exists');
       expect(e.isEmailExists, isTrue);
       expect(e.message, contains('already in use'));
+    }
+    client.dispose();
+  });
+
+  test('maps transport failures to a network ApiException', () async {
+    final client = ApiClient(
+      client: MockClient((request) async {
+        throw Exception('Connection failed');
+      }),
+      baseUrl: 'https://api.example.com',
+      idTokenFetcher: () async => null,
+    );
+
+    try {
+      await client.get('/me');
+      fail('expected ApiException');
+    } on ApiException catch (e) {
+      expect(e.isNetwork, isTrue);
+      expect(e.code, 'network_error');
+      expect(e.toDataException(), isA<NetworkException>());
     }
     client.dispose();
   });

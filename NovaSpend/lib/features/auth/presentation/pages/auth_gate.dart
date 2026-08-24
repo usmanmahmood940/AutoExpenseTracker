@@ -6,6 +6,7 @@ import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/http/api_client.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
 import 'package:nova_spend/features/auth/presentation/auth_service.dart';
 import 'package:nova_spend/features/auth/presentation/pages/auth_page.dart';
@@ -54,16 +55,7 @@ class _AuthGateState extends State<AuthGate> {
 
         if (waiting && user == null) {
           return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(context.l10n.commonLoading),
-                ],
-              ),
-            ),
+            body: AppPageLoader(label: context.l10n.commonLoading),
           );
         }
 
