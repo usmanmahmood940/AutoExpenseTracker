@@ -226,6 +226,36 @@ abstract class AppLocalizations {
   /// **'Amount range'**
   String get filterSheetAmountRange;
 
+  /// No description provided for @filterSheetAmountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Min'**
+  String get filterSheetAmountMin;
+
+  /// No description provided for @filterSheetAmountMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max'**
+  String get filterSheetAmountMax;
+
+  /// No description provided for @filterSheetAmountAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get filterSheetAmountAny;
+
+  /// No description provided for @filterSheetAmountInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Min must be less than max'**
+  String get filterSheetAmountInvalid;
+
+  /// No description provided for @filterSheetSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String filterSheetSelectedCount(int count);
+
   /// No description provided for @filterSourceIosShortcut.
   ///
   /// In en, this message translates to:

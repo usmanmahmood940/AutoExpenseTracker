@@ -78,6 +78,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterSheetAmountRange => 'Amount range';
 
   @override
+  String get filterSheetAmountMin => 'Min';
+
+  @override
+  String get filterSheetAmountMax => 'Max';
+
+  @override
+  String get filterSheetAmountAny => 'Any';
+
+  @override
+  String get filterSheetAmountInvalid => 'Min must be less than max';
+
+  @override
+  String filterSheetSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
   String get filterSourceIosShortcut => 'iOS Shortcut';
 
   @override

@@ -27,6 +27,16 @@
   "categorySheetTitle": "Select categories",
   "categorySheetAll": "All categories",
   "filterSheetAmountRange": "Amount range",
+  "filterSheetAmountMin": "Min",
+  "filterSheetAmountMax": "Max",
+  "filterSheetAmountAny": "Any",
+  "filterSheetAmountInvalid": "Min must be less than max",
+  "filterSheetSelectedCount": "{count} selected",
+  "@filterSheetSelectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "filterSourceIosShortcut": "iOS Shortcut",
   "filterSourceGmail": "Gmail",
   "activityResetAll": "Reset all",

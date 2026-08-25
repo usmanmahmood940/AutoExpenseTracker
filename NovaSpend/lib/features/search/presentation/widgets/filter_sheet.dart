@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
+import 'package:nova_spend/core/theme/app_motion.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/sheet_action_footer.dart';
@@ -133,34 +133,39 @@ class _FilterSheetState extends State<FilterSheet> {
     return true;
   }
 
-  void _selectType(String type) {
+  void _selectType(String? type) {
+    HapticFeedback.selectionClick();
     setState(() => _type = _type == type ? null : type);
   }
 
   void _togglePaymentMethod(String method) {
+    HapticFeedback.selectionClick();
     setState(() {
-      if (_paymentMethods.contains(method)) {
-        _paymentMethods.remove(method);
-      } else {
-        _paymentMethods.add(method);
-        if (_paymentMethods.length >= widget.paymentMethods.length) {
-          _paymentMethods.clear();
-        }
+      if (!_paymentMethods.remove(method)) _paymentMethods.add(method);
+      if (_paymentMethods.length >= widget.paymentMethods.length) {
+        _paymentMethods.clear();
       }
     });
   }
 
   void _toggleSource(String source) {
+    HapticFeedback.selectionClick();
     setState(() {
-      if (_sources.contains(source)) {
-        _sources.remove(source);
-      } else {
-        _sources.add(source);
-        if (_sources.length >= kIngestionSources.length) {
-          _sources.clear();
-        }
-      }
+      if (!_sources.remove(source)) _sources.add(source);
+      if (_sources.length >= kIngestionSources.length) _sources.clear();
     });
+  }
+
+  void _clearPaymentMethods() {
+    if (_paymentMethods.isEmpty) return;
+    HapticFeedback.selectionClick();
+    setState(_paymentMethods.clear);
+  }
+
+  void _clearSources() {
+    if (_sources.isEmpty) return;
+    HapticFeedback.selectionClick();
+    setState(_sources.clear);
   }
 
   bool get _canApply {
@@ -277,84 +282,91 @@ class _FilterSheetState extends State<FilterSheet> {
                   const SizedBox(height: AppSpacing.smPlus2),
                   Flexible(
                     child: SingleChildScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _SectionLabel(label: l10n.filterSheetAmountRange),
-                          const SizedBox(height: AppSpacing.sm),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _AmountField(
-                                  label: l10n.dateRangeStartLabel,
-                                  hint: l10n.feedFilterAmountMin,
-                                  currency: currency,
-                                  controller: _min,
-                                  invalid: !_amountValid,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  AppSpacing.sm,
-                                  28,
-                                  AppSpacing.sm,
-                                  0,
-                                ),
-                                child: Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 16,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              Expanded(
-                                child: _AmountField(
-                                  label: l10n.dateRangeEndLabel,
-                                  hint: l10n.feedFilterAmountMax,
-                                  currency: currency,
-                                  controller: _max,
-                                  invalid: !_amountValid,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          _SectionLabel(label: l10n.feedFilterType),
-                          const SizedBox(height: AppSpacing.sm),
-                          _FilterOption(
-                            label: l10n.feedFilterTypeDebit,
-                            selected: _type == 'debit',
-                            leading: Icons.arrow_downward_rounded,
-                            onTap: () => _selectType('debit'),
-                          ),
-                          _FilterOption(
-                            label: l10n.feedFilterTypeCredit,
-                            selected: _type == 'credit',
-                            leading: Icons.arrow_upward_rounded,
-                            onTap: () => _selectType('credit'),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          _SectionLabel(label: l10n.transactionPaymentMethod),
-                          const SizedBox(height: AppSpacing.sm),
-                          for (final method in widget.paymentMethods)
-                            _FilterOption(
-                              label: paymentMethodLabel(l10n, method),
-                              selected: _paymentMethods.contains(method),
-                              asset: 'assets/icons/icon_payment_method.svg',
-                              multiSelect: true,
-                              onTap: () => _togglePaymentMethod(method),
+                          _FilterSection(
+                            label: l10n.filterSheetAmountRange,
+                            child: _AmountRange(
+                              min: _min,
+                              max: _max,
+                              currency: currency,
+                              invalid: !_amountValid,
+                              errorText: l10n.filterSheetAmountInvalid,
                             ),
-                          const SizedBox(height: AppSpacing.md),
-                          _SectionLabel(label: l10n.transactionSource),
-                          const SizedBox(height: AppSpacing.sm),
-                          for (final source in kIngestionSources)
-                            _FilterOption(
-                              label: ingestionSourceLabel(l10n, source),
-                              selected: _sources.contains(source),
-                              leading: _sourceIcon(source),
-                              multiSelect: true,
-                              onTap: () => _toggleSource(source),
+                          ),
+                          _FilterSection(
+                            label: l10n.feedFilterType,
+                            child: Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                _FilterChip(
+                                  label: l10n.feedFilterTypeAll,
+                                  selected: _type == null,
+                                  onTap: () => _selectType(null),
+                                ),
+                                _FilterChip(
+                                  label: l10n.feedFilterTypeDebit,
+                                  selected: _type == 'debit',
+                                  icon: Icons.arrow_outward_rounded,
+                                  onTap: () => _selectType('debit'),
+                                ),
+                                _FilterChip(
+                                  label: l10n.feedFilterTypeCredit,
+                                  selected: _type == 'credit',
+                                  icon: Icons.south_west_rounded,
+                                  onTap: () => _selectType('credit'),
+                                ),
+                              ],
                             ),
+                          ),
+                          _FilterSection(
+                            label: l10n.transactionPaymentMethod,
+                            selectedCount: _paymentMethods.length,
+                            child: Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                _FilterChip(
+                                  label: l10n.commonAll,
+                                  selected: _paymentMethods.isEmpty,
+                                  onTap: _clearPaymentMethods,
+                                ),
+                                for (final method in widget.paymentMethods)
+                                  _FilterChip(
+                                    label: paymentMethodLabel(l10n, method),
+                                    selected: _paymentMethods.contains(method),
+                                    onTap: () => _togglePaymentMethod(method),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          _FilterSection(
+                            label: l10n.transactionSource,
+                            selectedCount: _sources.length,
+                            isLast: true,
+                            child: Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                _FilterChip(
+                                  label: l10n.commonAll,
+                                  selected: _sources.isEmpty,
+                                  onTap: _clearSources,
+                                ),
+                                for (final source in kIngestionSources)
+                                  _FilterChip(
+                                    label: ingestionSourceLabel(l10n, source),
+                                    selected: _sources.contains(source),
+                                    icon: _sourceIcon(source),
+                                    onTap: () => _toggleSource(source),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -378,22 +390,157 @@ class _FilterSheetState extends State<FilterSheet> {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
+/// Section label (with an optional selected count) above a group of controls.
+class _FilterSection extends StatelessWidget {
+  const _FilterSection({
+    required this.label,
+    required this.child,
+    this.selectedCount = 0,
+    this.isLast = false,
+  });
 
   final String label;
+  final Widget child;
+  final int selectedCount;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Text(
-      label,
-      style: theme.textTheme.titleSmall?.copyWith(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.02 * 13,
-        color: theme.colorScheme.onSurfaceVariant,
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.02 * 13,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (selectedCount > 0)
+                Text(
+                  l10n.filterSheetSelectedCount(selectedCount),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryStrong,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.smPlus),
+          child,
+        ],
       ),
+    );
+  }
+}
+
+/// Min / max amount inputs with an inline range error.
+class _AmountRange extends StatelessWidget {
+  const _AmountRange({
+    required this.min,
+    required this.max,
+    required this.currency,
+    required this.invalid,
+    required this.errorText,
+  });
+
+  final TextEditingController min;
+  final TextEditingController max;
+  final String currency;
+  final bool invalid;
+  final String errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: _AmountField(
+                label: l10n.filterSheetAmountMin,
+                currency: currency,
+                controller: min,
+                invalid: invalid,
+                isLast: false,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: Container(
+                width: 10,
+                height: 1.5,
+                decoration: BoxDecoration(
+                  color: AppColors.border(
+                    theme.brightness,
+                  ).withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+            ),
+            Expanded(
+              child: _AmountField(
+                label: l10n.filterSheetAmountMax,
+                currency: currency,
+                controller: max,
+                invalid: invalid,
+                isLast: true,
+              ),
+            ),
+          ],
+        ),
+        AnimatedSize(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : AppMotion.fast,
+          curve: AppMotion.standard,
+          alignment: Alignment.topLeft,
+          child: invalid
+              ? Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 14,
+                        color: AppColors.warningForeground(theme.brightness),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          errorText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.warningForeground(
+                              theme.brightness,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }
@@ -401,112 +548,95 @@ class _SectionLabel extends StatelessWidget {
 class _AmountField extends StatelessWidget {
   const _AmountField({
     required this.label,
-    required this.hint,
     required this.currency,
     required this.controller,
     required this.invalid,
+    required this.isLast,
   });
 
   final String label;
-  final String hint;
   final String currency;
   final TextEditingController controller;
   final bool invalid;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final accent = AppColors.primaryStrong;
     final border = AppColors.border(brightness);
+    final warning = AppColors.warningForeground(brightness);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-          ],
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-            prefixText: '$currency  ',
-            prefixStyle: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            filled: true,
-            fillColor: AppColors.neutralFill(
-              brightness,
-            ).withValues(alpha: 0.45),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.smPlus2,
-              vertical: AppSpacing.smPlus,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              borderSide: BorderSide(color: border.withValues(alpha: 0.7)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              borderSide: BorderSide(
-                color: invalid
-                    ? AppColors.warningForeground(brightness)
-                    : border.withValues(alpha: 0.7),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              borderSide: BorderSide(
-                color: invalid
-                    ? AppColors.warningForeground(brightness)
-                    : accent,
-                width: 1.5,
-              ),
-            ),
-          ),
-        ),
+    OutlineInputBorder outline(Color color, {double width = 1}) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        borderSide: BorderSide(color: color, width: width),
+      );
+    }
+
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
       ],
+      style: theme.textTheme.bodyMedium?.copyWith(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        labelText: label,
+        labelStyle: theme.textTheme.labelSmall?.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        hintText: l10n.filterSheetAmountAny,
+        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+        ),
+        prefixText: '$currency  ',
+        prefixStyle: theme.textTheme.bodySmall?.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        filled: true,
+        fillColor: AppColors.neutralFill(brightness).withValues(alpha: 0.45),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.smPlus2,
+          vertical: AppSpacing.smPlus2,
+        ),
+        border: outline(border.withValues(alpha: 0.7)),
+        enabledBorder: outline(
+          invalid ? warning : border.withValues(alpha: 0.7),
+        ),
+        focusedBorder: outline(invalid ? warning : accent, width: 1.5),
+      ),
     );
   }
 }
 
-class _FilterOption extends StatelessWidget {
-  const _FilterOption({
+/// Pill chip used for single- and multi-select filter values.
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
-    this.leading,
-    this.asset,
-    this.multiSelect = false,
+    this.icon,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final IconData? leading;
-  final String? asset;
-  final bool multiSelect;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -516,81 +646,59 @@ class _FilterOption extends StatelessWidget {
     final accent = AppColors.primaryStrong;
     final border = AppColors.border(brightness);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Material(
-        color: selected
-            ? AppColors.navActiveFill(brightness)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+    return Material(
+      color: selected
+          ? AppColors.navActiveFill(brightness)
+          : AppColors.neutralFill(brightness).withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: selected ? accent : border.withValues(alpha: 0.7),
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.smPlus2,
               vertical: AppSpacing.smPlus,
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected
-                        ? AppColors.navActiveFill(brightness)
-                        : AppColors.neutralFill(
-                            brightness,
-                          ).withValues(alpha: 0.45),
-                    border: Border.all(
-                      color: selected ? accent : border.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  child: asset != null
-                      ? SvgPicture.asset(
-                          asset!,
-                          width: 18,
-                          height: 18,
-                          colorFilter: ColorFilter.mode(
-                            selected ? accent : ink,
-                            BlendMode.srcIn,
-                          ),
-                        )
-                      : Icon(leading, size: 18, color: selected ? accent : ink),
-                ),
-                const SizedBox(width: AppSpacing.smPlus2),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? accent : ink,
-                    ),
+                if (icon != null) ...[
+                  Icon(icon, size: 15, color: selected ? accent : ink),
+                  const SizedBox(width: AppSpacing.xsMax),
+                ],
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? accent : ink,
                   ),
                 ),
-                if (multiSelect || selected)
+                if (selected) ...[
+                  const SizedBox(width: AppSpacing.sm),
                   Container(
-                    width: 22,
-                    height: 22,
+                    width: 16,
+                    height: 16,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? accent : Colors.transparent,
-                      border: selected
-                          ? null
-                          : Border.all(color: border.withValues(alpha: 0.85)),
+                      color: accent,
                     ),
-                    child: selected
-                        ? const Icon(
-                            Icons.check_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          )
-                        : null,
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 11,
+                      color: Colors.white,
+                    ),
                   ),
+                ],
               ],
             ),
           ),
