@@ -1,6 +1,7 @@
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
+import 'package:nova_spend/features/search/domain/entities/search_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -222,7 +223,7 @@ class BackendTransactionDatasource {
     }
   }
 
-  Future<List<TransactionEntity>> search({
+  Future<SearchPage> search({
     required String text,
     int limit = 50,
     String? cursor,
@@ -231,6 +232,7 @@ class BackendTransactionDatasource {
     String? type,
     bool subscriptionsOnly = false,
     List<String>? categories,
+    bool includeAggregates = false,
   }) async {
     try {
       final response = await _api.get(
@@ -246,15 +248,29 @@ class BackendTransactionDatasource {
           'categories': categories == null || categories.isEmpty
               ? null
               : categories.join(','),
+          'include_aggregates': includeAggregates ? 'true' : null,
         }),
         requireAuth: true,
       );
       final rawItems = response['items'];
-      if (rawItems is! List) return const [];
-      return rawItems
-          .whereType<Map>()
-          .map((item) => transactionFromApi(Map<String, dynamic>.from(item)))
-          .toList();
+      final items = rawItems is List
+          ? rawItems
+                .whereType<Map>()
+                .map(
+                  (item) => transactionFromApi(Map<String, dynamic>.from(item)),
+                )
+                .toList()
+          : const <TransactionEntity>[];
+      final nextCursor = response['next_cursor'];
+      return SearchPage(
+        items: items,
+        hasMore:
+            response['has_more'] == true ||
+            (nextCursor is String && nextCursor.isNotEmpty),
+        totalCount: (response['total_count'] as num?)?.toInt(),
+        totalSpent: (response['total_spent'] as num?)?.toDouble(),
+        totalReceived: (response['total_received'] as num?)?.toDouble(),
+      );
     } on ApiException catch (e) {
       throw e.toDataException();
     }

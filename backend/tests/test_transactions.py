@@ -158,6 +158,44 @@ def test_search_prefix_and_scan(api_client: TestClient) -> None:
     assert len(by_bank["items"]) == 3
 
 
+def test_search_aggregates_cover_full_match_set(api_client: TestClient) -> None:
+    _post_tx(api_client, merchant="KFC", amount=100, tx_date="2026-03-01")
+    _post_tx(api_client, merchant="PSO", amount=200, tx_date="2026-03-02")
+    _post_tx(
+        api_client,
+        merchant="Salary",
+        amount=500,
+        tx_date="2026-03-03",
+        tx_type="credit",
+    )
+
+    first = api_client.get(
+        "/transactions/search",
+        params={"limit": 1, "include_aggregates": True},
+    ).json()
+    assert len(first["items"]) == 1
+    assert first["has_more"] is True
+    assert first["total_count"] == 3
+    assert first["total_spent"] == 300.0
+    assert first["total_received"] == 500.0
+
+    later = api_client.get(
+        "/transactions/search",
+        params={"limit": 1, "cursor": first["next_cursor"]},
+    ).json()
+    assert later["total_count"] is None
+    assert later["total_spent"] is None
+    assert later["total_received"] is None
+
+    prefix = api_client.get(
+        "/transactions/search",
+        params={"q": "kf", "limit": 1, "include_aggregates": True},
+    ).json()
+    assert prefix["total_count"] == 1
+    assert prefix["total_spent"] == 100.0
+    assert prefix["total_received"] == 0.0
+
+
 def test_search_by_categories(api_client: TestClient) -> None:
     _post_tx(
         api_client,

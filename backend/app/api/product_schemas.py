@@ -96,6 +96,9 @@ class SearchListOut(BaseModel):
     items: list[TransactionOut]
     next_cursor: str | None
     has_more: bool
+    total_count: int | None = None
+    total_spent: float | None = None
+    total_received: float | None = None
 
 
 class HighlightOut(BaseModel):

@@ -1,12 +1,14 @@
 import 'package:nova_spend/features/search/domain/entities/search_query.dart';
+import 'package:nova_spend/features/search/domain/entities/search_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 
 abstract class SearchRepository {
-  Future<List<TransactionEntity>> searchTransactions({
+  Future<SearchPage> searchTransactions({
     required String uid,
     required SearchQuery query,
     int limit = 50,
     TransactionEntity? startAfter,
+    bool includeAggregates = false,
   });
 
   Future<List<String>> getRecentSearches();

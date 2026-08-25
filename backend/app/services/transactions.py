@@ -130,6 +130,55 @@ def _order_clause(sort_by: TransactionSortBy, order_by: SortOrder):
     return tuple(col.asc() for col in cols)
 
 
+def _apply_search_filters[T](
+    stmt: Select[T],
+    *,
+    needle: str,
+    date_from: date | None,
+    date_to: date | None,
+    tx_type: TransactionType | None,
+    subscriptions_only: bool,
+    category_names: list[str],
+) -> tuple[Select[T], bool]:
+    """Apply Activity search filters. Returns (stmt, use_prefix)."""
+    use_prefix = (
+        bool(needle)
+        and not subscriptions_only
+        and tx_type is None
+        and date_from is None
+        and date_to is None
+        and not category_names
+    )
+    if date_from is not None:
+        stmt = stmt.where(Transaction.transaction_date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(Transaction.transaction_date <= date_to)
+    if tx_type is not None:
+        stmt = stmt.where(Transaction.type == tx_type)
+    if subscriptions_only:
+        stmt = stmt.where(Transaction.is_recurring.is_(True))
+    if category_names:
+        stmt = stmt.where(Transaction.category.in_(category_names))
+
+    if use_prefix:
+        escaped = _escape_like(normalize_merchant_key(needle))
+        stmt = stmt.where(
+            Transaction.merchant_normalized.like(escaped + "%", escape="\\")
+        )
+    elif needle:
+        escaped = _escape_like(needle)
+        pattern = f"%{escaped}%"
+        stmt = stmt.where(
+            or_(
+                Transaction.merchant.ilike(pattern, escape="\\"),
+                Transaction.merchant_normalized.ilike(pattern, escape="\\"),
+                Transaction.category.ilike(pattern, escape="\\"),
+                Transaction.bank.ilike(pattern, escape="\\"),
+            )
+        )
+    return stmt, use_prefix
+
+
 def _after_cursor(
     stmt: Select[tuple[Transaction]],
     cursor: Transaction,
@@ -244,6 +293,7 @@ async def search_transactions(
     tx_type: TransactionType | None,
     subscriptions_only: bool,
     categories: list[str] | None = None,
+    include_aggregates: bool = False,
 ) -> dict[str, Any]:
     if date_from and date_to and date_from > date_to:
         raise BadRequestError(
@@ -253,50 +303,25 @@ async def search_transactions(
 
     needle = text.strip()
     category_names = [name for name in (categories or []) if name]
-    use_prefix = (
-        bool(needle)
-        and not subscriptions_only
-        and tx_type is None
-        and date_from is None
-        and date_to is None
-        and not category_names
-    )
-    prefix = normalize_merchant_key(needle) if use_prefix else ""
+    filter_kwargs = {
+        "needle": needle,
+        "date_from": date_from,
+        "date_to": date_to,
+        "tx_type": tx_type,
+        "subscriptions_only": subscriptions_only,
+        "category_names": category_names,
+    }
 
     stmt = select(Transaction).where(*_visible(user_id))
-    if date_from is not None:
-        stmt = stmt.where(Transaction.transaction_date >= date_from)
-    if date_to is not None:
-        stmt = stmt.where(Transaction.transaction_date <= date_to)
-    if tx_type is not None:
-        stmt = stmt.where(Transaction.type == tx_type)
-    if subscriptions_only:
-        stmt = stmt.where(Transaction.is_recurring.is_(True))
-    if category_names:
-        stmt = stmt.where(Transaction.category.in_(category_names))
+    stmt, use_prefix = _apply_search_filters(stmt, **filter_kwargs)
 
     if use_prefix:
-        escaped = _escape_like(prefix)
-        stmt = stmt.where(
-            Transaction.merchant_normalized.like(escaped + "%", escape="\\")
-        )
         order = (
             Transaction.merchant_normalized.asc(),
             Transaction.transaction_date.desc(),
             Transaction.id.desc(),
         )
     else:
-        if needle:
-            escaped = _escape_like(needle)
-            pattern = f"%{escaped}%"
-            stmt = stmt.where(
-                or_(
-                    Transaction.merchant.ilike(pattern, escape="\\"),
-                    Transaction.merchant_normalized.ilike(pattern, escape="\\"),
-                    Transaction.category.ilike(pattern, escape="\\"),
-                    Transaction.bank.ilike(pattern, escape="\\"),
-                )
-            )
         order = (Transaction.transaction_date.desc(), Transaction.id.desc())
 
     if cursor is not None:
@@ -323,10 +348,39 @@ async def search_transactions(
     rows = list((await session.execute(stmt)).scalars().all())
     has_more = len(rows) > limit
     items = rows[:limit]
+
+    total_count: int | None = None
+    total_spent: float | None = None
+    total_received: float | None = None
+    if include_aggregates:
+        agg = select(
+            func.count(Transaction.id),
+            func.coalesce(
+                func.sum(Transaction.amount).filter(
+                    Transaction.type == TransactionType.debit
+                ),
+                0,
+            ),
+            func.coalesce(
+                func.sum(Transaction.amount).filter(
+                    Transaction.type == TransactionType.credit
+                ),
+                0,
+            ),
+        ).where(*_visible(user_id))
+        agg, _ = _apply_search_filters(agg, **filter_kwargs)
+        count, spent, received = (await session.execute(agg)).one()
+        total_count = int(count)
+        total_spent = money_float(spent)
+        total_received = money_float(received)
+
     return {
         "items": items,
         "next_cursor": str(items[-1].id) if has_more and items else None,
         "has_more": has_more,
+        "total_count": total_count,
+        "total_spent": total_spent,
+        "total_received": total_received,
     }
 
 

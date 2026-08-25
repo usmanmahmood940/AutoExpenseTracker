@@ -18,6 +18,8 @@ class SearchProvider extends ChangeNotifier {
   final SearchTransactions _searchTransactions;
   final SearchRepository _searchRepository;
 
+  static const int pageSize = 20;
+
   SearchQuery query = SearchQuery.empty;
   List<TransactionEntity> results = [];
   List<String> recentSearches = [];
@@ -27,8 +29,16 @@ class SearchProvider extends ChangeNotifier {
   bool hasSearched = false;
   String? error;
 
+  /// Full-match totals from the first search page (not the loaded rows).
+  int matchCount = 0;
+  double matchSpent = 0;
+  double matchReceived = 0;
+
   String? _uid;
   Timer? _debounce;
+
+  /// Last item in server page order (before client-side sort).
+  TransactionEntity? _pageCursor;
 
   Future<void> start(String uid) async {
     if (_uid == uid) return;
@@ -166,9 +176,19 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final page = await _searchTransactions(uid: uid, query: query, limit: 10);
-      results = sortTransactions(page, query.sort);
-      hasMore = page.length >= 50;
+      final page = await _searchTransactions(
+        uid: uid,
+        query: query,
+        limit: pageSize,
+        includeAggregates: true,
+      );
+      _pageCursor = page.items.isEmpty ? null : page.items.last;
+      results = sortTransactions(page.items, query.sort);
+      hasMore = page.hasMore;
+      matchCount = page.totalCount ?? page.items.length;
+      final fallback = _spendTotals(page.items);
+      matchSpent = page.totalSpent ?? fallback.spent;
+      matchReceived = page.totalReceived ?? fallback.received;
 
       if (saveRecent && query.hasText) {
         await _searchRepository.addRecentSearch(query.text);
@@ -177,7 +197,11 @@ class SearchProvider extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       results = [];
+      _pageCursor = null;
       hasMore = false;
+      matchCount = 0;
+      matchSpent = 0;
+      matchReceived = 0;
     } finally {
       isLoading = false;
       notifyListeners();
@@ -186,7 +210,12 @@ class SearchProvider extends ChangeNotifier {
 
   Future<void> loadMore() async {
     final uid = _uid;
-    if (uid == null || isLoadingMore || !hasMore || results.isEmpty) {
+    final cursor = _pageCursor;
+    if (uid == null ||
+        isLoading ||
+        isLoadingMore ||
+        !hasMore ||
+        cursor == null) {
       return;
     }
 
@@ -197,18 +226,19 @@ class SearchProvider extends ChangeNotifier {
       final more = await _searchTransactions(
         uid: uid,
         query: query,
-        limit: 50,
-        startAfter: results.last,
+        limit: pageSize,
+        startAfter: cursor,
       );
-      if (more.isEmpty) {
+      if (more.items.isEmpty) {
         hasMore = false;
       } else {
+        _pageCursor = more.items.last;
         final existing = results.map((e) => e.id).toSet();
         results = sortTransactions([
           ...results,
-          ...more.where((t) => !existing.contains(t.id)),
+          ...more.items.where((t) => !existing.contains(t.id)),
         ], query.sort);
-        hasMore = more.length >= 50;
+        hasMore = more.hasMore;
         error = null;
       }
     } catch (e) {
@@ -224,4 +254,17 @@ class SearchProvider extends ChangeNotifier {
     _debounce?.cancel();
     super.dispose();
   }
+}
+
+({double spent, double received}) _spendTotals(List<TransactionEntity> txs) {
+  var spent = 0.0;
+  var received = 0.0;
+  for (final t in txs) {
+    if (t.type == 'credit') {
+      received += t.amount;
+    } else {
+      spent += t.amount;
+    }
+  }
+  return (spent: spent, received: received);
 }

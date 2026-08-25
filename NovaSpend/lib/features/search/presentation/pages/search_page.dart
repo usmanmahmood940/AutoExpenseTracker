@@ -56,17 +56,31 @@ class _SearchView extends StatefulWidget {
 
 class _SearchViewState extends State<_SearchView> {
   late final TextEditingController _controller;
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    _scrollController = ScrollController()..addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onScroll() => _maybeLoadMore();
+
+  void _maybeLoadMore() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - 200) return;
+    context.read<SearchProvider>().loadMore();
   }
 
   @override
@@ -75,6 +89,9 @@ class _SearchViewState extends State<_SearchView> {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final provider = context.watch<SearchProvider>();
+    if (!provider.isLoading && !provider.isLoadingMore && provider.hasMore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadMore());
+    }
     final topPad = GlassHeaderBar.contentTopPadding(context);
 
     return AdaptiveScaffold(
@@ -283,117 +300,112 @@ class _SearchViewState extends State<_SearchView> {
                   ),
                 ),
                 Expanded(
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (n) {
-                      if (n.metrics.pixels >= n.metrics.maxScrollExtent - 200) {
-                        provider.loadMore();
-                      }
-                      return false;
-                    },
-                    child: ListView(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
-                      children: [
-                        if (provider.recentSearches.isNotEmpty &&
-                            !provider.hasSearched) ...[
+                  child: ListView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+                    children: [
+                      if (provider.recentSearches.isNotEmpty &&
+                          !provider.hasSearched) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.md,
+                            0,
+                            AppSpacing.md,
+                            AppSpacing.sm,
+                          ),
+                          child: SectionHeader(
+                            title: l10n.searchRecent,
+                            actionLabel: l10n.searchClearRecent,
+                            onActionTap: provider.clearRecent,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              for (final term in provider.recentSearches.take(
+                                5,
+                              ))
+                                _RecentSearchChip(
+                                  label: term,
+                                  onTap: () {
+                                    _controller.text = term;
+                                    provider.applyRecent(term);
+                                    setState(() {});
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                      if (provider.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: SkeletonTransactionList(),
+                        )
+                      else if (provider.error != null &&
+                          provider.results.isEmpty)
+                        ErrorStateView(
+                          error: provider.error,
+                          onRetry: () => provider.runSearch(saveRecent: false),
+                        )
+                      else if (!provider.hasSearched)
+                        EmptyStateView(
+                          title: l10n.searchEmptyTitle,
+                          message: l10n.searchEmptyHint,
+                        )
+                      else if (provider.results.isEmpty)
+                        EmptyStateView(
+                          title: provider.query.hasActiveFilters
+                              ? l10n.searchNoResultsTitle
+                              : l10n.feedEmpty,
+                          message: provider.query.hasActiveFilters
+                              ? l10n.searchNoResultsHint
+                              : l10n.feedEmptyHint,
+                        )
+                      else ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: _ResultsCountRow(
+                            count: provider.matchCount,
+                            spent: provider.matchSpent,
+                            received: provider.matchReceived,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: provider.query.sort.groupsByDay
+                              ? _ResultsDayGroups(results: provider.results)
+                              : _ResultsFlatList(results: provider.results),
+                        ),
+                        if (provider.error != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(
                               AppSpacing.md,
-                              0,
                               AppSpacing.md,
-                              AppSpacing.sm,
+                              AppSpacing.md,
+                              0,
                             ),
-                            child: SectionHeader(
-                              title: l10n.searchRecent,
-                              actionLabel: l10n.searchClearRecent,
-                              onActionTap: provider.clearRecent,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                            ),
-                            child: Wrap(
-                              spacing: AppSpacing.sm,
-                              runSpacing: AppSpacing.sm,
-                              children: [
-                                for (final term in provider.recentSearches.take(
-                                  5,
-                                ))
-                                  _RecentSearchChip(
-                                    label: term,
-                                    onTap: () {
-                                      _controller.text = term;
-                                      provider.applyRecent(term);
-                                      setState(() {});
-                                    },
-                                  ),
-                              ],
+                            child: LoadErrorBanner(
+                              error: provider.error,
+                              onRetry: provider.loadMore,
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                        ],
-                        if (provider.isLoading)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                            ),
-                            child: SkeletonTransactionList(),
-                          )
-                        else if (provider.error != null &&
-                            provider.results.isEmpty)
-                          ErrorStateView(
-                            error: provider.error,
-                            onRetry: () =>
-                                provider.runSearch(saveRecent: false),
-                          )
-                        else if (!provider.hasSearched)
-                          EmptyStateView(
-                            title: l10n.searchEmptyTitle,
-                            message: l10n.searchEmptyHint,
-                          )
-                        else if (provider.results.isEmpty)
-                          EmptyStateView(
-                            title: provider.query.hasActiveFilters
-                                ? l10n.searchNoResultsTitle
-                                : l10n.feedEmpty,
-                            message: provider.query.hasActiveFilters
-                                ? l10n.searchNoResultsHint
-                                : l10n.feedEmptyHint,
-                          )
-                        else ...[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                            ),
-                            child: _ResultsCountRow(results: provider.results),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                            ),
-                            child: provider.query.sort.groupsByDay
-                                ? _ResultsDayGroups(results: provider.results)
-                                : _ResultsFlatList(results: provider.results),
-                          ),
-                          if (provider.error != null)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                AppSpacing.md,
-                                AppSpacing.md,
-                                AppSpacing.md,
-                                0,
-                              ),
-                              child: LoadErrorBanner(
-                                error: provider.error,
-                                onRetry: provider.loadMore,
-                              ),
-                            ),
-                          if (provider.isLoadingMore)
-                            const AppListFooterLoader(),
-                        ],
+                        if (provider.isLoadingMore) const AppListFooterLoader(),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -497,11 +509,17 @@ class _SearchViewState extends State<_SearchView> {
   }
 }
 
-/// Results count on the left, Spent / Net for the loaded list on the right.
+/// Results count on the left, Spent / Net for the full match set on the right.
 class _ResultsCountRow extends StatelessWidget {
-  const _ResultsCountRow({required this.results});
+  const _ResultsCountRow({
+    required this.count,
+    required this.spent,
+    required this.received,
+  });
 
-  final List<TransactionEntity> results;
+  final int count;
+  final double spent;
+  final double received;
 
   @override
   Widget build(BuildContext context) {
@@ -513,10 +531,9 @@ class _ResultsCountRow extends StatelessWidget {
       theme.colorScheme.onSurface,
       1,
     )!;
-    final totals = _spendTotals(results);
     final summary = dayGroupSummary(
-      spent: totals.spent,
-      received: totals.received,
+      spent: spent,
+      received: received,
       spentPrefix: l10n.homeDayGroupSpent,
       netPrefix: l10n.homeDayGroupNet,
       formatMoney: money.formatMoney,
@@ -531,7 +548,7 @@ class _ResultsCountRow extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            l10n.searchResultsCount('${results.length}'),
+            l10n.searchResultsCount('$count'),
             style: theme.textTheme.titleMedium,
           ),
         ),

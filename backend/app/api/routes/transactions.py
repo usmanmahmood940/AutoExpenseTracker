@@ -84,6 +84,7 @@ async def search_transactions(
     type: TransactionType | None = None,
     subscriptions_only: bool = False,
     categories: str | None = None,
+    include_aggregates: bool = False,
 ) -> SearchListOut:
     page = await tx_service.search_transactions(
         session,
@@ -96,11 +97,15 @@ async def search_transactions(
         tx_type=type,
         subscriptions_only=subscriptions_only,
         categories=_split_categories(categories),
+        include_aggregates=include_aggregates,
     )
     return SearchListOut(
         items=[TransactionOut.model_validate(item) for item in page["items"]],
         next_cursor=page["next_cursor"],
         has_more=page["has_more"],
+        total_count=page["total_count"],
+        total_spent=page["total_spent"],
+        total_received=page["total_received"],
     )
 
 

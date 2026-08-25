@@ -178,6 +178,8 @@ def _system_prompt(
         "- externalIdType: use tid for TID, ref for reference numbers, stan for "
         "STAN, unknown otherwise (typical for manual entries).\n"
         f"- category: MUST be exactly one of these values: [{category_list}].\n"
+        "  Income: salary, employer/company, investment only. Person-to-person "
+        "(named individual, P2P, IBFT/Raast) → Transfer, never Income.\n"
         f"  If none fit, use {FALLBACK_CATEGORY_NAME}.\n"
         "- parseConfidence: 0.0-1.0 based on how clearly fields were extracted."
     )
