@@ -1,30 +1,24 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
 
 /// Registers FCM token for server-side push on new transactions.
 ///
-/// Phase E: when [AppConstants.kUseBackendV1] is true, tokens go to
-/// `POST /me/devices`. Otherwise they are merged onto the Firestore user doc
-/// (`fcmTokens`) for the legacy Cloud Function notifier.
+/// Tokens go to `POST /me/devices`. Firebase Messaging is kept for receive +
+/// token refresh; Firestore is no longer a fallback.
 class PushNotificationService {
   PushNotificationService({
     FirebaseMessaging? messaging,
     FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
-    BackendAuthDatasource? backendAuth,
+    required BackendAuthDatasource backendAuth,
   })  : _messaging = messaging ?? FirebaseMessaging.instance,
         _auth = auth ?? FirebaseAuth.instance,
-        _db = firestore ?? FirebaseFirestore.instance,
         _backendAuth = backendAuth;
 
   final FirebaseMessaging _messaging;
   final FirebaseAuth _auth;
-  final FirebaseFirestore _db;
-  final BackendAuthDatasource? _backendAuth;
+  final BackendAuthDatasource _backendAuth;
 
   Future<void> init() async {
     try {
@@ -43,26 +37,16 @@ class PushNotificationService {
 
   Future<void> _persistToken(String? token) async {
     if (token == null || token.isEmpty) return;
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+    if (_auth.currentUser?.uid == null) return;
 
-    if (AppConstants.kUseBackendV1 && _backendAuth != null) {
-      try {
-        await _backendAuth.registerDevice(
-          fcmToken: token,
-          platform: _platform,
-        );
-        return;
-      } catch (e, st) {
-        debugPrint('POST /me/devices failed: $e\n$st');
-        // Fall through to Firestore so push is not silent during cutover.
-      }
+    try {
+      await _backendAuth.registerDevice(
+        fcmToken: token,
+        platform: _platform,
+      );
+    } catch (e, st) {
+      debugPrint('POST /me/devices failed: $e\n$st');
     }
-
-    await _db.collection(AppConstants.users).doc(uid).set({
-      'fcmTokens': FieldValue.arrayUnion([token]),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
   }
 
   static String get _platform {

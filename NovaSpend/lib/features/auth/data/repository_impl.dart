@@ -1,4 +1,3 @@
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/exceptions.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
@@ -9,12 +8,12 @@ import 'package:nova_spend/features/auth/domain/repositories/auth_repository.dar
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     required FirebaseAuthDatasource datasource,
-    BackendAuthDatasource? backendAuth,
+    required BackendAuthDatasource backendAuth,
   })  : _datasource = datasource,
         _backendAuth = backendAuth;
 
   final FirebaseAuthDatasource _datasource;
-  final BackendAuthDatasource? _backendAuth;
+  final BackendAuthDatasource _backendAuth;
 
   @override
   Stream<AppUser?> watchUser() => _datasource.watchUser();
@@ -28,12 +27,10 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> signOut() async {
     try {
-      if (AppConstants.kUseBackendV1 && _backendAuth != null) {
-        try {
-          await _backendAuth.logout();
-        } catch (_) {
-          // Still clear the local Firebase session.
-        }
+      try {
+        await _backendAuth.logout();
+      } catch (_) {
+        // Still clear the local Firebase session.
       }
       await _datasource.signOut();
     } on AuthException catch (e) {

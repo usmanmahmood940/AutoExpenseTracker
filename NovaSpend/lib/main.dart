@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nova_spend/app.dart';
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/locale/app_locale_controller.dart';
@@ -34,9 +33,8 @@ Future<void> main() async {
   await configureDependencies(prefs: prefs);
   final currencyController = AppCurrencyController(
     prefs,
-    remoteSync: AppConstants.kUseBackendV1
-        ? (code) => sl<BackendAuthDatasource>().updateMe(defaultCurrency: code)
-        : null,
+    remoteSync: (code) =>
+        sl<BackendAuthDatasource>().updateMe(defaultCurrency: code),
   );
   await currencyController.load();
   await sl<NotificationService>().init();

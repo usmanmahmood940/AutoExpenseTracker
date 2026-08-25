@@ -1,29 +1,11 @@
 /**
- * Cloud Functions entry point.
+ * Retired Cloud Functions package.
  *
- * Phase F dual-run: these stay deployed as a rollback target. Flutter and
- * Shortcuts now hit FastAPI. Firestore triggers go idle once ingest writes
- * Postgres only. Do not delete until §6 step 12.
+ * Product APIs, ingest, auth OTP, stats, and push live in `backend/`
+ * (FastAPI on Cloud Run). Deployed functions were deleted in migration
+ * step 12 (2026-08-25). Do not `firebase deploy --only functions`.
+ *
+ * Source files in this folder are an archive / reference only.
  */
 
-import { setGlobalOptions } from 'firebase-functions/v2';
-
-setGlobalOptions({
-  region: 'asia-south1',
-  maxInstances: 10,
-});
-
-export { ingestTransactionForUser } from './ingest';
-export { listTransactions } from './transactions';
-export { getPeriodStats } from './period_stats';
-export { onUserTransactionWritten } from './aggregates';
-export { onUserTransactionCreatedNotify } from './notify';
-export {
-  sendEmailOtp,
-  completeEmailOtpSignup,
-  sendPasswordResetOtp,
-  verifyPasswordResetOtp,
-  completePasswordReset,
-  ensureUserProfile,
-} from './auth';
-export { cleanupExpiredAuthDocs } from './auth_cleanup';
+export {};

@@ -1,6 +1,6 @@
 # NovaSpend Backend & Firebase Migration Plan
 
-**Status:** Phase F dual-run (2026-08-23) — traffic on FastAPI + Supabase; Firebase idle as rollback  
+**Status:** Phase F complete (2026-08-25) — FastAPI + Supabase; Firebase Auth + FCM only; Functions deleted, Firestore locked  
 **Target stack:** FastAPI (Cloud Run) + PostgreSQL (Cloud SQL or Supabase) + Firebase Auth (identity) + FCM (push delivery)  
 **App:** NovaSpend (Flutter)
 
@@ -310,7 +310,7 @@ If you want a longer, lower-risk transition, have `ingestTransactionForUser` wri
 - [x] Validate counts again post-sync — users 4=4; tx Firestore 345 / Postgres 346 (Postgres ahead from live ingest); summaries 9=9. Ingestions 47 vs 7 (old rows skipped on unique/FK; new ingest writes Postgres)
 - [x] Flip Flutter **and** Shortcuts/webhook to backend URLs **together** — Flutter `kUseBackendV1` default on; Shortcut webhook updated by owner
 - [x] Switch push to the Postgres worker; stop `onUserTransactionCreatedNotify` — `POST /ingest` calls `notify_new_transaction` (`devices` table). Firestore trigger stays **deployed but idle** (no new Firestore writes). Do not delete until step 12
-- [ ] Monitor errors 48–72h — **started 2026-08-23** (step 11)
+- [x] Monitor errors 48–72h — started 2026-08-23; Functions deleted in step 12 (2026-08-25)
 
 Flipping Shortcuts before the migration would split history: new transactions in Postgres, everything older in Firestore, and a migration that then has to special-case the gap or double-count it. Flipping Flutter before the migration shows users an empty app.
 
@@ -337,8 +337,8 @@ Steps 1–9 touch **dev/staging only**. Production keeps running on Firestore/Fu
 | 8 | Flutter: search, merchant, review, categories, settings screens | dev | No client Firestore for those |
 | 9 | Point **dev** Shortcuts/webhook at new ingest URL; rehearse the cutover | dev | Owner updated Shortcut + verified Home history (2026-08-23) |
 | 10 | **Production:** migrate data → validate → freeze → flip Flutter + Shortcuts + push together | **prod** | Live on backend 2026-08-23 ([§5 Phase F](#phase-f--data-migration--production-cutover-week-67)) |
-| 11 | Dual-run monitoring (Firebase idle, as rollback) | prod | **In progress** — keep Functions deployed 3–7 days |
-| 12 | Firebase cleanup ([§8](#8-post-migration-firebase-cleanup)) | prod | Unused services removed/disabled |
+| 11 | Dual-run monitoring (Firebase idle, as rollback) | prod | Done 2026-08-25 — last Function logs 2026-08-22 (pre-freeze) |
+| 12 | Firebase cleanup ([§8](#8-post-migration-firebase-cleanup)) | prod | 2026-08-25: Functions deleted; Firestore rules deny-all; Flutter Firestore/callables removed. Data retained until 30–90 day window |
 
 **Optional dual-write**, if chosen, starts a few days *before* step 10 — not at step 11.
 
@@ -380,15 +380,15 @@ Two different things, often confused:
 
 Only after production has been stable on the backend and you no longer need Firestore as fallback.
 
-### 8.1 Remove from Flutter (`NovaSpend`)
+### 8.1 Remove from Flutter (`NovaSpend`) — done 2026-08-25
 
 | Remove / stop using | Notes |
 |---------------------|--------|
-| `cloud_firestore` package & all `Firestore*Datasource` | After every feature uses API |
-| Direct callable usage for list/stats/auth OTP | Replaced by FastAPI |
-| Firebase Auth SDK for signup/login/reset | Keep **only if** you still use it for token refresh; prefer backend-issued/passed tokens only |
-| Firestore listeners (monthly summary, categories streams) | Poll or refresh via API |
-| App Check client wiring **if** APIs no longer require it | Optional keep for abuse |
+| `cloud_firestore` package & all `Firestore*Datasource` | ✅ Removed; repos call FastAPI only |
+| Direct callable usage for list/stats/auth OTP | ✅ `CloudFunctionsHttpClient` deleted |
+| Firebase Auth SDK for signup/login/reset | Kept for ID token refresh + Google/Apple; email OTP/login/reset is `/auth/*` |
+| Firestore listeners (monthly summary, categories streams) | ✅ Poll/refresh via API |
+| App Check client wiring **if** APIs no longer require it | Kept in `main.dart` (optional abuse) |
 
 **Keep in Flutter (hybrid)**
 
@@ -398,7 +398,9 @@ Only after production has been stable on the backend and you no longer need Fire
 
 If you later leave Firebase Auth entirely, remove Auth SDK too and use your own JWT refresh.
 
-### 8.2 Remove / disable Cloud Functions
+### 8.2 Remove / disable Cloud Functions — done 2026-08-25
+
+Deleted all 12 deployed functions in `asia-south1` after logs showed no invocations after the 2026-08-23 freeze (last ingest 2026-08-22). `functions/` is an archive; do not redeploy. `firebase.json` no longer includes a functions target.
 
 Delete or stop deploying (order: confirm zero traffic in logs first):
 
@@ -426,8 +428,8 @@ Eventually delete the `functions/` package or leave a stub README pointing to `b
 
 ### 8.3 Firestore cleanup
 
-1. Export final backup (GCS).
-2. Lock rules to deny all client access:
+1. Export final backup (GCS) — ✅ `gs://auto-expense-tracker-2026-firestore-backup/step12-2026-08-25` (successful 2026-08-25)
+2. Lock rules to deny all client access — ✅ deployed 2026-08-25:
 
 ```text
 rules_version = '2';
@@ -441,7 +443,7 @@ service cloud.firestore {
 ```
 
 3. After retention period (e.g. 30–90 days), delete collections or the Firestore database.
-4. Remove composite indexes you no longer need (optional cost cleanup).
+4. Remove composite indexes you no longer need (optional cost cleanup) — ✅ emptied `firestore.indexes.json` and deployed 2026-08-25. Automatic single-field indexes remain until the data is deleted.
 
 ### 8.4 What NOT to delete in Firebase (phase 1)
 
@@ -557,6 +559,6 @@ Record answers in this section when decided:
 5. Migrate **dev** data → Postgres, then point the Flutter app at dev and cut screens over feature by feature.  
 6. **Production:** migrate data first, then flip Flutter + Shortcuts + push in one freeze window.  
 7. Dual-run with Firebase idle; stabilize 3–7 days.  
-8. Delete Functions, lock/delete Firestore, keep Auth + FCM until you outgrow them.
+8. Delete Functions, lock Firestore (keep data 30–90 days), keep Auth + FCM until you outgrow them.
 
 The order that matters most: **data before traffic.** Never point production clients or webhooks at the backend before its tables are populated.

@@ -1,7 +1,5 @@
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/transactions/data/datasource/backend_transaction_datasource.dart';
-import 'package:nova_spend/features/transactions/data/datasource/firestore_transaction_datasource.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -11,27 +9,19 @@ import 'package:nova_spend/features/transactions/domain/repositories/transaction
 
 class TransactionRepositoryImpl implements TransactionRepository {
   TransactionRepositoryImpl({
-    required FirestoreTransactionDatasource datasource,
-    BackendTransactionDatasource? backend,
-  })  : _datasource = datasource,
-        _backend = backend;
+    required BackendTransactionDatasource backend,
+  }) : _backend = backend;
 
-  final FirestoreTransactionDatasource _datasource;
-  final BackendTransactionDatasource? _backend;
-
-  bool get _useBackend => AppConstants.kUseBackendV1 && _backend != null;
+  final BackendTransactionDatasource _backend;
 
   @override
   Stream<List<TransactionEntity>> watchTransactions(
     String uid, {
     int limit = 50,
   }) {
-    if (_useBackend) {
-      return Stream.fromFuture(
-        _backend!.getTransactionsPage(limit: limit).then((page) => page.items),
-      );
-    }
-    return _datasource.watchTransactions(uid, limit: limit);
+    return Stream.fromFuture(
+      _backend.getTransactionsPage(limit: limit).then((page) => page.items),
+    );
   }
 
   @override
@@ -46,19 +36,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     String orderBy = 'desc',
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getTransactionsPage(
-          limit: limit,
-          startAfter: startAfter,
-          filter: filter,
-          dateFrom: dateFrom,
-          dateTo: dateTo,
-          sortBy: sortBy,
-          orderBy: orderBy,
-        );
-      }
-      return await _datasource.getTransactionsPage(
-        uid,
+      return await _backend.getTransactionsPage(
         limit: limit,
         startAfter: startAfter,
         filter: filter,
@@ -79,14 +57,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String to,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getPeriodStats(
-          period: period,
-          from: from,
-          to: to,
-        );
-      }
-      return await _datasource.getPeriodStats(
+      return await _backend.getPeriodStats(
         period: period,
         from: from,
         to: to,
@@ -103,11 +74,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     Map<String, dynamic> fields,
   ) async {
     try {
-      if (_useBackend) {
-        await _backend!.updateTransaction(transactionId, fields);
-        return;
-      }
-      await _datasource.updateTransaction(uid, transactionId, fields);
+      await _backend.updateTransaction(transactionId, fields);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -115,10 +82,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Stream<List<TransactionEntity>> watchNeedsReview(String uid) {
-    if (_useBackend) {
-      return Stream.fromFuture(_backend!.getNeedsReview());
-    }
-    return _datasource.watchNeedsReview(uid);
+    return Stream.fromFuture(_backend.getNeedsReview());
   }
 
   @override
@@ -127,10 +91,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     int limit = 50,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getNeedsReview(limit: limit);
-      }
-      return await _datasource.getNeedsReview(uid, limit: limit);
+      return await _backend.getNeedsReview(limit: limit);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -141,10 +102,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     String uid,
     String status,
   ) {
-    if (_useBackend) {
-      return Stream.fromFuture(_backend!.getIngestionsByStatus(status));
-    }
-    return _datasource.watchIngestionsByStatus(uid, status);
+    return Stream.fromFuture(_backend.getIngestionsByStatus(status));
   }
 
   @override
@@ -154,10 +112,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     int limit = 50,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getIngestionsByStatus(status, limit: limit);
-      }
-      return await _datasource.getIngestionsByStatus(uid, status, limit: limit);
+      return await _backend.getIngestionsByStatus(status, limit: limit);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -165,10 +120,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<int> getPendingReviewCount(String uid) {
-    if (_useBackend) {
-      return _backend!.getPendingReviewCount();
-    }
-    return _datasource.getPendingReviewCount(uid);
+    return _backend.getPendingReviewCount();
   }
 
   @override
@@ -178,14 +130,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required Map<String, dynamic> transactionFields,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.createManualFromIngestion(
-          ingestionId: ingestionId,
-          transactionFields: transactionFields,
-        );
-      }
-      return await _datasource.createManualFromIngestion(
-        uid: uid,
+      return await _backend.createManualFromIngestion(
         ingestionId: ingestionId,
         transactionFields: transactionFields,
       );
@@ -197,11 +142,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<void> markReviewed(String uid, String transactionId) async {
     try {
-      if (_useBackend) {
-        await _backend!.markReviewed(transactionId);
-        return;
-      }
-      await _datasource.markReviewed(uid, transactionId);
+      await _backend.markReviewed(transactionId);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -210,11 +151,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<void> softDelete(String uid, String transactionId) async {
     try {
-      if (_useBackend) {
-        await _backend!.softDelete(transactionId);
-        return;
-      }
-      await _datasource.softDelete(uid, transactionId);
+      await _backend.softDelete(transactionId);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -228,16 +165,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String category,
   }) async {
     try {
-      if (_useBackend) {
-        await _backend!.upsertMerchantCategoryOverride(
-          merchantKey: merchantKey,
-          displayName: displayName,
-          category: category,
-        );
-        return;
-      }
-      await _datasource.upsertMerchantCategoryOverride(
-        uid: uid,
+      await _backend.upsertMerchantCategoryOverride(
         merchantKey: merchantKey,
         displayName: displayName,
         category: category,
@@ -253,13 +181,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String merchantKey,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getMerchantCategoryOverride(merchantKey);
-      }
-      return await _datasource.getMerchantCategoryOverride(
-        uid: uid,
-        merchantKey: merchantKey,
-      );
+      return await _backend.getMerchantCategoryOverride(merchantKey);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -271,14 +193,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String merchantKey,
   }) async {
     try {
-      if (_useBackend) {
-        await _backend!.deleteMerchantCategoryOverride(merchantKey);
-        return;
-      }
-      await _datasource.deleteMerchantCategoryOverride(
-        uid: uid,
-        merchantKey: merchantKey,
-      );
+      await _backend.deleteMerchantCategoryOverride(merchantKey);
     } catch (e) {
       throwAsFailure(e);
     }

@@ -123,7 +123,7 @@ class _AuthGateState extends State<AuthGate> {
       if (code == null || code.isEmpty) return;
       await context.read<AppCurrencyController>().applyFromServer(code);
     } catch (_) {
-      // Non-blocking — GET /me or CF ensureUserProfile.
+      // Non-blocking — GET /me.
     }
   }
 }

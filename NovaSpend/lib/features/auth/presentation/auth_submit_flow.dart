@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/app_error_mapper.dart';
 import 'package:nova_spend/core/http/api_client.dart';
-import 'package:nova_spend/core/http/cloud_functions_http_client.dart';
 import 'package:nova_spend/features/auth/presentation/auth_error_mapper.dart';
 import 'package:nova_spend/features/auth/presentation/auth_service.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
@@ -68,8 +67,6 @@ class AuthSubmitFlow {
         return AuthSubmitOutcome(errorText: l10n.authEmailInUse);
       }
       return AuthSubmitOutcome(errorText: e.message);
-    } on CloudFunctionsHttpException catch (e) {
-      return AuthSubmitOutcome(errorText: e.message);
     } catch (e) {
       return AuthSubmitOutcome(errorText: AppErrorMapper.message(l10n, e));
     }
@@ -80,9 +77,8 @@ class AuthSubmitFlow {
     required String password,
     required AppLocalizations l10n,
   }) async {
-    final credential = AppConstants.kUseBackendV1
-        ? await _auth.loginWithBackend(email: email, password: password)
-        : await _auth.signIn(email: email, password: password);
+    final credential =
+        await _auth.loginWithBackend(email: email, password: password);
     final user = credential.user;
     if (user == null) {
       return AuthSubmitOutcome(errorText: l10n.authWrongCredentials);
@@ -111,26 +107,11 @@ class AuthSubmitFlow {
       return AuthSubmitOutcome(errorText: l10n.authAcceptTermsError);
     }
 
-    // Prefer Auth Admin check via Cloud Function — Identity Toolkit
-    // createAuthUri is unreliable when email enumeration protection is on.
-    try {
-      final inUse = await _auth.isEmailAlreadyInUse(email);
-      if (inUse) {
-        return AuthSubmitOutcome(errorText: l10n.authEmailInUse);
-      }
-    } catch (_) {
-      // Fall through to sendEmailOtp, which enforces existence server-side.
-    }
-
+    // Backend signup OTP enforces existence server-side.
     try {
       await _auth.sendEmailOtp(email: email);
     } on ApiException catch (e) {
       if (e.isEmailExists) {
-        return AuthSubmitOutcome(errorText: l10n.authEmailInUse);
-      }
-      rethrow;
-    } on CloudFunctionsHttpException catch (e) {
-      if (_isEmailInUseMessage(e.message)) {
         return AuthSubmitOutcome(errorText: l10n.authEmailInUse);
       }
       rethrow;
@@ -141,12 +122,5 @@ class AuthSubmitFlow {
       verificationEmail: email.trim(),
       forceLoginMode: true,
     );
-  }
-
-  static bool _isEmailInUseMessage(String message) {
-    final lower = message.toLowerCase();
-    return lower.contains('already in use') ||
-        lower.contains('already-exists') ||
-        lower.contains('email-already');
   }
 }

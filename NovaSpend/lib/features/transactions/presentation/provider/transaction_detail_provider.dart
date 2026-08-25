@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
@@ -182,11 +181,9 @@ class TransactionDetailProvider extends ChangeNotifier {
         'day': day,
         'isEdited': true,
         'categorySource': 'user',
-        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       if (needsReview) {
-        fields['reviewedAt'] = FieldValue.serverTimestamp();
         fields['status'] = 'active';
       }
 

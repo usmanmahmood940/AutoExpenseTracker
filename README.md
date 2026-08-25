@@ -1,10 +1,12 @@
 # Auto Expense Tracker
 
-Personal auto expense logger: bank SMS/email → webhook → Gemini parsing → Firestore.
+Personal auto expense logger: bank SMS/email → FastAPI ingest → Gemini parsing → Postgres.
 
-## Phase 1 — Backend core (current)
+**Firebase Functions and client Firestore are retired (2026-08-25).** Live APIs are in [`backend/`](backend/) (Cloud Run). Firebase remains for **Auth** and **FCM** only. See [`docs/backend-migration-plan.md`](docs/backend-migration-plan.md) and [`docs/webhooks.md`](docs/webhooks.md).
 
-- **`ingestTransactionForUser`** HTTP Cloud Function (Firebase Functions v2, `asia-south1`) — multi-user webhook keyed by Firebase Auth UID
+## Phase 1 — Backend core (historical)
+
+The original ingest path was `ingestTransactionForUser` (Firebase Functions v2). That function has been deleted. The notes below are an archive of the old Functions + Firestore stack.
 - Gemini parsing with structured JSON output (`gemini-2.5-flash`, with fallbacks)
 - Firestore writes: `users/{uid}/raw_ingestions` and `users/{uid}/transactions`
 - Dedup by amount + currency + accountId + externalId + transactionDate
@@ -18,7 +20,7 @@ Personal auto expense logger: bank SMS/email → webhook → Gemini parsing → 
 ├── firestore.indexes.json
 ├── functions/
 │   ├── src/
-│   │   ├── index.ts          # Function exports
+│   │   ├── index.ts          # Retired stub — do not deploy
 │   │   ├── ingest.ts         # ingestTransactionForUser
 │   │   ├── gemini.ts         # Gemini parsing
 │   │   ├── dedup.ts          # Dedup key + account masking

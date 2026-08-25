@@ -1,22 +1,15 @@
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/merchants/data/datasource/backend_merchant_datasource.dart';
-import 'package:nova_spend/features/merchants/data/datasource/firestore_merchant_datasource.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
 import 'package:nova_spend/features/merchants/domain/repositories/merchant_repository.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 
 class MerchantRepositoryImpl implements MerchantRepository {
   MerchantRepositoryImpl({
-    required FirestoreMerchantDatasource datasource,
-    BackendMerchantDatasource? backend,
-  })  : _datasource = datasource,
-        _backend = backend;
+    required BackendMerchantDatasource backend,
+  }) : _backend = backend;
 
-  final FirestoreMerchantDatasource _datasource;
-  final BackendMerchantDatasource? _backend;
-
-  bool get _useBackend => AppConstants.kUseBackendV1 && _backend != null;
+  final BackendMerchantDatasource _backend;
 
   @override
   Future<MerchantSummaryEntity> getMerchantSummary({
@@ -25,15 +18,8 @@ class MerchantRepositoryImpl implements MerchantRepository {
     String? displayNameHint,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getMerchantSummary(
-          merchantNormalized: merchantNormalized,
-        );
-      }
-      return await _datasource.getMerchantSummary(
-        uid: uid,
+      return await _backend.getMerchantSummary(
         merchantNormalized: merchantNormalized,
-        displayNameHint: displayNameHint,
       );
     } catch (e) {
       throwAsFailure(e);
@@ -48,15 +34,7 @@ class MerchantRepositoryImpl implements MerchantRepository {
     TransactionEntity? startAfter,
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.getMerchantTransactions(
-          merchantNormalized: merchantNormalized,
-          limit: limit,
-          startAfter: startAfter,
-        );
-      }
-      return await _datasource.getMerchantTransactions(
-        uid: uid,
+      return await _backend.getMerchantTransactions(
         merchantNormalized: merchantNormalized,
         limit: limit,
         startAfter: startAfter,

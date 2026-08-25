@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 
 /// Lightweight recurring detection: same merchant + similar amount within ~30 days.
@@ -47,9 +46,4 @@ class RecurringDetector {
 String yearMonthNow([DateTime? now]) {
   final d = now ?? DateTime.now();
   return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
-}
-
-Timestamp? parseFirestoreTimestamp(dynamic value) {
-  if (value is Timestamp) return value;
-  return null;
 }

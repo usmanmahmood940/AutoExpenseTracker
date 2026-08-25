@@ -73,11 +73,11 @@ Project: `auto-expense-tracker-2026`
 
 ---
 
-## `ingestTransactionForUser` (legacy Cloud Function)
+## `ingestTransactionForUser` (deleted Cloud Function)
 
-Identifies the user via Firebase Auth UID (`X-User-Id` or `?uid=`). Writes under `users/{uid}/…`.
+Identifies the user via Firebase Auth UID (`X-User-Id` or `?uid=`). Wrote under `users/{uid}/…`.
 
-**Legacy.** Shortcuts now use FastAPI `POST /ingest` (Phase F, 2026-08-23). Keep this Function deployed for rollback only.
+**Deleted 2026-08-25** (migration step 12). Use FastAPI `POST /ingest` below.
 
 ### URL
 

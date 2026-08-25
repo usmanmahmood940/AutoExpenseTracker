@@ -1,87 +1,28 @@
 rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model (cold backup only)
+// ===============================================================
+//
+// After FastAPI + Postgres cutover (docs/backend-migration-plan.md
+// §6 step 12 / §8.3), Firestore is retained as a backup. Existing
+// collections (users, transactions, raw_ingestions, categories,
+// merchantCategoryOverrides, monthlySummaries, auth ephemeral docs,
+// etc.) are not read or written by NovaSpend clients.
+//
+// Firebase Admin SDK (migrate scripts) bypasses these rules.
+// Data is kept until the retention window (30–90 days), then
+// collections may be deleted. Auth + FCM are unchanged.
+//
+// Client access is deny-all. There are no allowed queries, so no
+// per-collection validators: every create/update/delete/get/list
+// from a client SDK is rejected. isAuthenticated / isOwner / uid
+// helpers are omitted because no path grants access.
+//
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Global default categories — readable by signed-in clients
-    match /categories/{categoryId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    // Legacy top-level collections — Admin SDK only
-    match /transactions/{document=**} {
+    match /{document=**} {
       allow read, write: if false;
-    }
-    match /raw_ingestions/{document=**} {
-      allow read, write: if false;
-    }
-
-    // Auth ephemeral state — Admin SDK only
-    match /authTemp/{document=**} {
-      allow read, write: if false;
-    }
-    match /authRateLimits/{document=**} {
-      allow read, write: if false;
-    }
-    // Legacy auth collections (drained by monthly cleanup) — Admin SDK only
-    match /emailVerificationOtps/{document=**} {
-      allow read, write: if false;
-    }
-    match /passwordResetOtps/{document=**} {
-      allow read, write: if false;
-    }
-    match /passwordResetSessions/{document=**} {
-      allow read, write: if false;
-    }
-
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
-
-      match /transactions/{transactionId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /raw_ingestions/{ingestionId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /categories/{categoryId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /merchantCategoryOverrides/{overrideId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /monthlySummaries/{summaryId} {
-        allow read: if isOwner(userId);
-        allow write: if false; // maintained by Cloud Functions
-      }
-
-      match /aiSummaries/{summaryId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /recurringPatterns/{patternId} {
-        allow read: if isOwner(userId);
-        allow write: if false; // maintained by Cloud Functions
-      }
-
-      match /budgets/{budgetId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /meta/{docId} {
-        allow read: if isOwner(userId);
-        allow write: if false; // maintained by Cloud Functions
-      }
     }
   }
 }

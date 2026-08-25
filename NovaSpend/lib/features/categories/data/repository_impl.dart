@@ -1,38 +1,28 @@
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/categories/data/datasource/backend_category_datasource.dart';
-import 'package:nova_spend/features/categories/data/datasource/firestore_category_datasource.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
 
 class CategoryRepositoryImpl implements CategoryRepository {
   CategoryRepositoryImpl({
-    required FirestoreCategoryDatasource datasource,
-    BackendCategoryDatasource? backend,
-  })  : _datasource = datasource,
-        _backend = backend;
+    required BackendCategoryDatasource backend,
+  }) : _backend = backend;
 
-  final FirestoreCategoryDatasource _datasource;
-  final BackendCategoryDatasource? _backend;
-
-  bool get _useBackend => AppConstants.kUseBackendV1 && _backend != null;
+  final BackendCategoryDatasource _backend;
 
   @override
   Stream<List<CategoryEntity>> watchDefaults() {
-    if (_useBackend) return _backend!.watchDefaults();
-    return _datasource.watchDefaults();
+    return _backend.watchDefaults();
   }
 
   @override
   Stream<List<CategoryEntity>> watchUserCategories(String uid) {
-    if (_useBackend) return _backend!.watchUserCategories();
-    return _datasource.watchUserCategories(uid);
+    return _backend.watchUserCategories();
   }
 
   @override
   Stream<List<CategoryEntity>> watchAll(String uid) {
-    if (_useBackend) return _backend!.watchAll();
-    return _datasource.watchAll(uid);
+    return _backend.watchAll();
   }
 
   @override
@@ -44,16 +34,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
     String color = '#757575',
   }) async {
     try {
-      if (_useBackend) {
-        return await _backend!.createCustom(
-          name: name,
-          type: type,
-          icon: icon,
-          color: color,
-        );
-      }
-      return await _datasource.createCustom(
-        uid: uid,
+      return await _backend.createCustom(
         name: name,
         type: type,
         icon: icon,

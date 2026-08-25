@@ -1,27 +1,21 @@
-/// App-wide constants for Firebase paths and webhook endpoints.
+/// App-wide constants for API endpoints and preferences.
 class AppConstants {
   AppConstants._();
 
   static const String projectId = 'auto-expense-tracker-2026';
-  static const String region = 'asia-south1';
 
-  /// FastAPI (Cloud Run) base URL for Phase E+.
+  /// FastAPI (Cloud Run) base URL.
   static const String apiBaseUrl =
       'https://novaspend-api-h7asbihbya-el.a.run.app';
 
-  /// When true, product screens and auth OTP/login/reset use FastAPI
-  /// instead of Firestore / Cloud Functions.
-  /// Disable with `--dart-define=USE_BACKEND_V1=false`.
+  /// Product screens and auth OTP/login/reset use FastAPI.
+  /// Kept as a compile-time switch for staged builds; default on.
   static const bool kUseBackendV1 = bool.fromEnvironment(
     'USE_BACKEND_V1',
     defaultValue: true,
   );
 
-  /// Dev Shortcuts should hit FastAPI `/ingest`. Production stays on the
-  /// Cloud Function until the Phase F freeze.
-  static String get ingestForUserUrl => kUseBackendV1
-      ? '$apiBaseUrl/ingest'
-      : 'https://asia-south1-auto-expense-tracker-2026.cloudfunctions.net/ingestTransactionForUser';
+  static const String ingestForUserUrl = '$apiBaseUrl/ingest';
 
   /// Used by Identity Toolkit `createAuthUri` email existence checks.
   static const String productionSiteUrl =
@@ -43,14 +37,6 @@ class AppConstants {
   );
 
   static const int otpResendCooldownSeconds = 30;
-
-  static const String users = 'users';
-  static const String transactions = 'transactions';
-  static const String rawIngestions = 'raw_ingestions';
-  static const String categories = 'categories';
-  static const String merchantCategoryOverrides = 'merchantCategoryOverrides';
-  static const String monthlySummaries = 'monthlySummaries';
-  static const String meta = 'meta';
 
   static const double confidenceReviewThreshold = 0.8;
 
