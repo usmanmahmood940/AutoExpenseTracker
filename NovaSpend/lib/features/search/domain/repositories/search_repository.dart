@@ -11,6 +11,8 @@ abstract class SearchRepository {
     bool includeAggregates = false,
   });
 
+  Future<List<String>> listPaymentMethods();
+
   Future<List<String>> getRecentSearches();
 
   Future<void> addRecentSearch(String term);

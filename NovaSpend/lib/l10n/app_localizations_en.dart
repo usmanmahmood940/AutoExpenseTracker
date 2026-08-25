@@ -75,6 +75,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categorySheetAll => 'All categories';
 
   @override
+  String get filterSheetAmountRange => 'Amount range';
+
+  @override
+  String get filterSourceIosShortcut => 'iOS Shortcut';
+
+  @override
+  String get filterSourceGmail => 'Gmail';
+
+  @override
   String get activityResetAll => 'Reset all';
 
   @override

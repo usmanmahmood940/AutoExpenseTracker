@@ -68,6 +68,7 @@ class HomeProvider extends ChangeNotifier {
   bool _hasMore = true;
   String? _error;
   String? _uid;
+  final Map<HomePeriod, Future<void>> _periodStatsInFlight = {};
 
   List<TransactionEntity>? _periodItemsCache;
 
@@ -102,8 +103,7 @@ class HomeProvider extends ChangeNotifier {
 
   /// True when the currently selected period may have more transactions than
   /// the ones loaded in the preview. Used for the "Show more" button.
-  bool get periodHasMore =>
-      periodItems.length >= homePageSize && _hasMore;
+  bool get periodHasMore => periodItems.length >= homePageSize && _hasMore;
 
   String? get error => _error;
 
@@ -164,7 +164,7 @@ class HomeProvider extends ChangeNotifier {
     try {
       await Future.wait([
         _loadTransactionsPage(uid),
-        _loadAllPeriodStats(),
+        _ensurePeriodStats(_period),
         _loadPendingReviewCount(uid),
       ]);
       _error = null;
@@ -181,7 +181,20 @@ class HomeProvider extends ChangeNotifier {
     if (_period == period) return;
     _period = period;
     _invalidatePeriodCache();
+    if (_periodStats.containsKey(period)) {
+      _isPeriodStatsLoading = false;
+      notifyListeners();
+      return;
+    }
+    _isPeriodStatsLoading = true;
     notifyListeners();
+    final requested = period;
+    unawaited(() async {
+      await _ensurePeriodStats(requested);
+      if (_period != requested) return;
+      _isPeriodStatsLoading = false;
+      notifyListeners();
+    }());
   }
 
   /// Pull-to-refresh: reloads the feed and stats for the **current** period only.
@@ -193,9 +206,10 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _periodStats.removeWhere((key, _) => key != _period);
       await Future.wait([
         _loadTransactionsPage(uid),
-        _loadPeriodStats(_period),
+        _ensurePeriodStats(_period, force: true),
         _loadPendingReviewCount(uid),
       ]);
       _error = null;
@@ -222,10 +236,23 @@ class HomeProvider extends ChangeNotifier {
     _hasMore = page.hasMore;
   }
 
-  Future<void> _loadAllPeriodStats() async {
-    await Future.wait([
-      for (final period in HomePeriod.values) _loadPeriodStatsSafely(period),
-    ]);
+  Future<void> _ensurePeriodStats(HomePeriod period, {bool force = false}) {
+    if (!force && _periodStats.containsKey(period)) {
+      return Future.value();
+    }
+    if (!force) {
+      final inFlight = _periodStatsInFlight[period];
+      if (inFlight != null) return inFlight;
+    }
+
+    late final Future<void> future;
+    future = _loadPeriodStatsSafely(period).whenComplete(() {
+      if (identical(_periodStatsInFlight[period], future)) {
+        _periodStatsInFlight.remove(period);
+      }
+    });
+    _periodStatsInFlight[period] = future;
+    return future;
   }
 
   Future<void> _loadPeriodStatsSafely(HomePeriod period) async {

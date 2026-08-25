@@ -13,6 +13,10 @@ class SearchQuery extends Equatable {
     this.creditsOnly = false,
     this.subscriptionsOnly = false,
     this.categories = const [],
+    this.amountMin,
+    this.amountMax,
+    this.paymentMethods = const [],
+    this.sources = const [],
   });
 
   final String text;
@@ -26,6 +30,14 @@ class SearchQuery extends Equatable {
 
   /// Display names of selected categories. Empty means all categories.
   final List<String> categories;
+  final double? amountMin;
+  final double? amountMax;
+
+  /// Canonical payment-method keys. Empty means all methods.
+  final List<String> paymentMethods;
+
+  /// Ingestion source keys (`ios_shortcut`, `gmail`, `manual`). Empty means all.
+  final List<String> sources;
 
   static const empty = SearchQuery();
 
@@ -35,12 +47,25 @@ class SearchQuery extends Equatable {
 
   bool get hasCategories => categories.isNotEmpty;
 
+  bool get hasAmountRange => amountMin != null || amountMax != null;
+
+  bool get hasPaymentMethods => paymentMethods.isNotEmpty;
+
+  bool get hasSources => sources.isNotEmpty;
+
+  /// Filters owned by the extra-filters sheet (not date/category chips).
+  bool get hasSheetFilters =>
+      hasAmountRange ||
+      debitsOnly ||
+      creditsOnly ||
+      hasPaymentMethods ||
+      hasSources;
+
   bool get hasActiveFilters =>
       hasText ||
       hasDateRange ||
       hasCategories ||
-      debitsOnly ||
-      creditsOnly ||
+      hasSheetFilters ||
       subscriptionsOnly;
 
   /// True when Reset all should show (filters or a non-default sort).
@@ -64,6 +89,14 @@ class SearchQuery extends Equatable {
     bool? subscriptionsOnly,
     List<String>? categories,
     bool clearCategories = false,
+    double? amountMin,
+    double? amountMax,
+    bool clearAmountMin = false,
+    bool clearAmountMax = false,
+    List<String>? paymentMethods,
+    bool clearPaymentMethods = false,
+    List<String>? sources,
+    bool clearSources = false,
   }) {
     return SearchQuery(
       text: text ?? this.text,
@@ -75,6 +108,12 @@ class SearchQuery extends Equatable {
       creditsOnly: creditsOnly ?? this.creditsOnly,
       subscriptionsOnly: subscriptionsOnly ?? this.subscriptionsOnly,
       categories: clearCategories ? const [] : (categories ?? this.categories),
+      amountMin: clearAmountMin ? null : (amountMin ?? this.amountMin),
+      amountMax: clearAmountMax ? null : (amountMax ?? this.amountMax),
+      paymentMethods: clearPaymentMethods
+          ? const []
+          : (paymentMethods ?? this.paymentMethods),
+      sources: clearSources ? const [] : (sources ?? this.sources),
     );
   }
 
@@ -89,5 +128,9 @@ class SearchQuery extends Equatable {
     creditsOnly,
     subscriptionsOnly,
     categories,
+    amountMin,
+    amountMax,
+    paymentMethods,
+    sources,
   ];
 }

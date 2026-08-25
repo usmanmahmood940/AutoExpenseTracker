@@ -20,6 +20,7 @@ def _post_tx(
     tx_type: str = "debit",
     category: str = "Food & Dining",
     bank: str = "HBL",
+    payment_method: str = "unknown",
 ) -> dict:
     response = client.post(
         "/transactions",
@@ -30,6 +31,7 @@ def _post_tx(
             "type": tx_type,
             "category": category,
             "bank": bank,
+            "payment_method": payment_method,
         },
     )
     assert response.status_code == 201, response.text
@@ -230,6 +232,131 @@ def test_search_by_categories(api_client: TestClient) -> None:
         params={"categories": "Food & Dining,Fuel"},
     ).json()
     assert {item["merchant"] for item in multi["items"]} == {"KFC", "PSO"}
+
+
+def test_search_sort_applies_to_full_match_set(api_client: TestClient) -> None:
+    """Sort is SQL-side so page 1 is the true top of the full match set."""
+    _post_tx(api_client, merchant="Cheap", amount=100, tx_date="2026-03-10")
+    _post_tx(api_client, merchant="Mid", amount=400, tx_date="2026-03-01")
+    _post_tx(api_client, merchant="Pricey", amount=900, tx_date="2026-03-05")
+
+    first = api_client.get(
+        "/transactions/search",
+        params={
+            "date_from": "2026-03-01",
+            "date_to": "2026-03-31",
+            "sort_by": "amount",
+            "order_by": "desc",
+            "limit": 1,
+            "include_aggregates": True,
+        },
+    ).json()
+    assert first["items"][0]["merchant"] == "Pricey"
+    assert first["has_more"] is True
+    assert first["total_count"] == 3
+    assert first["sort_by"] == "amount"
+    assert first["order_by"] == "desc"
+
+    second = api_client.get(
+        "/transactions/search",
+        params={
+            "date_from": "2026-03-01",
+            "date_to": "2026-03-31",
+            "sort_by": "amount",
+            "order_by": "desc",
+            "limit": 1,
+            "cursor": first["next_cursor"],
+        },
+    ).json()
+    assert second["items"][0]["merchant"] == "Mid"
+
+    oldest = api_client.get(
+        "/transactions/search",
+        params={"sort_by": "date", "order_by": "asc", "limit": 1},
+    ).json()
+    assert oldest["items"][0]["merchant"] == "Mid"
+
+    az = api_client.get(
+        "/transactions/search",
+        params={"sort_by": "merchant", "order_by": "asc"},
+    ).json()
+    assert [item["merchant"] for item in az["items"]] == ["Cheap", "Mid", "Pricey"]
+
+    prefix_amount = api_client.get(
+        "/transactions/search",
+        params={"q": "p", "sort_by": "amount", "order_by": "desc"},
+    ).json()
+    assert [item["merchant"] for item in prefix_amount["items"]] == ["Pricey"]
+
+
+def test_search_amount_type_payment_and_source(api_client: TestClient) -> None:
+    _post_tx(
+        api_client,
+        merchant="Cheap",
+        amount=100,
+        tx_date="2026-03-01",
+        payment_method="cash",
+    )
+    _post_tx(
+        api_client,
+        merchant="Mid",
+        amount=400,
+        tx_date="2026-03-02",
+        payment_method="wallet",
+    )
+    _post_tx(
+        api_client,
+        merchant="Salary",
+        amount=900,
+        tx_date="2026-03-03",
+        tx_type="credit",
+        payment_method="bank_transfer",
+    )
+
+    ranged = api_client.get(
+        "/transactions/search",
+        params={"amount_min": 150, "amount_max": 500},
+    ).json()
+    assert [item["merchant"] for item in ranged["items"]] == ["Mid"]
+
+    credits = api_client.get(
+        "/transactions/search",
+        params={"type": "credit"},
+    ).json()
+    assert [item["merchant"] for item in credits["items"]] == ["Salary"]
+
+    methods = api_client.get(
+        "/transactions/search",
+        params={"payment_methods": "cash,wallet"},
+    ).json()
+    assert {item["merchant"] for item in methods["items"]} == {"Cheap", "Mid"}
+
+    manual = api_client.get(
+        "/transactions/search",
+        params={"sources": "manual"},
+    ).json()
+    assert len(manual["items"]) == 3
+
+    gmail = api_client.get(
+        "/transactions/search",
+        params={"sources": "gmail"},
+    ).json()
+    assert gmail["items"] == []
+
+    invalid_range = api_client.get(
+        "/transactions/search",
+        params={"amount_min": 500, "amount_max": 100},
+    )
+    assert invalid_range.status_code == 400
+
+
+def test_list_payment_methods(api_client: TestClient) -> None:
+    response = api_client.get("/payment-methods")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert "debit_card" in items
+    assert "wallet" in items
+    assert items[0] == "debit_card"
 
 
 def test_user_isolation() -> None:

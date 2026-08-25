@@ -220,6 +220,24 @@ abstract class AppLocalizations {
   /// **'All categories'**
   String get categorySheetAll;
 
+  /// No description provided for @filterSheetAmountRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount range'**
+  String get filterSheetAmountRange;
+
+  /// No description provided for @filterSourceIosShortcut.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS Shortcut'**
+  String get filterSourceIosShortcut;
+
+  /// No description provided for @filterSourceGmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Gmail'**
+  String get filterSourceGmail;
+
   /// No description provided for @activityResetAll.
   ///
   /// In en, this message translates to:

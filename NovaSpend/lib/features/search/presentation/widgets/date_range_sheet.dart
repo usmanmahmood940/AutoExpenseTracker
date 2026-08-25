@@ -7,6 +7,7 @@ import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_motion.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/sheet_action_footer.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/presentation/widgets/date_range_calendar.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -76,9 +77,12 @@ class _DateRangeSheetState extends State<DateRangeSheet> {
 
   bool get _customComplete => _customFrom != null && _customTo != null;
 
-  bool get _canApply => _preset != null && (!_isCustom || _customComplete);
+  bool get _canApply {
+    if (_preset == null) return widget.initial != null;
+    return !_isCustom || _customComplete;
+  }
 
-  bool get _canClear => widget.initial != null;
+  bool get _canClear => _preset != null;
 
   DateRangeValue get _current =>
       resolveDateRange(_preset!, customFrom: _customFrom, customTo: _customTo);
@@ -135,11 +139,19 @@ class _DateRangeSheetState extends State<DateRangeSheet> {
 
   void _apply() {
     if (!_canApply) return;
+    if (_preset == null) {
+      Navigator.of(context).pop(const DateRangeSheetResult.cleared());
+      return;
+    }
     Navigator.of(context).pop(DateRangeSheetResult.applied(_current));
   }
 
   void _clear() {
-    Navigator.of(context).pop(const DateRangeSheetResult.cleared());
+    setState(() {
+      _preset = null;
+      _customFrom = null;
+      _customTo = null;
+    });
   }
 
   @override
@@ -283,64 +295,13 @@ class _DateRangeSheetState extends State<DateRangeSheet> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      if (_canClear) ...[
-                        TextButton(
-                          onPressed: _clear,
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.colorScheme.onSurfaceVariant,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.smPlus2,
-                            ),
-                          ),
-                          child: Text(
-                            l10n.feedClearFilters,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                      ],
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _canApply ? _apply : null,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primaryStrong,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: AppColors.neutralFill(
-                              brightness,
-                            ),
-                            disabledForegroundColor: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.4),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            minimumSize: const Size.fromHeight(52),
-                            maximumSize: const Size.fromHeight(52),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
-                          ),
-                          child: Text(
-                            l10n.dateRangeApply,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: _canApply
-                                  ? Colors.white
-                                  : theme.colorScheme.onSurface.withValues(
-                                      alpha: 0.4,
-                                    ),
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  SheetActionFooter(
+                    showClear: _canClear,
+                    onClear: _clear,
+                    onApply: _apply,
+                    applyEnabled: _canApply,
+                    clearLabel: l10n.feedClearFilters,
+                    applyLabel: l10n.dateRangeApply,
                   ),
                 ],
               ),

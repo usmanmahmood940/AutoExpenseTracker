@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/domain/entities/search_query.dart';
 import 'package:nova_spend/features/search/domain/entities/transaction_sort.dart';
@@ -23,6 +24,7 @@ class SearchProvider extends ChangeNotifier {
   SearchQuery query = SearchQuery.empty;
   List<TransactionEntity> results = [];
   List<String> recentSearches = [];
+  List<String> paymentMethods = kPaymentMethods;
   bool isLoading = false;
   bool isLoadingMore = false;
   bool hasMore = false;
@@ -45,6 +47,7 @@ class SearchProvider extends ChangeNotifier {
     _uid = uid;
     recentSearches = await _searchRepository.getRecentSearches();
     notifyListeners();
+    unawaited(ensurePaymentMethods());
   }
 
   /// Loads the Activity list once if it has never been fetched.
@@ -60,6 +63,18 @@ class SearchProvider extends ChangeNotifier {
     query = SearchQuery.empty;
     notifyListeners();
     unawaited(runSearch(saveRecent: false));
+  }
+
+  Future<void> ensurePaymentMethods() async {
+    try {
+      final items = await _searchRepository.listPaymentMethods();
+      if (items.isEmpty) return;
+      if (listEquals(paymentMethods, items)) return;
+      paymentMethods = List<String>.unmodifiable(items);
+      notifyListeners();
+    } catch (_) {
+      // Keep the canonical client catalog if the request fails.
+    }
   }
 
   void setText(String text) {
@@ -120,9 +135,6 @@ class SearchProvider extends ChangeNotifier {
   void setSort(TransactionSort sort) {
     if (query.sort == sort) return;
     query = query.copyWith(sort: sort);
-    if (results.isNotEmpty) {
-      results = sortTransactions(results, sort);
-    }
     notifyListeners();
     unawaited(runSearch(saveRecent: false));
   }
@@ -149,6 +161,47 @@ class SearchProvider extends ChangeNotifier {
 
   void toggleSubscriptions() {
     query = query.copyWith(subscriptionsOnly: !query.subscriptionsOnly);
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
+  void applySheetFilters({
+    double? amountMin,
+    double? amountMax,
+    String? type,
+    List<String> paymentMethods = const [],
+    List<String> sources = const [],
+  }) {
+    final methods = List<String>.unmodifiable([...paymentMethods]..sort());
+    final nextSources = List<String>.unmodifiable([...sources]..sort());
+    final next = query.copyWith(
+      amountMin: amountMin,
+      amountMax: amountMax,
+      clearAmountMin: amountMin == null,
+      clearAmountMax: amountMax == null,
+      debitsOnly: type == 'debit',
+      creditsOnly: type == 'credit',
+      paymentMethods: methods,
+      clearPaymentMethods: methods.isEmpty,
+      sources: nextSources,
+      clearSources: nextSources.isEmpty,
+    );
+    if (next == query) return;
+    query = next;
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
+  void clearSheetFilters() {
+    if (!query.hasSheetFilters) return;
+    query = query.copyWith(
+      clearAmountMin: true,
+      clearAmountMax: true,
+      debitsOnly: false,
+      creditsOnly: false,
+      clearPaymentMethods: true,
+      clearSources: true,
+    );
     notifyListeners();
     unawaited(runSearch(saveRecent: false));
   }
@@ -183,7 +236,7 @@ class SearchProvider extends ChangeNotifier {
         includeAggregates: true,
       );
       _pageCursor = page.items.isEmpty ? null : page.items.last;
-      results = sortTransactions(page.items, query.sort);
+      results = page.items;
       hasMore = page.hasMore;
       matchCount = page.totalCount ?? page.items.length;
       final fallback = _spendTotals(page.items);
@@ -234,10 +287,10 @@ class SearchProvider extends ChangeNotifier {
       } else {
         _pageCursor = more.items.last;
         final existing = results.map((e) => e.id).toSet();
-        results = sortTransactions([
+        results = [
           ...results,
           ...more.items.where((t) => !existing.contains(t.id)),
-        ], query.sort);
+        ];
         hasMore = more.hasMore;
         error = null;
       }

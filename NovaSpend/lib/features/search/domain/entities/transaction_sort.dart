@@ -14,8 +14,18 @@ enum TransactionSort {
   bool get isDefault => this == defaultSort;
 
   /// Day headers (Spent / Net) only make sense for date-ordered lists.
-  bool get groupsByDay =>
-      this == dateNewest || this == dateOldest;
+  bool get groupsByDay => this == dateNewest || this == dateOldest;
+
+  String get apiSortBy => switch (this) {
+    dateNewest || dateOldest => 'date',
+    amountHighest || amountLowest => 'amount',
+    merchantAz || merchantZa => 'merchant',
+  };
+
+  String get apiOrderBy => switch (this) {
+    dateNewest || amountHighest || merchantZa => 'desc',
+    dateOldest || amountLowest || merchantAz => 'asc',
+  };
 
   int compare(TransactionEntity a, TransactionEntity b) {
     switch (this) {

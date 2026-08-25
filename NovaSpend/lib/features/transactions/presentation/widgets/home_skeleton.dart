@@ -46,18 +46,33 @@ class HomeFeedSkeleton extends StatelessWidget {
         children: const [
           SkeletonSectionHeader(titleWidth: 140, actionWidth: 96),
           SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(child: _HighlightCardBones()),
-              SizedBox(width: AppSpacing.smPlus2),
-              Expanded(child: _HighlightCardBones()),
-            ],
-          ),
+          HighlightCardsSkeleton(),
           SizedBox(height: AppSpacing.lg),
           SkeletonSectionHeader(titleWidth: 168, actionWidth: 56),
           SizedBox(height: AppSpacing.sm),
           SkeletonTransactionList(groupCount: 1, rowsPerGroup: 4),
         ],
+      ),
+    );
+  }
+}
+
+/// Skeleton for the two home highlight cards while period stats load.
+class HighlightCardsSkeleton extends StatelessWidget {
+  const HighlightCardsSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SkeletonPulse(
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _HighlightCardBones()),
+            SizedBox(width: AppSpacing.smPlus2),
+            Expanded(child: _HighlightCardBones()),
+          ],
+        ),
       ),
     );
   }

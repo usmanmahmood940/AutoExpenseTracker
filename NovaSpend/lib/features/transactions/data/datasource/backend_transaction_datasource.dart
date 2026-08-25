@@ -232,6 +232,12 @@ class BackendTransactionDatasource {
     String? type,
     bool subscriptionsOnly = false,
     List<String>? categories,
+    double? amountMin,
+    double? amountMax,
+    List<String>? paymentMethods,
+    List<String>? sources,
+    String sortBy = 'date',
+    String orderBy = 'desc',
     bool includeAggregates = false,
   }) async {
     try {
@@ -248,6 +254,16 @@ class BackendTransactionDatasource {
           'categories': categories == null || categories.isEmpty
               ? null
               : categories.join(','),
+          'amount_min': amountMin?.toString(),
+          'amount_max': amountMax?.toString(),
+          'payment_methods': paymentMethods == null || paymentMethods.isEmpty
+              ? null
+              : paymentMethods.join(','),
+          'sources': sources == null || sources.isEmpty
+              ? null
+              : sources.join(','),
+          'sort_by': sortBy,
+          'order_by': orderBy,
           'include_aggregates': includeAggregates ? 'true' : null,
         }),
         requireAuth: true,
@@ -271,6 +287,20 @@ class BackendTransactionDatasource {
         totalSpent: (response['total_spent'] as num?)?.toDouble(),
         totalReceived: (response['total_received'] as num?)?.toDouble(),
       );
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<List<String>> listPaymentMethods() async {
+    try {
+      final response = await _api.get('/payment-methods', requireAuth: true);
+      final raw = response['items'];
+      if (raw is! List) return const [];
+      return raw
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
     } on ApiException catch (e) {
       throw e.toDataException();
     }

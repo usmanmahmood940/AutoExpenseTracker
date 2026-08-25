@@ -99,6 +99,8 @@ class SearchListOut(BaseModel):
     total_count: int | None = None
     total_spent: float | None = None
     total_received: float | None = None
+    sort_by: str | None = None
+    order_by: str | None = None
 
 
 class HighlightOut(BaseModel):

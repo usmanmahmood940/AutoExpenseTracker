@@ -35,8 +35,23 @@ class SearchRepositoryImpl implements SearchRepository {
         type: query.typeFilter,
         subscriptionsOnly: query.subscriptionsOnly,
         categories: query.hasCategories ? query.categories : null,
+        amountMin: query.amountMin,
+        amountMax: query.amountMax,
+        paymentMethods: query.hasPaymentMethods ? query.paymentMethods : null,
+        sources: query.hasSources ? query.sources : null,
+        sortBy: query.sort.apiSortBy,
+        orderBy: query.sort.apiOrderBy,
         includeAggregates: includeAggregates,
       );
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
+  Future<List<String>> listPaymentMethods() async {
+    try {
+      return await _backend.listPaymentMethods();
     } catch (e) {
       throwAsFailure(e);
     }

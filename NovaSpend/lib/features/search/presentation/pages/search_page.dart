@@ -21,6 +21,7 @@ import 'package:nova_spend/features/search/domain/entities/date_range_preset.dar
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/search/presentation/widgets/category_filter_sheet.dart';
 import 'package:nova_spend/features/search/presentation/widgets/date_range_sheet.dart';
+import 'package:nova_spend/features/search/presentation/widgets/filter_sheet.dart';
 import 'package:nova_spend/features/search/presentation/widgets/sort_by_sheet.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
@@ -243,11 +244,15 @@ class _SearchViewState extends State<_SearchView> {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.xsMax),
-                      const _ActivityToolbarIcon(
+                      _ActivityToolbarIcon(
+                        emphasized: provider.query.hasSheetFilters,
+                        onTap: () => _openFilterSheet(context, provider),
                         child: Icon(
                           Icons.filter_alt_outlined,
                           size: 22,
-                          color: AppColors.primaryStrong,
+                          color: provider.query.hasSheetFilters
+                              ? AppColors.primaryStrong
+                              : theme.colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -430,6 +435,33 @@ class _SearchViewState extends State<_SearchView> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openFilterSheet(
+    BuildContext context,
+    SearchProvider provider,
+  ) async {
+    await provider.ensurePaymentMethods();
+    if (!context.mounted) return;
+    final selected = await FilterSheet.show(
+      context,
+      paymentMethods: provider.paymentMethods,
+      initial: provider.query.hasSheetFilters
+          ? FilterSheetValue.fromQuery(provider.query)
+          : null,
+    );
+    if (selected == null || !mounted) return;
+    if (selected.cleared) {
+      provider.clearSheetFilters();
+      return;
+    }
+    provider.applySheetFilters(
+      amountMin: selected.value.amountMin,
+      amountMax: selected.value.amountMax,
+      type: selected.value.type,
+      paymentMethods: selected.value.paymentMethods,
+      sources: selected.value.sources,
     );
   }
 

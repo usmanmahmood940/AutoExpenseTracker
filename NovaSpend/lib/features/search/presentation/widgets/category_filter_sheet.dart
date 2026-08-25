@@ -3,6 +3,7 @@ import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/category_avatar.dart';
+import 'package:nova_spend/core/widgets/sheet_action_footer.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 
@@ -84,13 +85,17 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
   }
 
   void _apply() {
-    Navigator.of(
-      context,
-    ).pop(CategoryFilterSheetResult.applied(_selected.toList(growable: false)));
+    Navigator.of(context).pop(
+      _selected.isEmpty
+          ? const CategoryFilterSheetResult.cleared()
+          : CategoryFilterSheetResult.applied(
+              _selected.toList(growable: false),
+            ),
+    );
   }
 
   void _clear() {
-    Navigator.of(context).pop(const CategoryFilterSheetResult.cleared());
+    setState(_selected.clear);
   }
 
   @override
@@ -200,55 +205,12 @@ class _CategoryFilterSheetState extends State<CategoryFilterSheet> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      if (_canClear) ...[
-                        TextButton(
-                          onPressed: _clear,
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.colorScheme.onSurfaceVariant,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.smPlus2,
-                            ),
-                          ),
-                          child: Text(
-                            l10n.feedClearFilters,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                      ],
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _apply,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primaryStrong,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            minimumSize: const Size.fromHeight(52),
-                            maximumSize: const Size.fromHeight(52),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                            ),
-                          ),
-                          child: Text(
-                            l10n.dateRangeApply,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  SheetActionFooter(
+                    showClear: _canClear,
+                    onClear: _clear,
+                    onApply: _apply,
+                    clearLabel: l10n.feedClearFilters,
+                    applyLabel: l10n.dateRangeApply,
                   ),
                 ],
               ),

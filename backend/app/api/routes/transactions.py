@@ -17,23 +17,51 @@ from app.api.product_schemas import (
     TransactionOut,
 )
 from app.db.models.enums import (
+    IngestionSource,
     SortOrder,
     TransactionSortBy,
     TransactionStatus,
     TransactionType,
 )
 from app.services import transactions as tx_service
+from app.services.payment_methods import PAYMENT_METHODS
 
 router = APIRouter(tags=["transactions"])
 
 Limit = Annotated[int, Query(ge=1, le=100)]
 
 
-def _split_categories(raw: str | None) -> list[str] | None:
+def _split_csv(raw: str | None) -> list[str]:
     if not raw:
-        return None
-    names = [part.strip() for part in raw.split(",") if part.strip()]
+        return []
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def _split_categories(raw: str | None) -> list[str] | None:
+    names = _split_csv(raw)
     return names or None
+
+
+def _parse_payment_methods(raw: str | None) -> list[str]:
+    allowed = set(PAYMENT_METHODS)
+    seen: list[str] = []
+    for name in _split_csv(raw):
+        if name in allowed and name not in seen:
+            seen.append(name)
+    return seen
+
+
+def _parse_sources(raw: str | None) -> list[str]:
+    allowed = {item.value for item in IngestionSource}
+    seen: list[str] = []
+    for name in _split_csv(raw):
+        if name in allowed and name not in seen:
+            seen.append(name)
+    return seen
+
+
+class PaymentMethodListOut(BaseModel):
+    items: list[str]
 
 
 class TransactionCreateRequest(BaseModel):
@@ -72,6 +100,11 @@ class TransactionUpdateRequest(BaseModel):
     status: TransactionStatus | None = None
 
 
+@router.get("/payment-methods", response_model=PaymentMethodListOut)
+async def list_payment_methods(_user: CurrentUser) -> PaymentMethodListOut:
+    return PaymentMethodListOut(items=list(PAYMENT_METHODS))
+
+
 @router.get("/transactions/search", response_model=SearchListOut)
 async def search_transactions(
     user: CurrentUser,
@@ -84,7 +117,13 @@ async def search_transactions(
     type: TransactionType | None = None,
     subscriptions_only: bool = False,
     categories: str | None = None,
+    amount_min: Decimal | None = None,
+    amount_max: Decimal | None = None,
+    payment_methods: str | None = None,
+    sources: str | None = None,
     include_aggregates: bool = False,
+    sort_by: TransactionSortBy = TransactionSortBy.date,
+    order_by: SortOrder = SortOrder.desc,
 ) -> SearchListOut:
     page = await tx_service.search_transactions(
         session,
@@ -97,7 +136,13 @@ async def search_transactions(
         tx_type=type,
         subscriptions_only=subscriptions_only,
         categories=_split_categories(categories),
+        amount_min=amount_min,
+        amount_max=amount_max,
+        payment_methods=_parse_payment_methods(payment_methods),
+        sources=_parse_sources(sources),
         include_aggregates=include_aggregates,
+        sort_by=sort_by,
+        order_by=order_by,
     )
     return SearchListOut(
         items=[TransactionOut.model_validate(item) for item in page["items"]],
@@ -106,6 +151,8 @@ async def search_transactions(
         total_count=page["total_count"],
         total_spent=page["total_spent"],
         total_received=page["total_received"],
+        sort_by=page["sort_by"],
+        order_by=page["order_by"],
     )
 
 

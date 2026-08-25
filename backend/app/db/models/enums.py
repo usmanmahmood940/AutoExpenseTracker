@@ -57,6 +57,7 @@ class PeriodKind(StrEnum):
 class TransactionSortBy(StrEnum):
     date = "date"
     amount = "amount"
+    merchant = "merchant"
 
 
 class SortOrder(StrEnum):

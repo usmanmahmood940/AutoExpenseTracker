@@ -33,3 +33,15 @@ String paymentMethodLabel(AppLocalizations l10n, String key) {
   }
 }
 
+String ingestionSourceLabel(AppLocalizations l10n, String key) {
+  switch (key) {
+    case 'ios_shortcut':
+      return l10n.filterSourceIosShortcut;
+    case 'gmail':
+      return l10n.filterSourceGmail;
+    case 'manual':
+      return l10n.transactionSourceManual;
+    default:
+      return key;
+  }
+}

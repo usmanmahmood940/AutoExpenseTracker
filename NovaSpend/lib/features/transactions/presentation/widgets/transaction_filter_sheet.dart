@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/sheet_action_footer.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 
@@ -45,6 +46,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
   String? _type;
   DateTime? _from;
   DateTime? _to;
+  int _resetToken = 0;
 
   @override
   void initState() {
@@ -57,6 +59,9 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
     _max = TextEditingController(
       text: i.amountMax?.toStringAsFixed(0) ?? '',
     );
+    _merchant.addListener(_onChanged);
+    _min.addListener(_onChanged);
+    _max.addListener(_onChanged);
     _category = i.category;
     _bank = i.bank;
     _type = i.type;
@@ -66,10 +71,62 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
 
   @override
   void dispose() {
-    _merchant.dispose();
-    _min.dispose();
-    _max.dispose();
+    _merchant
+      ..removeListener(_onChanged)
+      ..dispose();
+    _min
+      ..removeListener(_onChanged)
+      ..dispose();
+    _max
+      ..removeListener(_onChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
+
+  bool get _canClear {
+    return _merchant.text.trim().isNotEmpty ||
+        _min.text.trim().isNotEmpty ||
+        _max.text.trim().isNotEmpty ||
+        _category != null ||
+        _bank != null ||
+        _type != null ||
+        _from != null ||
+        _to != null;
+  }
+
+  void _clear() {
+    _merchant.clear();
+    _min.clear();
+    _max.clear();
+    setState(() {
+      _category = null;
+      _bank = null;
+      _type = null;
+      _from = null;
+      _to = null;
+      _resetToken++;
+    });
+  }
+
+  void _apply() {
+    Navigator.pop(
+      context,
+      TransactionFilter(
+        dateFrom: _from,
+        dateTo: _to,
+        category: _category,
+        bank: _bank,
+        merchantQuery: _merchant.text.trim().isEmpty
+            ? null
+            : _merchant.text.trim(),
+        amountMin: double.tryParse(_min.text),
+        amountMax: double.tryParse(_max.text),
+        type: _type,
+        accountIdMasked: widget.initial.accountIdMasked,
+      ),
+    );
   }
 
   Future<void> _pickDate({required bool isFrom}) async {
@@ -115,6 +172,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
             ),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String?>(
+              key: ValueKey('category-$_resetToken'),
               initialValue: _category,
               decoration: InputDecoration(labelText: l10n.feedFilterCategory),
               items: [
@@ -127,6 +185,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
             ),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String?>(
+              key: ValueKey('bank-$_resetToken'),
               initialValue: _bank,
               decoration: InputDecoration(labelText: l10n.feedFilterBank),
               items: [
@@ -139,6 +198,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
             ),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String?>(
+              key: ValueKey('type-$_resetToken'),
               initialValue: _type,
               decoration: InputDecoration(labelText: l10n.feedFilterType),
               items: [
@@ -206,37 +266,12 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context, TransactionFilter.empty);
-                  },
-                  child: Text(l10n.feedClearFilters),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(
-                      context,
-                      TransactionFilter(
-                        dateFrom: _from,
-                        dateTo: _to,
-                        category: _category,
-                        bank: _bank,
-                        merchantQuery: _merchant.text.trim().isEmpty
-                            ? null
-                            : _merchant.text.trim(),
-                        amountMin: double.tryParse(_min.text),
-                        amountMax: double.tryParse(_max.text),
-                        type: _type,
-                        accountIdMasked: widget.initial.accountIdMasked,
-                      ),
-                    );
-                  },
-                  child: Text(l10n.feedApplyFilters),
-                ),
-              ],
+            SheetActionFooter(
+              showClear: _canClear,
+              onClear: _clear,
+              onApply: _apply,
+              clearLabel: l10n.feedClearFilters,
+              applyLabel: l10n.feedApplyFilters,
             ),
           ],
         ),

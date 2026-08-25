@@ -42,7 +42,8 @@ showModalBottomSheet<T>(
 
 - Primary: `FilledButton`, `AppColors.primaryStrong`, height **52**, `AppRadius.md`.
 - Override theme padding — use **horizontal-only** padding + `minimumSize`/`maximumSize` height 52 + `height: 1.2` on label so text is not clipped.
-- Secondary **Clear** (`TextButton`) only when a filter is already applied; return a distinct cleared result (not the same as dismiss).
+- Secondary **Clear** (`TextButton`) only when the sheet is not in its default state. Use `SheetActionFooter` so Clear animates in/out and Apply grows/shrinks to fill the row.
+- Tapping Clear **resets the sheet in place** (does not dismiss). Apply commits the current state, including default/cleared. Dismiss via close/scrim is still `null`.
 - Prefer a small result type: applied / cleared / `null` dismissed.
 
 ## Motion & expand-in-place

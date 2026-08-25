@@ -11,7 +11,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Select, and_, func, or_, select, tuple_
+from sqlalchemy import Select, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, NotFoundError
@@ -117,14 +117,26 @@ def _apply_list_filters[T](
     return stmt
 
 
-def _order_clause(sort_by: TransactionSortBy, order_by: SortOrder):
+def _sort_key_columns(sort_by: TransactionSortBy):
     date_col = Transaction.transaction_date
-    amount_col = Transaction.amount
     id_col = Transaction.id
     if sort_by is TransactionSortBy.amount:
-        cols = (amount_col, date_col, id_col)
-    else:
-        cols = (date_col, id_col)
+        return (Transaction.amount, date_col, id_col)
+    if sort_by is TransactionSortBy.merchant:
+        return (Transaction.merchant_normalized, date_col, id_col)
+    return (date_col, id_col)
+
+
+def _cursor_key(cursor: Transaction, sort_by: TransactionSortBy):
+    if sort_by is TransactionSortBy.amount:
+        return (cursor.amount, cursor.transaction_date, cursor.id)
+    if sort_by is TransactionSortBy.merchant:
+        return (cursor.merchant_normalized, cursor.transaction_date, cursor.id)
+    return (cursor.transaction_date, cursor.id)
+
+
+def _order_clause(sort_by: TransactionSortBy, order_by: SortOrder):
+    cols = _sort_key_columns(sort_by)
     if order_by is SortOrder.desc:
         return tuple(col.desc() for col in cols)
     return tuple(col.asc() for col in cols)
@@ -139,6 +151,10 @@ def _apply_search_filters[T](
     tx_type: TransactionType | None,
     subscriptions_only: bool,
     category_names: list[str],
+    amount_min: Decimal | None,
+    amount_max: Decimal | None,
+    payment_methods: list[str],
+    sources: list[str],
 ) -> tuple[Select[T], bool]:
     """Apply Activity search filters. Returns (stmt, use_prefix)."""
     use_prefix = (
@@ -148,6 +164,10 @@ def _apply_search_filters[T](
         and date_from is None
         and date_to is None
         and not category_names
+        and amount_min is None
+        and amount_max is None
+        and not payment_methods
+        and not sources
     )
     if date_from is not None:
         stmt = stmt.where(Transaction.transaction_date >= date_from)
@@ -159,6 +179,18 @@ def _apply_search_filters[T](
         stmt = stmt.where(Transaction.is_recurring.is_(True))
     if category_names:
         stmt = stmt.where(Transaction.category.in_(category_names))
+    if amount_min is not None:
+        stmt = stmt.where(Transaction.amount >= amount_min)
+    if amount_max is not None:
+        stmt = stmt.where(Transaction.amount <= amount_max)
+    if payment_methods:
+        stmt = stmt.where(Transaction.payment_method.in_(payment_methods))
+    if sources:
+        source_col = func.coalesce(
+            Transaction.sms_source.op("->>")("source"),
+            "manual",
+        )
+        stmt = stmt.where(source_col.in_(sources))
 
     if use_prefix:
         escaped = _escape_like(normalize_merchant_key(needle))
@@ -185,12 +217,8 @@ def _after_cursor(
     sort_by: TransactionSortBy,
     order_by: SortOrder,
 ) -> Select[tuple[Transaction]]:
-    if sort_by is TransactionSortBy.amount:
-        key = tuple_(Transaction.amount, Transaction.transaction_date, Transaction.id)
-        cursor_key = (cursor.amount, cursor.transaction_date, cursor.id)
-    else:
-        key = tuple_(Transaction.transaction_date, Transaction.id)
-        cursor_key = (cursor.transaction_date, cursor.id)
+    key = tuple_(*_sort_key_columns(sort_by))
+    cursor_key = _cursor_key(cursor, sort_by)
     if order_by is SortOrder.desc:
         return stmt.where(key < cursor_key)
     return stmt.where(key > cursor_key)
@@ -293,16 +321,29 @@ async def search_transactions(
     tx_type: TransactionType | None,
     subscriptions_only: bool,
     categories: list[str] | None = None,
+    amount_min: Decimal | None = None,
+    amount_max: Decimal | None = None,
+    payment_methods: list[str] | None = None,
+    sources: list[str] | None = None,
     include_aggregates: bool = False,
+    sort_by: TransactionSortBy = TransactionSortBy.date,
+    order_by: SortOrder = SortOrder.desc,
 ) -> dict[str, Any]:
     if date_from and date_to and date_from > date_to:
         raise BadRequestError(
             "date_from must be on or before date_to.",
             code="invalid_date_range",
         )
+    if amount_min is not None and amount_max is not None and amount_min > amount_max:
+        raise BadRequestError(
+            "amount_min must be on or before amount_max.",
+            code="invalid_amount_range",
+        )
 
     needle = text.strip()
     category_names = [name for name in (categories or []) if name]
+    methods = [name for name in (payment_methods or []) if name]
+    source_names = [name for name in (sources or []) if name]
     filter_kwargs = {
         "needle": needle,
         "date_from": date_from,
@@ -310,41 +351,20 @@ async def search_transactions(
         "tx_type": tx_type,
         "subscriptions_only": subscriptions_only,
         "category_names": category_names,
+        "amount_min": amount_min,
+        "amount_max": amount_max,
+        "payment_methods": methods,
+        "sources": source_names,
     }
 
     stmt = select(Transaction).where(*_visible(user_id))
-    stmt, use_prefix = _apply_search_filters(stmt, **filter_kwargs)
-
-    if use_prefix:
-        order = (
-            Transaction.merchant_normalized.asc(),
-            Transaction.transaction_date.desc(),
-            Transaction.id.desc(),
-        )
-    else:
-        order = (Transaction.transaction_date.desc(), Transaction.id.desc())
+    stmt, _use_prefix = _apply_search_filters(stmt, **filter_kwargs)
 
     if cursor is not None:
         cursor_row = await get_owned(session, user_id=user_id, transaction_id=cursor)
-        if use_prefix:
-            stmt = stmt.where(
-                or_(
-                    Transaction.merchant_normalized > cursor_row.merchant_normalized,
-                    and_(
-                        Transaction.merchant_normalized
-                        == cursor_row.merchant_normalized,
-                        tuple_(Transaction.transaction_date, Transaction.id)
-                        < (cursor_row.transaction_date, cursor_row.id),
-                    ),
-                )
-            )
-        else:
-            stmt = stmt.where(
-                tuple_(Transaction.transaction_date, Transaction.id)
-                < (cursor_row.transaction_date, cursor_row.id)
-            )
+        stmt = _after_cursor(stmt, cursor_row, sort_by, order_by)
 
-    stmt = stmt.order_by(*order).limit(limit + 1)
+    stmt = stmt.order_by(*_order_clause(sort_by, order_by)).limit(limit + 1)
     rows = list((await session.execute(stmt)).scalars().all())
     has_more = len(rows) > limit
     items = rows[:limit]
@@ -381,6 +401,8 @@ async def search_transactions(
         "total_count": total_count,
         "total_spent": total_spent,
         "total_received": total_received,
+        "sort_by": sort_by.value,
+        "order_by": order_by.value,
     }
 
 

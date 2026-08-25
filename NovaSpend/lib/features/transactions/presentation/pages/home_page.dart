@@ -311,10 +311,7 @@ class _HomeBody extends StatelessWidget {
       return const HomeFeedSkeleton();
     }
     if (home.error != null && home.items.isEmpty) {
-      return ErrorStateView(
-        error: home.error,
-        onRetry: home.refresh,
-      );
+      return ErrorStateView(error: home.error, onRetry: home.refresh);
     }
     if (home.items.isEmpty) {
       return EmptyStateView(
@@ -384,6 +381,10 @@ class _Highlights extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final period = context.select((HomeProvider p) => p.period);
+    final waitingForStats = context.select(
+      (HomeProvider p) =>
+          p.isPeriodStatsLoading && p.currentPeriodStats == null,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -395,34 +396,37 @@ class _Highlights extends StatelessWidget {
           showActionChevron: true,
         ),
         const SizedBox(height: _headerGap),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _highlightCard(
-                  context,
-                  l10n,
-                  highlight: home.highestSpend,
-                  label: l10n.homeHighestSpend,
-                  iconAsset: 'assets/icons/icon_highest_spend.svg',
-                  amountColor: Theme.of(context).colorScheme.onSurface,
+        if (waitingForStats)
+          const HighlightCardsSkeleton()
+        else
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _highlightCard(
+                    context,
+                    l10n,
+                    highlight: home.highestSpend,
+                    label: l10n.homeHighestSpend,
+                    iconAsset: 'assets/icons/icon_highest_spend.svg',
+                    amountColor: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.smPlus2),
-              Expanded(
-                child: _highlightCard(
-                  context,
-                  l10n,
-                  highlight: home.highestReceive,
-                  label: l10n.homeHighestReceived,
-                  iconAsset: 'assets/icons/icon_highest_received.svg',
-                  amountColor: AppColors.primaryStrong,
+                const SizedBox(width: AppSpacing.smPlus2),
+                Expanded(
+                  child: _highlightCard(
+                    context,
+                    l10n,
+                    highlight: home.highestReceive,
+                    label: l10n.homeHighestReceived,
+                    iconAsset: 'assets/icons/icon_highest_received.svg',
+                    amountColor: AppColors.primaryStrong,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -445,8 +449,9 @@ Widget _highlightCard(
     );
   }
 
-  final merchant =
-      highlight.merchant.isEmpty ? highlight.category : highlight.merchant;
+  final merchant = highlight.merchant.isEmpty
+      ? highlight.category
+      : highlight.merchant;
   final day = relativeDayLabel(
     highlight.transactionDate,
     today: l10n.homePeriodToday,
@@ -501,13 +506,7 @@ Widget _dayGroups(
   return TransactionGroupCard.grouped(
     sections: [
       for (final day in days)
-        _daySection(
-          context,
-          l10n,
-          day: day,
-          txs: grouped[day]!,
-          money: money,
-        ),
+        _daySection(context, l10n, day: day, txs: grouped[day]!, money: money),
     ],
   );
 }
