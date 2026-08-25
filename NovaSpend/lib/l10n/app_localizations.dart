@@ -409,13 +409,13 @@ abstract class AppLocalizations {
   /// No description provided for @searchEmptyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Search by merchant, category, or bank'**
+  /// **'Search by merchant or category'**
   String get searchEmptyTitle;
 
   /// No description provided for @searchEmptyHint.
   ///
   /// In en, this message translates to:
-  /// **'Examples: KFC, Food, Meezan'**
+  /// **'Examples: KFC, Food'**
   String get searchEmptyHint;
 
   /// No description provided for @searchNoResults.

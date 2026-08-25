@@ -149,15 +149,21 @@ def test_search_prefix_and_scan(api_client: TestClient) -> None:
         "/transactions/search",
         params={"q": "shopping", "date_from": "2026-03-01", "date_to": "2026-03-31"},
     )
-    # "shopping" matches nothing in merchant/category/bank here
+    # "shopping" matches nothing in merchant/category here
     assert scan.status_code == 200
     assert scan.json()["items"] == []
+
+    by_category = api_client.get(
+        "/transactions/search",
+        params={"q": "Food", "date_from": "2026-03-01", "date_to": "2026-03-31"},
+    ).json()
+    assert len(by_category["items"]) == 3
 
     by_bank = api_client.get(
         "/transactions/search",
         params={"q": "HBL", "date_from": "2026-03-01", "date_to": "2026-03-31"},
     ).json()
-    assert len(by_bank["items"]) == 3
+    assert by_bank["items"] == []
 
 
 def test_search_aggregates_cover_full_match_set(api_client: TestClient) -> None:

@@ -168,10 +168,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchFilterSubscriptions => 'Subscriptions';
 
   @override
-  String get searchEmptyTitle => 'Search by merchant, category, or bank';
+  String get searchEmptyTitle => 'Search by merchant or category';
 
   @override
-  String get searchEmptyHint => 'Examples: KFC, Food, Meezan';
+  String get searchEmptyHint => 'Examples: KFC, Food';
 
   @override
   String get searchNoResults => 'No transactions match your search';

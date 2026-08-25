@@ -129,7 +129,7 @@ tests/
 | POST | `/me/devices` | Register an FCM token; moves it if another account already held it. |
 | DELETE | `/me/devices/{token}` | Unregister a token. Idempotent. |
 | GET | `/transactions` | List (date range, sort by date/amount, cursor, optional aggregates + filters). |
-| GET | `/transactions/search` | Merchant prefix or scan across merchant/category/bank. |
+| GET | `/transactions/search` | Merchant prefix or scan across merchant/category. |
 | POST | `/transactions` | Manual create (optional `ingestion_id` to complete a `needs_parse` row). |
 | GET | `/transactions/{id}` | Detail. |
 | PATCH | `/transactions/{id}` | Update fields. Does **not** create a merchant override. |

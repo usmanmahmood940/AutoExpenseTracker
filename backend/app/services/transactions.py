@@ -205,7 +205,6 @@ def _apply_search_filters[T](
                 Transaction.merchant.ilike(pattern, escape="\\"),
                 Transaction.merchant_normalized.ilike(pattern, escape="\\"),
                 Transaction.category.ilike(pattern, escape="\\"),
-                Transaction.bank.ilike(pattern, escape="\\"),
             )
         )
     return stmt, use_prefix
