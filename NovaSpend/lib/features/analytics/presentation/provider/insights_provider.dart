@@ -28,6 +28,10 @@ class InsightsProvider extends ChangeNotifier {
   String? _uid;
   int _loadToken = 0;
 
+  /// Production Cloud Run may not have `/analytics/range` yet. After the first
+  /// failure we sum monthly `/analytics/summary` and skip the new extras.
+  bool _rangeUnavailable = false;
+
   DateTime get month => _month;
   String get yearMonth => DateFormat('yyyy-MM').format(_month);
 
@@ -170,14 +174,13 @@ class InsightsProvider extends ChangeNotifier {
 
     try {
       if (preset == InsightsPeriodPreset.thisYear && !_chevronOverride) {
-        final currentFuture = _repository.getRange(
-          uid,
-          from: bounds.from,
-          to: bounds.to,
-        );
-        final previousFuture = _tryPreviousRange(uid, previous);
+        final currentFuture = _rangeOrMonthly(uid, bounds);
+        final previousFuture = _rangeOrMonthly(uid, previous);
         summary = await currentFuture;
         previousSummary = await previousFuture;
+        if (summary == null) {
+          throw StateError('year_summary_unavailable');
+        }
       } else {
         final prevMonth = DateTime(_month.year, _month.month - 1);
         final prevYm = DateFormat('yyyy-MM').format(prevMonth);
@@ -201,6 +204,7 @@ class InsightsProvider extends ChangeNotifier {
     }
 
     if (token != _loadToken || summary == null) return;
+    if (_rangeUnavailable) return;
     await _loadExtras(uid, token, bounds);
   }
 
@@ -215,19 +219,43 @@ class InsightsProvider extends ChangeNotifier {
     }
   }
 
-  Future<MonthlySummaryEntity?> _tryPreviousRange(
+  /// Prefer `/analytics/range`; if it is not deployed yet, sum monthly
+  /// `/analytics/summary` rows for the same window.
+  Future<MonthlySummaryEntity?> _rangeOrMonthly(
     String uid,
-    ({DateTime from, DateTime to}) previous,
+    ({DateTime from, DateTime to}) bounds,
   ) async {
+    if (!_rangeUnavailable) {
+      try {
+        return await _repository.getRange(
+          uid,
+          from: bounds.from,
+          to: bounds.to,
+        );
+      } catch (_) {
+        _rangeUnavailable = true;
+      }
+    }
     try {
-      return await _repository.getRange(
-        uid,
-        from: previous.from,
-        to: previous.to,
-      );
+      return await _summaryFromMonths(uid, bounds);
     } catch (_) {
       return null;
     }
+  }
+
+  Future<MonthlySummaryEntity> _summaryFromMonths(
+    String uid,
+    ({DateTime from, DateTime to}) bounds,
+  ) async {
+    final months = yearMonthsInRange(bounds.from, bounds.to);
+    final items = await Future.wait(
+      months.map((yearMonth) => _repository.getSummary(uid, yearMonth)),
+    );
+    return mergeMonthlySummaries(
+      items,
+      from: bounds.from,
+      to: bounds.to,
+    );
   }
 
   Future<void> _loadExtras(

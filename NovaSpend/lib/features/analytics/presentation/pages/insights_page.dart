@@ -62,28 +62,24 @@ class _InsightsView extends StatelessWidget {
     return AdaptiveScaffold(
       title: l10n.insightsTitle,
       appBar: AppBar(title: Text(l10n.insightsTitle)),
-      body: provider.isLoading && summary == null
-          ? const _InsightsSkeleton()
-          : provider.error != null && summary == null
-              ? ErrorStateView(
-                  error: provider.error,
-                  onRetry: provider.retry,
-                )
-              : summary == null || provider.isEmpty
-              ? Column(
-                  children: [
-                    _PeriodControls(provider: provider),
-                    Expanded(
-                      child: Center(child: Text(l10n.insightsEmpty)),
-                    ),
-                  ],
-                )
-              : AppBusyContent(
-                  busy: provider.isLoading,
-                  child: ListView(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
-                    children: [
-                      _PeriodControls(provider: provider),
+      body: Column(
+        children: [
+          _PeriodControls(provider: provider),
+          Expanded(
+            child: provider.isLoading && summary == null
+                ? const _InsightsSkeleton()
+                : provider.error != null && summary == null
+                    ? ErrorStateView(
+                        error: provider.error,
+                        onRetry: provider.retry,
+                      )
+                    : summary == null || provider.isEmpty
+                    ? Center(child: Text(l10n.insightsEmpty))
+                    : AppBusyContent(
+                        busy: provider.isLoading,
+                        child: ListView(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+                          children: [
                       BalanceHeader(
                         label: l10n.insightsNet,
                         amount: money.formatMoney(summary.net),
@@ -164,6 +160,9 @@ class _InsightsView extends StatelessWidget {
                     ],
                   ),
                 ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -271,8 +270,6 @@ class _InsightsSkeleton extends StatelessWidget {
           AppSpacing.xxl,
         ),
         children: [
-          const SkeletonBox(height: 40, radius: 20),
-          const SizedBox(height: AppSpacing.lg),
           const Center(child: SkeletonBox(width: 96, height: 12)),
           const SizedBox(height: AppSpacing.smPlus),
           const Center(child: SkeletonBox(width: 196, height: 34)),

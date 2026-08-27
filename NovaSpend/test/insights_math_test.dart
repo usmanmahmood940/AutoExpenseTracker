@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 
 void main() {
@@ -100,6 +101,62 @@ void main() {
       );
       expect(previous.from, DateTime(2025, 1, 1));
       expect(previous.to, DateTime(2025, 8, 27));
+    });
+  });
+
+  group('yearMonthsInRange', () {
+    test('lists months inclusive', () {
+      expect(
+        yearMonthsInRange(DateTime(2025, 1, 1), DateTime(2025, 8, 27)),
+        [
+          '2025-01',
+          '2025-02',
+          '2025-03',
+          '2025-04',
+          '2025-05',
+          '2025-06',
+          '2025-07',
+          '2025-08',
+        ],
+      );
+    });
+  });
+
+  group('mergeMonthlySummaries', () {
+    test('sums totals and breakdowns', () {
+      const jan = MonthlySummaryEntity(
+        yearMonth: '2025-01',
+        currency: 'PKR',
+        totalDebit: 100,
+        totalCredit: 20,
+        net: -80,
+        transactionCount: 2,
+        byCategory: {'Food': 100},
+        byMerchant: {'KFC': 100},
+      );
+      const feb = MonthlySummaryEntity(
+        yearMonth: '2025-02',
+        currency: 'PKR',
+        totalDebit: 50,
+        totalCredit: 0,
+        net: -50,
+        transactionCount: 1,
+        byCategory: {'Food': 30, 'Fuel': 20},
+        byMerchant: {'KFC': 30, 'PSO': 20},
+      );
+      final merged = mergeMonthlySummaries(
+        [jan, feb],
+        from: DateTime(2025, 1, 1),
+        to: DateTime(2025, 2, 28),
+      );
+      expect(merged.totalDebit, 150);
+      expect(merged.totalCredit, 20);
+      expect(merged.net, -130);
+      expect(merged.transactionCount, 3);
+      expect(merged.byCategory['Food'], 130);
+      expect(merged.byMerchant['KFC'], 130);
+      expect(merged.dateFrom, '2025-01-01');
+      expect(merged.dateTo, '2025-02-28');
     });
   });
 }

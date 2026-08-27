@@ -1,6 +1,8 @@
 /// Comparison, ranking, and copy facts for Insights. Pure Dart — no Flutter.
 library;
 
+import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
+
 enum InsightsPeriodPreset { thisMonth, lastMonth, thisYear }
 
 class InsightsNarrativeFacts {
@@ -149,4 +151,81 @@ String compactAxisLabel(double value) {
     return k == k.roundToDouble() ? '${k.toInt()}K' : '${k.toStringAsFixed(1)}K';
   }
   return value.round().toString();
+}
+
+String isoDay(DateTime value) {
+  final d = dateOnly(value);
+  final y = d.year.toString().padLeft(4, '0');
+  final m = d.month.toString().padLeft(2, '0');
+  final day = d.day.toString().padLeft(2, '0');
+  return '$y-$m-$day';
+}
+
+/// Inclusive calendar months covering [from]..[to], as `YYYY-MM`.
+List<String> yearMonthsInRange(DateTime from, DateTime to) {
+  final months = <String>[];
+  var cursor = DateTime(from.year, from.month);
+  final last = DateTime(to.year, to.month);
+  while (!cursor.isAfter(last)) {
+    final y = cursor.year.toString().padLeft(4, '0');
+    final m = cursor.month.toString().padLeft(2, '0');
+    months.add('$y-$m');
+    cursor = DateTime(cursor.year, cursor.month + 1);
+  }
+  return months;
+}
+
+Map<String, double> _sumMaps(Iterable<Map<String, double>> maps) {
+  final out = <String, double>{};
+  for (final map in maps) {
+    map.forEach((key, value) {
+      out[key] = (out[key] ?? 0) + value;
+    });
+  }
+  return out;
+}
+
+MonthlySummaryEntity mergeMonthlySummaries(
+  List<MonthlySummaryEntity> items, {
+  required DateTime from,
+  required DateTime to,
+}) {
+  var debit = 0.0;
+  var credit = 0.0;
+  var count = 0;
+  var currency = 'PKR';
+  final stats = <String, MerchantSpendStat>{};
+  for (final item in items) {
+    currency = item.currency;
+    debit += item.totalDebit;
+    credit += item.totalCredit;
+    count += item.transactionCount;
+    item.byMerchantStats.forEach((key, stat) {
+      final existing = stats[key];
+      if (existing == null) {
+        stats[key] = stat;
+        return;
+      }
+      stats[key] = MerchantSpendStat(
+        amount: existing.amount + stat.amount,
+        visitCount: existing.visitCount + stat.visitCount,
+        merchantNormalized: existing.merchantNormalized.isNotEmpty
+            ? existing.merchantNormalized
+            : stat.merchantNormalized,
+      );
+    });
+  }
+  return MonthlySummaryEntity(
+    yearMonth: '',
+    dateFrom: isoDay(from),
+    dateTo: isoDay(to),
+    currency: currency,
+    totalDebit: debit,
+    totalCredit: credit,
+    net: credit - debit,
+    transactionCount: count,
+    byCategory: _sumMaps(items.map((e) => e.byCategory)),
+    byMerchant: _sumMaps(items.map((e) => e.byMerchant)),
+    byMerchantStats: stats,
+  );
 }
