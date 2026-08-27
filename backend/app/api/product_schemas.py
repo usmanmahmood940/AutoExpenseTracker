@@ -135,8 +135,16 @@ class PeriodStatsOut(BaseModel):
     comparison: PeriodComparisonOut | None
 
 
+class MerchantSpendStatOut(BaseModel):
+    amount: float
+    visit_count: int
+    merchant_normalized: str
+
+
 class MonthlySummaryOut(BaseModel):
-    year_month: str
+    year_month: str = ""
+    date_from: str | None = None
+    date_to: str | None = None
     currency: str
     total_debit: float
     total_credit: float
@@ -144,6 +152,36 @@ class MonthlySummaryOut(BaseModel):
     transaction_count: int
     by_category: dict[str, float]
     by_merchant: dict[str, float]
+    by_merchant_stats: dict[str, MerchantSpendStatOut] = Field(default_factory=dict)
+
+
+class TrendPointOut(BaseModel):
+    date: str
+    debit: float
+
+
+class TrendOut(BaseModel):
+    bucket: str
+    currency: str
+    points: list[TrendPointOut]
+
+
+class RecurringMerchantOut(BaseModel):
+    display_name: str
+    merchant_normalized: str
+    count: int
+    average_amount: float
+    last_date: str
+
+
+class RecurringListOut(BaseModel):
+    items: list[RecurringMerchantOut]
+
+
+class NarrativeOut(BaseModel):
+    narrative: str | None = None
+    source: str = "none"
+    model: str | None = None
 
 
 class MonthlySummaryListOut(BaseModel):
