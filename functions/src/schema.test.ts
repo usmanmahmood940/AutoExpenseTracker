@@ -3,7 +3,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DEFAULT_CATEGORIES, normalizeMerchantKey } from './schema';
+import { DEFAULT_CATEGORIES, normalizeMerchantKey, resolveMerchant } from './schema';
 
 interface MerchantKeyCase {
   input: string;
@@ -42,6 +42,36 @@ test('normalizeMerchantKey matches shared cross-language fixture', () => {
       normalizeMerchantKey(input),
       expected,
       `normalizeMerchantKey(${JSON.stringify(input)}) should equal ${JSON.stringify(expected)}`,
+    );
+  }
+});
+
+interface ResolveMerchantCase {
+  merchant: string;
+  category: string;
+  paymentMethod: string;
+  expected: string;
+}
+
+test('resolveMerchant matches shared cross-language fixture', () => {
+  const fixturePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    'shared',
+    'test-fixtures',
+    'resolve-merchant-cases.json',
+  );
+  const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
+    cases: ResolveMerchantCase[];
+  };
+  assert.ok(fixture.cases.length > 0, 'fixture should not be empty');
+
+  for (const { merchant, category, paymentMethod, expected } of fixture.cases) {
+    assert.equal(
+      resolveMerchant(merchant, category, paymentMethod),
+      expected,
+      `resolveMerchant(${JSON.stringify(merchant)}, ${JSON.stringify(category)}, ${JSON.stringify(paymentMethod)}) should equal ${JSON.stringify(expected)}`,
     );
   }
 });

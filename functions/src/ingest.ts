@@ -12,6 +12,7 @@ import {
   COLLECTIONS,
   normalizeMerchant,
   normalizeMerchantKey,
+  resolveMerchant,
   type IngestWebhookRequest,
   type IngestWebhookResponse,
   type MerchantCategoryOverride,
@@ -198,8 +199,17 @@ async function processIngest(
     };
   }
 
+  const parsed = {
+    ...parseResult.parsed,
+    merchant: resolveMerchant(
+      parseResult.parsed.merchant,
+      parseResult.parsed.category,
+      parseResult.parsed.paymentMethod,
+    ),
+  };
+
   const fieldValidation = validateParsedTransaction(
-    parseResult.parsed,
+    parsed,
     allowedCategories,
   );
   if (!fieldValidation.ok) {
@@ -215,7 +225,6 @@ async function processIngest(
     };
   }
 
-  const parsed = parseResult.parsed;
   const dedupKey = computeDedupKey(parsed);
   const duplicate = await findDuplicateTransaction(uid, dedupKey);
 

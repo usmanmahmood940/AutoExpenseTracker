@@ -17,6 +17,7 @@ import {
 } from './payment_methods';
 import {
   FALLBACK_CATEGORY_NAME,
+  resolveMerchant,
   type ParsedTransaction,
 } from './schema';
 
@@ -54,7 +55,8 @@ function buildParsedTransactionSchema(
       },
       merchant: {
         type: SchemaType.STRING,
-        description: 'Primary merchant or payee name',
+        description:
+          'Primary merchant or payee. Use ATM for cash withdrawals with no named merchant — never Unknown',
       },
       merchantDetails: {
         type: SchemaType.STRING,
@@ -167,6 +169,7 @@ Rules:
 - Dates must use ISO format: transactionDate as YYYY-MM-DD, transactionTime as ISO 8601 with +05:00 for Pakistan.
 - If the input is a manual/natural-language entry and does not specify a date or time, use exactly this current date/time supplied by the application: transactionDate=${currentDate}, transactionTime=${currentDateTime}. Never invent another "today" and never use placeholders.
 - If a bank message includes a date/time, prefer those values from the message.
+- merchant: required. For cash withdrawal / ATM with no named merchant, use "ATM" — never "Unknown". Put ATM location in merchantDetails when present.
 - Use "Unknown" for missing merchantDetails, branch, bank, or accountId when not inferable.
 - paymentMethod: MUST be exactly one of: [${PAYMENT_METHODS.join(', ')}].
   Map specifics to these generics (e.g. card used → debit_card, credit card → credit_card,
@@ -186,7 +189,10 @@ Input: PKR 5,990.00 charged at PSO RANGERS>LAH for card used, from A/C xxx1215 (
 Output: {"amount":5990,"currency":"PKR","type":"debit","merchant":"PSO RANGERS","merchantDetails":"LAH","category":"Fuel","paymentMethod":"debit_card","bank":"Unknown","accountId":"xxx1215","branch":"DHA PHASE VIII BR LHR","transactionTime":"2026-07-06T11:27:00+05:00","transactionDate":"2026-07-06","externalId":"387522","externalIdType":"tid","parseConfidence":0.95}
 
 Input: spent 200 at KFC
-Output: {"amount":200,"currency":"PKR","type":"debit","merchant":"KFC","merchantDetails":null,"category":"Food & Dining","paymentMethod":"${DEFAULT_PAYMENT_METHOD}","bank":"Unknown","accountId":"Unknown","branch":null,"transactionTime":"${currentDateTime}","transactionDate":"${currentDate}","externalId":null,"externalIdType":"unknown","parseConfidence":0.9}`;
+Output: {"amount":200,"currency":"PKR","type":"debit","merchant":"KFC","merchantDetails":null,"category":"Food & Dining","paymentMethod":"${DEFAULT_PAYMENT_METHOD}","bank":"Unknown","accountId":"Unknown","branch":null,"transactionTime":"${currentDateTime}","transactionDate":"${currentDate}","externalId":null,"externalIdType":"unknown","parseConfidence":0.9}
+
+Input: PKR 10,000.00 withdrawn from ATM, A/C xxx1234 on 06-Jul-2026 at 11:27
+Output: {"amount":10000,"currency":"PKR","type":"debit","merchant":"ATM","merchantDetails":null,"category":"Cash Withdrawal","paymentMethod":"atm_withdrawal","bank":"Unknown","accountId":"xxx1234","branch":null,"transactionTime":"2026-07-06T11:27:00+05:00","transactionDate":"2026-07-06","externalId":null,"externalIdType":"unknown","parseConfidence":0.95}`;
 }
 
 export type ParseResult =
@@ -197,22 +203,24 @@ function normalizeParsed(
   raw: Record<string, unknown>,
   allowedCategories: string[],
 ): ParsedTransaction {
+  const category = resolveAllowedCategory(
+    String(raw.category ?? FALLBACK_CATEGORY_NAME),
+    allowedCategories,
+  );
+  const paymentMethod = normalizePaymentMethod(
+    String(raw.paymentMethod ?? DEFAULT_PAYMENT_METHOD),
+  );
   return {
     amount: Number(raw.amount),
     currency: normalizeCurrency(String(raw.currency ?? DEFAULT_CURRENCY)),
     type: String(raw.type ?? 'debit').toLowerCase() as ParsedTransaction['type'],
-    merchant: String(raw.merchant ?? 'Unknown'),
+    merchant: resolveMerchant(String(raw.merchant ?? ''), category, paymentMethod),
     merchantDetails:
       raw.merchantDetails == null || raw.merchantDetails === 'Unknown'
         ? null
         : String(raw.merchantDetails),
-    category: resolveAllowedCategory(
-      String(raw.category ?? FALLBACK_CATEGORY_NAME),
-      allowedCategories,
-    ),
-    paymentMethod: normalizePaymentMethod(
-      String(raw.paymentMethod ?? DEFAULT_PAYMENT_METHOD),
-    ),
+    category,
+    paymentMethod,
     bank: String(raw.bank ?? 'Unknown'),
     accountId: String(raw.accountId ?? 'Unknown'),
     branch:

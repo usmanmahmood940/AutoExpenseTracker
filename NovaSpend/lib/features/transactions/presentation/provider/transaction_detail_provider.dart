@@ -15,7 +15,11 @@ class TransactionDetailProvider extends ChangeNotifier {
   })  : _transaction = transaction,
         _updateTransaction = updateTransaction,
         _repository = repository,
-        merchant = transaction.merchant,
+        merchant = resolveMerchant(
+          transaction.merchant,
+          category: transaction.category,
+          paymentMethod: normalizePaymentMethod(transaction.paymentMethod),
+        ),
         merchantDetails = transaction.merchantDetails ?? '',
         amount = transaction.amount,
         category = transaction.category,
@@ -49,10 +53,15 @@ class TransactionDetailProvider extends ChangeNotifier {
 
   /// Normalized merchant key of an existing override, if any.
   String? _activeOverrideKey;
+  Future<void>? _rememberStateFuture;
 
   TransactionEntity get transaction => _transaction;
 
-  Future<void> loadMerchantRememberState() async {
+  Future<void> loadMerchantRememberState() {
+    return _rememberStateFuture ??= _fetchMerchantRememberState();
+  }
+
+  Future<void> _fetchMerchantRememberState() async {
     isLoadingRememberState = true;
     notifyListeners();
     try {
@@ -134,7 +143,11 @@ class TransactionDetailProvider extends ChangeNotifier {
   }
 
   void resetDraftFromTransaction() {
-    merchant = _transaction.merchant;
+    merchant = resolveMerchant(
+      _transaction.merchant,
+      category: _transaction.category,
+      paymentMethod: normalizePaymentMethod(_transaction.paymentMethod),
+    );
     merchantDetails = _transaction.merchantDetails ?? '';
     amount = _transaction.amount;
     category = _transaction.category;
@@ -162,10 +175,14 @@ class TransactionDetailProvider extends ChangeNotifier {
       final day = _dayNameFromDate(transactionDate) ?? _transaction.day;
 
       final resolvedBank = bank.trim().isEmpty ? 'Unknown' : bank.trim();
-      final trimmedMerchant = merchant.trim();
+      final resolvedPaymentMethod = normalizePaymentMethod(paymentMethod);
+      final trimmedMerchant = resolveMerchant(
+        merchant.trim(),
+        category: category,
+        paymentMethod: resolvedPaymentMethod,
+      );
       final trimmedDetails = merchantDetails.trim();
       final currentKey = normalizeMerchantKey(trimmedMerchant);
-      final resolvedPaymentMethod = normalizePaymentMethod(paymentMethod);
 
       final fields = <String, dynamic>{
         'merchant': trimmedMerchant,

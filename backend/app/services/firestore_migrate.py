@@ -37,7 +37,7 @@ from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.monthly_summary import MonthlySummary
 from app.db.models.user import DEFAULT_CURRENCY, DEFAULT_TIMEZONE, User
 from app.services.categories import CUSTOM_SORT_ORDER, _slugify
-from app.services.merchant_key import normalize_merchant_key
+from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money
 
 logger = logging.getLogger(__name__)
@@ -176,7 +176,12 @@ def transaction_kwargs(
     tx_date = as_date(data.get("transactionDate"))
     if tx_date is None:
         return None
-    merchant = (data.get("merchant") or "Unknown").strip() or "Unknown"
+    category = (data.get("category") or "Uncategorized")[:100]
+    payment_method = (data.get("paymentMethod") or "unknown")[:64]
+    raw_merchant = (data.get("merchant") or "Unknown").strip() or "Unknown"
+    merchant = resolve_merchant(
+        raw_merchant, category=category, payment_method=payment_method
+    )
     try:
         amount = as_money(data.get("amount") or 0)
     except (InvalidOperation, ValueError):
@@ -201,7 +206,7 @@ def transaction_kwargs(
         parse_confidence = Decimal("1")
 
     normalized = (data.get("merchantNormalized") or "").strip()
-    if not normalized:
+    if not normalized or merchant != raw_merchant:
         normalized = normalize_merchant_key(merchant)
 
     return {
@@ -219,9 +224,9 @@ def transaction_kwargs(
         "merchant_normalized": normalized[:200],
         "is_recurring": bool(data.get("isRecurring", False)),
         "recurring_group_id": _clip(data.get("recurringGroupId"), 64),
-        "category": (data.get("category") or "Uncategorized")[:100],
+        "category": category,
         "category_source": (data.get("categorySource") or "rule")[:64],
-        "payment_method": (data.get("paymentMethod") or "unknown")[:64],
+        "payment_method": payment_method,
         "bank": (data.get("bank") or "")[:100],
         "account_id": (data.get("accountId") or "")[:100],
         "account_id_masked": (data.get("accountIdMasked") or "")[:32],

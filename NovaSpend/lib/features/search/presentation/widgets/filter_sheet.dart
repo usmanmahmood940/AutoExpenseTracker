@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
@@ -8,7 +10,9 @@ import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/sheet_action_footer.dart';
 import 'package:nova_spend/features/search/domain/entities/ingestion_source.dart';
 import 'package:nova_spend/features/search/domain/entities/search_query.dart';
+import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
+import 'package:provider/provider.dart';
 
 /// Outcome of [FilterSheet.show]. `null` means the sheet was dismissed.
 class FilterSheetResult {
@@ -63,16 +67,24 @@ class FilterSheet extends StatefulWidget {
 
   static Future<FilterSheetResult?> show(
     BuildContext context, {
-    required List<String> paymentMethods,
     FilterSheetValue? initial,
   }) {
+    final search = context.read<SearchProvider>();
+    unawaited(search.ensurePaymentMethods());
     return showModalBottomSheet<FilterSheetResult>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          FilterSheet(initial: initial, paymentMethods: paymentMethods),
+      builder: (_) => ChangeNotifierProvider<SearchProvider>.value(
+        value: search,
+        child: Consumer<SearchProvider>(
+          builder: (_, provider, _) => FilterSheet(
+            initial: initial,
+            paymentMethods: provider.paymentMethods,
+          ),
+        ),
+      ),
     );
   }
 

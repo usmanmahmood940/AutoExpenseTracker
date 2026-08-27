@@ -538,6 +538,9 @@ export function userRecurringPatternsPath(uid: string): string {
   return `${COLLECTIONS.users}/${uid}/${COLLECTIONS.recurringPatterns}`;
 }
 
+export const DEFAULT_MERCHANT = 'Unknown';
+export const ATM_MERCHANT = 'ATM';
+
 /**
  * Normalize merchant name for indexing, overrides, and merchant pages.
  * Keep in sync with Flutter `normalizeMerchantKey`.
@@ -549,6 +552,32 @@ export function normalizeMerchant(merchant: string): string {
 /** Normalize merchant name for override document ids / lookups */
 export function normalizeMerchantKey(merchant: string): string {
   return merchant.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Stored/display name. Cash withdrawals with no merchant become ATM.
+ * Keep in sync with Flutter `resolveMerchant` and Python `resolve_merchant`.
+ */
+export function resolveMerchant(
+  merchant: string,
+  category: string,
+  paymentMethod: string,
+): string {
+  const trimmed = merchant.trim();
+  const missing = trimmed === '' || trimmed.toLowerCase() === 'unknown';
+  if (missing && isCashWithdrawal(category, paymentMethod)) {
+    return ATM_MERCHANT;
+  }
+  return trimmed || DEFAULT_MERCHANT;
+}
+
+function isCashWithdrawal(category: string, paymentMethod: string): boolean {
+  const cat = category.trim().toLowerCase();
+  return (
+    cat === 'cash withdrawal' ||
+    cat === 'cash_withdrawal' ||
+    paymentMethod.trim().toLowerCase() === 'atm_withdrawal'
+  );
 }
 
 /** Default user ID for legacy single-user webhook (top-level collections) */

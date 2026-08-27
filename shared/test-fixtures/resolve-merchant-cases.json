@@ -1,0 +1,53 @@
+{
+  "description": "Cross-language test vectors for resolveMerchant(). Cash withdrawals with a missing merchant fall back to ATM — never Unknown. Implementations: functions/src/schema.ts, backend/app/services/merchant_key.py, NovaSpend/lib/core/constants/app_constants.dart.",
+  "cases": [
+    {
+      "merchant": "Unknown",
+      "category": "Cash Withdrawal",
+      "paymentMethod": "atm_withdrawal",
+      "expected": "ATM"
+    },
+    {
+      "merchant": "unknown",
+      "category": "cash_withdrawal",
+      "paymentMethod": "unknown",
+      "expected": "ATM"
+    },
+    {
+      "merchant": "",
+      "category": "Cash Withdrawal",
+      "paymentMethod": "debit_card",
+      "expected": "ATM"
+    },
+    {
+      "merchant": "   ",
+      "category": "Fuel",
+      "paymentMethod": "atm_withdrawal",
+      "expected": "ATM"
+    },
+    {
+      "merchant": "HBL ATM",
+      "category": "Cash Withdrawal",
+      "paymentMethod": "atm_withdrawal",
+      "expected": "HBL ATM"
+    },
+    {
+      "merchant": "Unknown",
+      "category": "Fuel",
+      "paymentMethod": "debit_card",
+      "expected": "Unknown"
+    },
+    {
+      "merchant": "",
+      "category": "Food & Dining",
+      "paymentMethod": "unknown",
+      "expected": "Unknown"
+    },
+    {
+      "merchant": "KFC",
+      "category": "Food & Dining",
+      "paymentMethod": "debit_card",
+      "expected": "KFC"
+    }
+  ]
+}

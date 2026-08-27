@@ -26,7 +26,7 @@ from app.db.models.enums import (
 from app.db.models.raw_ingestion import RawIngestion
 from app.db.models.transaction import Transaction
 from app.db.seeds.categories import FALLBACK_CATEGORY_NAME
-from app.services.merchant_key import normalize_merchant_key
+from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money, money_float
 
 VISIBLE_STATUSES = (TransactionStatus.active, TransactionStatus.needs_review)
@@ -425,7 +425,11 @@ async def create_transaction(
     category_source: str,
     ingestion_id: uuid.UUID | None,
 ) -> Transaction:
-    merchant = merchant.strip()
+    merchant = resolve_merchant(
+        merchant.strip(),
+        category=category,
+        payment_method=payment_method,
+    )
     if not merchant:
         raise BadRequestError("merchant is required.", code="merchant_required")
 
@@ -526,6 +530,15 @@ async def update_transaction(
         tx.day = updates["day"]
     if "status" in updates and updates["status"] is not None:
         tx.status = updates["status"]
+
+    resolved_merchant = resolve_merchant(
+        tx.merchant,
+        category=tx.category,
+        payment_method=tx.payment_method,
+    )
+    if resolved_merchant != tx.merchant:
+        tx.merchant = resolved_merchant
+        tx.merchant_normalized = normalize_merchant_key(resolved_merchant)
 
     tx.is_edited = True
     if "category_source" not in updates and (

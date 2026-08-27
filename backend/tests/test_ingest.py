@@ -208,3 +208,45 @@ def test_low_confidence_needs_review(
     tx = run_isolated(load)
     assert tx is not None
     assert tx.status.value == "needs_review"
+
+
+def test_cash_withdrawal_unknown_merchant_becomes_atm(
+    ingest_client: tuple[TestClient, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, uid = ingest_client
+
+    async def atm_parse(*_args: object, **_kwargs: object) -> ParseOk:
+        return ParseOk(
+            parsed=_parsed(
+                merchant="Unknown",
+                merchant_details=None,
+                category="Cash Withdrawal",
+                payment_method="atm_withdrawal",
+                amount=10000.0,
+                external_id="atm-1",
+            ),
+            model="gemini-test",
+        )
+
+    monkeypatch.setattr("app.services.ingest.parse_transaction", atm_parse)
+    response = client.post(
+        "/ingest",
+        json={**BODY, "idempotencyKey": f"atm-{uuid4().hex}"},
+        headers={"X-User-Id": uid},
+    )
+    assert response.status_code == 200
+    tx_id = response.json()["transactionId"]
+    from uuid import UUID
+
+    from app.db.models.transaction import Transaction
+    from tests.conftest import run_isolated
+
+    async def load(session):  # type: ignore[no-untyped-def]
+        return await session.get(Transaction, UUID(tx_id))
+
+    tx = run_isolated(load)
+    assert tx is not None
+    assert tx.merchant == "ATM"
+    assert tx.merchant_normalized == "atm"
+    assert tx.category == "Cash Withdrawal"

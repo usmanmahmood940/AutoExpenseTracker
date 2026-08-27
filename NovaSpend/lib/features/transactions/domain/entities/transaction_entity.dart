@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:nova_spend/core/constants/app_constants.dart';
 
 class SmsSourceEntity extends Equatable {
   const SmsSourceEntity({
@@ -136,13 +137,23 @@ class TransactionEntity extends Equatable {
     return b.id.compareTo(a.id);
   }
 
+  /// Merchant shown in lists/detail. Cash withdrawals with no name are ATM.
+  String get displayMerchant => resolveMerchant(
+        merchant,
+        category: category,
+        paymentMethod: paymentMethod,
+      );
+
   /// Effective key for merchant grouping / navigation.
   String get resolvedMerchantKey {
+    final effective = displayMerchant;
     final stored = merchantNormalized;
-    if (stored != null && stored.trim().isNotEmpty) {
+    final merchantUnchanged =
+        normalizeMerchantKey(effective) == normalizeMerchantKey(merchant);
+    if (merchantUnchanged && stored != null && stored.trim().isNotEmpty) {
       return stored.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
     }
-    return merchant.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    return normalizeMerchantKey(effective);
   }
 
   TransactionEntity copyWith({

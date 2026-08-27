@@ -38,6 +38,7 @@ class SearchProvider extends ChangeNotifier {
 
   String? _uid;
   Timer? _debounce;
+  Future<void>? _paymentMethodsFuture;
 
   /// Last item in server page order (before client-side sort).
   TransactionEntity? _pageCursor;
@@ -65,7 +66,11 @@ class SearchProvider extends ChangeNotifier {
     unawaited(runSearch(saveRecent: false));
   }
 
-  Future<void> ensurePaymentMethods() async {
+  Future<void> ensurePaymentMethods() {
+    return _paymentMethodsFuture ??= _loadPaymentMethods();
+  }
+
+  Future<void> _loadPaymentMethods() async {
     try {
       final items = await _searchRepository.listPaymentMethods();
       if (items.isEmpty) return;

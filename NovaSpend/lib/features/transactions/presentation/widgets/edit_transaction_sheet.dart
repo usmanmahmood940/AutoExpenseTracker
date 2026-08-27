@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -9,25 +11,20 @@ import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
+import 'package:nova_spend/features/categories/presentation/widgets/category_catalog_scope.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/transaction_detail_provider.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
 class EditTransactionSheet extends StatefulWidget {
-  const EditTransactionSheet({required this.categories, super.key});
-
-  final List<String> categories;
+  const EditTransactionSheet({super.key});
 
   /// Opens a near-full-height, scrollable edit sheet.
   /// Returns `true` when the transaction was saved successfully.
-  static Future<bool?> show(
-    BuildContext context, {
-    required List<String> categories,
-  }) async {
+  static Future<bool?> show(BuildContext context) {
     final provider = context.read<TransactionDetailProvider>();
     provider.resetDraftFromTransaction();
-    await provider.loadMerchantRememberState();
-    if (!context.mounted) return null;
+    unawaited(provider.loadMerchantRememberState());
 
     return showModalBottomSheet<bool>(
       context: context,
@@ -37,7 +34,7 @@ class EditTransactionSheet extends StatefulWidget {
       builder: (sheetContext) {
         return ChangeNotifierProvider<TransactionDetailProvider>.value(
           value: provider,
-          child: EditTransactionSheet(categories: categories),
+          child: const EditTransactionSheet(),
         );
       },
     );
@@ -159,6 +156,11 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
     final merchantHint = _merchant.text.trim().isEmpty
         ? l10n.transactionMerchant
         : _merchant.text.trim();
+    final categories = CategoryCatalogScope.of(context)
+        .map((c) => c.name)
+        .toSet()
+        .toList()
+      ..sort();
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -220,7 +222,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                       label: l10n.transactionCategory,
                       muted: muted,
                       child: _CategoryDropdown(
-                        categories: widget.categories,
+                        categories: categories,
                         value: provider.category,
                         fill: fieldFill,
                         ink: ink,
@@ -322,6 +324,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                     const SizedBox(height: AppSpacing.lg),
                     _RememberToggle(
                       enabled: provider.rememberForMerchant,
+                      isLoading: provider.isLoadingRememberState,
                       title: l10n.transactionRememberMerchant,
                       subtitle: l10n.transactionAutoCategorizeHint(
                         merchantHint,
@@ -990,6 +993,7 @@ class _PickerField extends StatelessWidget {
 class _RememberToggle extends StatelessWidget {
   const _RememberToggle({
     required this.enabled,
+    required this.isLoading,
     required this.title,
     required this.subtitle,
     required this.ink,
@@ -1000,6 +1004,7 @@ class _RememberToggle extends StatelessWidget {
   });
 
   final bool enabled;
+  final bool isLoading;
   final String title;
   final String subtitle;
   final Color ink;
@@ -1057,11 +1062,17 @@ class _RememberToggle extends StatelessWidget {
               ],
             ),
           ),
-          Switch.adaptive(
-            value: enabled,
-            activeTrackColor: AppColors.primaryStrong,
-            onChanged: onChanged,
-          ),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: AppLoader(size: AppLoaderSize.small),
+            )
+          else
+            Switch.adaptive(
+              value: enabled,
+              activeTrackColor: AppColors.primaryStrong,
+              onChanged: onChanged,
+            ),
         ],
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -11,7 +13,6 @@ import 'package:nova_spend/core/utils/category_visuals.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/category_color_scope.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
-import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
@@ -45,7 +46,7 @@ class TransactionDetailPage extends StatelessWidget {
           updateTransaction: sl<UpdateTransaction>(),
           repository: sl<TransactionRepository>(),
         );
-        provider.loadMerchantRememberState();
+        unawaited(provider.loadMerchantRememberState());
         return provider;
       },
       child: const _DetailView(),
@@ -61,36 +62,9 @@ class _DetailView extends StatefulWidget {
 }
 
 class _DetailViewState extends State<_DetailView> {
-  List<String> _categories = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    final repo = sl<CategoryRepository>();
-    final uid = context.read<AuthProvider>().uid;
-    final defaults = await repo.watchDefaults().first;
-    if (!mounted) return;
-    final custom = uid == null
-        ? <dynamic>[]
-        : await repo.watchUserCategories(uid).first;
-    if (!mounted) return;
-    final names = <String>{
-      ...defaults.map((c) => c.name),
-      ...custom.map((c) => c.name),
-    }.toList()..sort();
-    setState(() => _categories = names);
-  }
-
   Future<void> _openEditSheet() async {
     final l10n = context.l10n;
-    final saved = await EditTransactionSheet.show(
-      context,
-      categories: _categories,
-    );
+    final saved = await EditTransactionSheet.show(context);
     if (!mounted || saved != true) return;
     ScaffoldMessenger.of(
       context,
@@ -136,12 +110,12 @@ class _DetailViewState extends State<_DetailView> {
   }
 
   void _openMerchant(TransactionEntity tx) {
-    if (tx.merchant.trim().isEmpty) return;
+    if (tx.displayMerchant.trim().isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MerchantPage(
           merchantNormalized: tx.resolvedMerchantKey,
-          displayName: tx.merchant,
+          displayName: tx.displayMerchant,
         ),
       ),
     );
@@ -507,7 +481,7 @@ class _HeroCard extends StatelessWidget {
     final amountText = '$sign${currency.formatMoney(tx.amount)}';
     final date = _formatShortDate(tx.transactionDate);
     final time = formatClockTime(tx.transactionTime);
-    final merchant = tx.merchant.trim();
+    final merchant = tx.displayMerchant.trim();
 
     return _SurfaceCard(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),

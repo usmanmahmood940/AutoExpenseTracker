@@ -449,9 +449,14 @@ Widget _highlightCard(
     );
   }
 
-  final merchant = highlight.merchant.isEmpty
-      ? highlight.category
-      : highlight.merchant;
+  final resolved = resolveMerchant(
+    highlight.merchant,
+    category: highlight.category,
+    paymentMethod: '',
+  );
+  final hasMerchant = highlight.merchant.trim().isNotEmpty ||
+      resolved != kDefaultMerchant;
+  final merchant = hasMerchant ? resolved : highlight.category;
   final day = relativeDayLabel(
     highlight.transactionDate,
     today: l10n.homePeriodToday,
@@ -465,9 +470,9 @@ Widget _highlightCard(
     amount: AppCurrencyScope.of(context).formatMoney(highlight.amount),
     amountColor: amountColor,
     subtitle: l10n.homeHighlightSubtitle(_truncate(merchant, 10), day),
-    onTap: highlight.merchant.isEmpty
-        ? null
-        : () => _openMerchantHighlight(context, highlight),
+    onTap: hasMerchant
+        ? () => _openMerchantHighlight(context, highlight)
+        : null,
   );
 }
 
@@ -549,7 +554,7 @@ TransactionGroupSection _daySection(
         TransactionListTile(
           transaction: tx,
           onTap: () => _openDetail(context, tx),
-          onMerchantTap: tx.merchant.isEmpty
+          onMerchantTap: tx.displayMerchant.isEmpty
               ? null
               : () => _openMerchant(context, tx),
         ),
@@ -619,21 +624,28 @@ void _openMerchant(BuildContext context, TransactionEntity tx) {
     MaterialPageRoute<void>(
       builder: (_) => MerchantPage(
         merchantNormalized: tx.resolvedMerchantKey,
-        displayName: tx.merchant,
+        displayName: tx.displayMerchant,
       ),
     ),
   );
 }
 
 void _openMerchantHighlight(BuildContext context, PeriodHighlight highlight) {
-  final key = highlight.merchantNormalized.isNotEmpty
-      ? highlight.merchantNormalized
-      : normalizeMerchantKey(highlight.merchant);
+  final display = resolveMerchant(
+    highlight.merchant,
+    category: highlight.category,
+    paymentMethod: '',
+  );
+  final key = display != highlight.merchant.trim()
+      ? normalizeMerchantKey(display)
+      : (highlight.merchantNormalized.isNotEmpty
+            ? highlight.merchantNormalized
+            : normalizeMerchantKey(highlight.merchant));
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => MerchantPage(
         merchantNormalized: key,
-        displayName: highlight.merchant,
+        displayName: display,
       ),
     ),
   );

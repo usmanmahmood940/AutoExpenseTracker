@@ -14,6 +14,7 @@ import httpx
 
 from app.db.seeds.categories import FALLBACK_CATEGORY_NAME
 from app.services.currencies import CURRENCIES, DEFAULT_CURRENCY, normalize_currency
+from app.services.merchant_key import resolve_merchant
 from app.services.payment_methods import (
     DEFAULT_PAYMENT_METHOD,
     PAYMENT_METHODS,
@@ -106,7 +107,13 @@ def _schema(allowed_categories: list[str]) -> dict[str, Any]:
                 "enum": list(CURRENCIES),
             },
             "type": {"type": "STRING", "description": "debit or credit"},
-            "merchant": {"type": "STRING"},
+            "merchant": {
+                "type": "STRING",
+                "description": (
+                    "Primary merchant or payee. Use ATM for cash withdrawals "
+                    "with no named merchant — never Unknown"
+                ),
+            },
             "merchantDetails": {"type": "STRING", "nullable": True},
             "category": {
                 "type": "STRING",
@@ -170,6 +177,9 @@ def _system_prompt(
         "never use placeholders.\n"
         "- If a bank message includes a date/time, prefer those values from the "
         "message.\n"
+        '- merchant: required. For cash withdrawal / ATM with no named merchant, '
+        'use "ATM" — never "Unknown". Put ATM location in merchantDetails when '
+        "present.\n"
         '- Use "Unknown" for missing merchantDetails, branch, bank, or accountId '
         "when not inferable.\n"
         f"- paymentMethod: MUST be exactly one of: [{methods}].\n"
@@ -189,21 +199,27 @@ def _normalize(raw: dict[str, Any], allowed_categories: list[str]) -> ParsedTran
     details = raw.get("merchantDetails")
     branch = raw.get("branch")
     external_id = raw.get("externalId")
+    category = resolve_allowed_category(
+        str(raw.get("category") or FALLBACK_CATEGORY_NAME),
+        allowed_categories,
+    )
+    payment_method = normalize_payment_method(
+        str(raw.get("paymentMethod") or DEFAULT_PAYMENT_METHOD)
+    )
     return ParsedTransaction(
         amount=float(raw.get("amount") or 0),
         currency=normalize_currency(str(raw.get("currency") or DEFAULT_CURRENCY)),
         type=str(raw.get("type") or "debit").lower(),
-        merchant=str(raw.get("merchant") or "Unknown"),
+        merchant=resolve_merchant(
+            str(raw.get("merchant") or ""),
+            category=category,
+            payment_method=payment_method,
+        ),
         merchant_details=(
             None if details is None or details == "Unknown" else str(details)
         ),
-        category=resolve_allowed_category(
-            str(raw.get("category") or FALLBACK_CATEGORY_NAME),
-            allowed_categories,
-        ),
-        payment_method=normalize_payment_method(
-            str(raw.get("paymentMethod") or DEFAULT_PAYMENT_METHOD)
-        ),
+        category=category,
+        payment_method=payment_method,
         bank=str(raw.get("bank") or "Unknown"),
         account_id=str(raw.get("accountId") or "Unknown"),
         branch=None if branch is None or branch == "Unknown" else str(branch),

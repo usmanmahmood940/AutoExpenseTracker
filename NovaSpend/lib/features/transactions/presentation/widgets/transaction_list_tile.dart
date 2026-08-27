@@ -37,9 +37,9 @@ class TransactionListTile extends StatelessWidget {
     final amountColor =
         isCredit ? AppColors.accent : theme.colorScheme.onSurface;
     final sign = isCredit ? '+' : '−';
-    final merchantLabel = transaction.merchant.isEmpty
+    final merchantLabel = transaction.displayMerchant.isEmpty
         ? context.l10n.transactionMerchant
-        : transaction.merchant;
+        : transaction.displayMerchant;
     final time = showTime ? formatClockTime(transaction.transactionTime) : '';
 
     final merchantStyle = theme.textTheme.titleMedium?.copyWith(

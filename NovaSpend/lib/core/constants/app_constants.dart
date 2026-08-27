@@ -49,3 +49,31 @@ class AppConstants {
 String normalizeMerchantKey(String merchant) {
   return merchant.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 }
+
+const String kDefaultMerchant = 'Unknown';
+const String kAtmMerchant = 'ATM';
+
+/// Stored/display name. Cash withdrawals with no merchant become ATM.
+///
+/// Keep in sync with `resolveMerchant` in `functions/src/schema.ts` and
+/// `resolve_merchant` in `backend/app/services/merchant_key.py`.
+String resolveMerchant(
+  String merchant, {
+  required String category,
+  required String paymentMethod,
+}) {
+  final trimmed = merchant.trim();
+  final missing =
+      trimmed.isEmpty || trimmed.toLowerCase() == 'unknown';
+  if (missing && _isCashWithdrawal(category, paymentMethod)) {
+    return kAtmMerchant;
+  }
+  return trimmed.isEmpty ? kDefaultMerchant : trimmed;
+}
+
+bool _isCashWithdrawal(String category, String paymentMethod) {
+  final cat = category.trim().toLowerCase();
+  return cat == 'cash withdrawal' ||
+      cat == 'cash_withdrawal' ||
+      paymentMethod.trim().toLowerCase() == 'atm_withdrawal';
+}

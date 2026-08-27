@@ -137,6 +137,36 @@ def test_patch_detail_soft_delete(api_client: TestClient) -> None:
     assert listed["items"] == []
 
 
+def test_cash_withdrawal_unknown_merchant_becomes_atm(api_client: TestClient) -> None:
+    created = _post_tx(
+        api_client,
+        merchant="Unknown",
+        amount=5000,
+        tx_date="2026-03-01",
+        category="Cash Withdrawal",
+        payment_method="atm_withdrawal",
+    )
+    assert created["merchant"] == "ATM"
+    assert created["merchant_normalized"] == "atm"
+
+    other = _post_tx(
+        api_client,
+        merchant="Unknown",
+        amount=200,
+        tx_date="2026-03-02",
+        category="Food & Dining",
+    )
+    assert other["merchant"] == "Unknown"
+
+    patched = api_client.patch(
+        f"/transactions/{other['id']}",
+        json={"category": "Cash Withdrawal"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["merchant"] == "ATM"
+    assert patched.json()["merchant_normalized"] == "atm"
+
+
 def test_search_prefix_and_scan(api_client: TestClient) -> None:
     _post_tx(api_client, merchant="KFC", amount=100, tx_date="2026-03-01")
     _post_tx(api_client, merchant="Khaadi", amount=200, tx_date="2026-03-02")

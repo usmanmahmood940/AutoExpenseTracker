@@ -27,7 +27,7 @@ class ExportService {
           t.id,
           t.transactionDate,
           t.transactionTime,
-          t.merchant,
+          t.displayMerchant,
           t.amount,
           t.currency,
           t.type,

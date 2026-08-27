@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -34,7 +34,7 @@ from app.services.categories import allowed_category_names
 from app.services.dates import day_name_from_date, parse_received_at
 from app.services.dedup import DedupFields, compute_dedup_key, mask_account_id
 from app.services.gemini import ParsedTransaction, ParseFail, parse_transaction
-from app.services.merchant_key import normalize_merchant, normalize_merchant_key
+from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money
 from app.services.user_profile import ensure_profile
 from app.workers.summaries import recompute_for_date
@@ -290,6 +290,14 @@ async def process_ingest(
         )
 
     parsed = parse_result.parsed
+    parsed = replace(
+        parsed,
+        merchant=resolve_merchant(
+            parsed.merchant,
+            category=parsed.category,
+            payment_method=parsed.payment_method,
+        ),
+    )
     field_error = validate_parsed(parsed, allowed)
     if field_error:
         ingestion.status = IngestionStatus.needs_parse
@@ -357,7 +365,7 @@ async def process_ingest(
         type=TransactionType(parsed.type),
         merchant=parsed.merchant,
         merchant_details=parsed.merchant_details,
-        merchant_normalized=normalize_merchant(parsed.merchant),
+        merchant_normalized=normalize_merchant_key(parsed.merchant),
         is_recurring=False,
         category=category,
         category_source=category_source,

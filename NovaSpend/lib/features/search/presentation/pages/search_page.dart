@@ -305,110 +305,126 @@ class _SearchViewState extends State<_SearchView> {
                   ),
                 ),
                 Expanded(
-                  child: ListView(
+                  child: CustomScrollView(
                     controller: _scrollController,
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
-                    children: [
+                    slivers: [
                       if (provider.recentSearches.isNotEmpty &&
-                          !provider.hasSearched) ...[
-                        Padding(
+                          !provider.hasSearched)
+                        SliverPadding(
                           padding: const EdgeInsets.fromLTRB(
                             AppSpacing.md,
                             0,
                             AppSpacing.md,
-                            AppSpacing.sm,
+                            AppSpacing.lg,
                           ),
-                          child: SectionHeader(
-                            title: l10n.searchRecent,
-                            actionLabel: l10n.searchClearRecent,
-                            onActionTap: provider.clearRecent,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                          ),
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              for (final term in provider.recentSearches.take(
-                                5,
-                              ))
-                                _RecentSearchChip(
-                                  label: term,
-                                  onTap: () {
-                                    _controller.text = term;
-                                    provider.applyRecent(term);
-                                    setState(() {});
-                                  },
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SectionHeader(
+                                  title: l10n.searchRecent,
+                                  actionLabel: l10n.searchClearRecent,
+                                  onActionTap: provider.clearRecent,
                                 ),
-                            ],
+                                const SizedBox(height: AppSpacing.sm),
+                                Wrap(
+                                  spacing: AppSpacing.sm,
+                                  runSpacing: AppSpacing.sm,
+                                  children: [
+                                    for (final term in provider.recentSearches
+                                        .take(5))
+                                      _RecentSearchChip(
+                                        label: term,
+                                        onTap: () {
+                                          _controller.text = term;
+                                          provider.applyRecent(term);
+                                          setState(() {});
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
                       if (provider.isLoading)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
+                        const SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.md,
+                            0,
+                            AppSpacing.md,
+                            AppSpacing.xxl,
                           ),
-                          child: SkeletonTransactionList(),
+                          sliver: SliverToBoxAdapter(
+                            child: SkeletonTransactionList(),
+                          ),
                         )
                       else if (provider.error != null &&
                           provider.results.isEmpty)
-                        ErrorStateView(
-                          error: provider.error,
-                          onRetry: () => provider.runSearch(saveRecent: false),
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: ErrorStateView(
+                            error: provider.error,
+                            onRetry: () =>
+                                provider.runSearch(saveRecent: false),
+                          ),
                         )
                       else if (!provider.hasSearched)
-                        EmptyStateView(
-                          title: l10n.searchEmptyTitle,
-                          message: l10n.searchEmptyHint,
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyStateView(
+                            title: l10n.searchEmptyTitle,
+                            message: l10n.searchEmptyHint,
+                          ),
                         )
                       else if (provider.results.isEmpty)
-                        EmptyStateView(
-                          title: provider.query.hasActiveFilters
-                              ? l10n.searchNoResultsTitle
-                              : l10n.feedEmpty,
-                          message: provider.query.hasActiveFilters
-                              ? l10n.searchNoResultsHint
-                              : l10n.feedEmptyHint,
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyStateView(
+                            title: provider.query.hasActiveFilters
+                                ? l10n.searchNoResultsTitle
+                                : l10n.feedEmpty,
+                            message: provider.query.hasActiveFilters
+                                ? l10n.searchNoResultsHint
+                                : l10n.feedEmptyHint,
+                          ),
                         )
                       else ...[
-                        Padding(
+                        SliverPadding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
                           ),
-                          child: _ResultsCountRow(
-                            count: provider.matchCount,
-                            spent: provider.matchSpent,
-                            received: provider.matchReceived,
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _ResultsCountRow(
+                                  count: provider.matchCount,
+                                  spent: provider.matchSpent,
+                                  received: provider.matchReceived,
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                provider.query.sort.groupsByDay
+                                    ? _ResultsDayGroups(
+                                        results: provider.results,
+                                      )
+                                    : _ResultsFlatList(
+                                        results: provider.results,
+                                      ),
+                                if (provider.error != null) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  LoadErrorBanner(
+                                    error: provider.error,
+                                    onRetry: provider.loadMore,
+                                  ),
+                                ],
+                                if (provider.isLoadingMore)
+                                  const AppListFooterLoader(),
+                                const SizedBox(height: AppSpacing.xxl),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                          ),
-                          child: provider.query.sort.groupsByDay
-                              ? _ResultsDayGroups(results: provider.results)
-                              : _ResultsFlatList(results: provider.results),
-                        ),
-                        if (provider.error != null)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.md,
-                              AppSpacing.md,
-                              AppSpacing.md,
-                              0,
-                            ),
-                            child: LoadErrorBanner(
-                              error: provider.error,
-                              onRetry: provider.loadMore,
-                            ),
-                          ),
-                        if (provider.isLoadingMore) const AppListFooterLoader(),
                       ],
                     ],
                   ),
@@ -442,11 +458,8 @@ class _SearchViewState extends State<_SearchView> {
     BuildContext context,
     SearchProvider provider,
   ) async {
-    await provider.ensurePaymentMethods();
-    if (!context.mounted) return;
     final selected = await FilterSheet.show(
       context,
-      paymentMethods: provider.paymentMethods,
       initial: provider.query.hasSheetFilters
           ? FilterSheetValue.fromQuery(provider.query)
           : null,
@@ -667,14 +680,14 @@ Widget _resultTile(BuildContext context, TransactionEntity tx) {
         ),
       );
     },
-    onMerchantTap: tx.merchant.isEmpty
+    onMerchantTap: tx.displayMerchant.isEmpty
         ? null
         : () {
             Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => MerchantPage(
                   merchantNormalized: tx.resolvedMerchantKey,
-                  displayName: tx.merchant,
+                  displayName: tx.displayMerchant,
                 ),
               ),
             );
