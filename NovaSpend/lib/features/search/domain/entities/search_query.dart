@@ -59,7 +59,8 @@ class SearchQuery extends Equatable {
       debitsOnly ||
       creditsOnly ||
       hasPaymentMethods ||
-      hasSources;
+      hasSources ||
+      subscriptionsOnly;
 
   bool get hasActiveFilters =>
       hasText ||

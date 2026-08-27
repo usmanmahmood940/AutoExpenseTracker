@@ -312,17 +312,75 @@
   },
   "insightsTitle": "Insights",
   "insightsThisMonth": "This month",
-  "insightsSpent": "Debit",
-  "insightsIncome": "Credit",
+  "insightsLastMonth": "Last month",
+  "insightsThisYear": "This year",
+  "insightsSpent": "Spent",
+  "insightsIncome": "Received",
   "insightsNet": "Net",
+  "insightsTransactions": "Transactions",
   "insightsVsPrevious": "vs previous month",
-  "insightsByCategory": "By category",
+  "insightsChangeUp": "↑ {percent}% vs previous period",
+  "@insightsChangeUp": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsChangeDown": "↓ {percent}% vs previous period",
+  "@insightsChangeDown": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsByCategory": "Where money went",
   "insightsTrends": "Spend over time",
   "insightsTopMerchants": "Top merchants",
   "insightsCashFlow": "Credit vs Debit",
-  "insightsEmpty": "No summary for this month yet",
+  "insightsWhatChanged": "What changed",
+  "insightsNarrativeSpendUp": "You spent {percent}% more than the previous period.",
+  "@insightsNarrativeSpendUp": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeSpendDown": "You spent {percent}% less than the previous period.",
+  "@insightsNarrativeSpendDown": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeSpendFlat": "You spent about the same as the previous period.",
+  "insightsNarrativeTopCategory": "{category} was {percent}% of spend.",
+  "@insightsNarrativeTopCategory": {
+    "placeholders": {
+      "category": {"type": "String"},
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeTopMerchant": "{merchant} was a top merchant at {amount}.",
+  "@insightsNarrativeTopMerchant": {
+    "placeholders": {
+      "merchant": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "insightsRecurring": "Recurring",
+  "insightsRecurringMeta": "{count} · avg {amount}",
+  "@insightsRecurringMeta": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "insightsVisitCount": "{count, plural, =1{1 visit} other{{count} visits}}",
+  "@insightsVisitCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "insightsEmpty": "No summary for this period yet",
   "insightsPrevMonth": "Previous",
   "insightsNextMonth": "Next",
+  "activitySubscriptions": "Subscriptions only",
   "authUnlockTitle": "Unlock NovaSpend",
   "authUnlockSubtitle": "Authenticate to view your finances",
   "authUnlockButton": "Unlock",

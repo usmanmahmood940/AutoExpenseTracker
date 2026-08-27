@@ -1,6 +1,8 @@
 import 'package:nova_spend/core/constants/currencies.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
@@ -179,8 +181,27 @@ MonthlySummaryEntity monthlySummaryFromApi(Map<String, dynamic> json) {
     );
   }
 
+  Map<String, MerchantSpendStat> statsMap(dynamic raw) {
+    if (raw is! Map) return {};
+    final out = <String, MerchantSpendStat>{};
+    raw.forEach((key, value) {
+      if (value is Map) {
+        final map = Map<String, dynamic>.from(value);
+        out[key.toString()] = MerchantSpendStat(
+          amount: (map['amount'] as num?)?.toDouble() ?? 0,
+          visitCount: (map['visit_count'] as num?)?.toInt() ?? 0,
+          merchantNormalized: map['merchant_normalized'] as String? ??
+              key.toString().toLowerCase(),
+        );
+      }
+    });
+    return out;
+  }
+
   return MonthlySummaryEntity(
     yearMonth: json['year_month'] as String? ?? '',
+    dateFrom: json['date_from'] as String?,
+    dateTo: json['date_to'] as String?,
     currency: json['currency'] as String? ?? 'PKR',
     totalDebit: (json['total_debit'] as num?)?.toDouble() ?? 0,
     totalCredit: (json['total_credit'] as num?)?.toDouble() ?? 0,
@@ -188,7 +209,45 @@ MonthlySummaryEntity monthlySummaryFromApi(Map<String, dynamic> json) {
     transactionCount: (json['transaction_count'] as num?)?.toInt() ?? 0,
     byCategory: numMap(json['by_category']),
     byMerchant: numMap(json['by_merchant']),
+    byMerchantStats: statsMap(json['by_merchant_stats']),
   );
+}
+
+List<TrendPointEntity> trendPointsFromApi(Map<String, dynamic> json) {
+  final raw = json['points'];
+  if (raw is! List) return const [];
+  return raw.whereType<Map>().map((item) {
+    final map = Map<String, dynamic>.from(item);
+    final parsed = DateTime.tryParse(map['date'] as String? ?? '');
+    return TrendPointEntity(
+      date: parsed ?? DateTime(1970),
+      debit: (map['debit'] as num?)?.toDouble() ?? 0,
+    );
+  }).toList();
+}
+
+List<RecurringMerchantEntity> recurringMerchantsFromApi(
+  Map<String, dynamic> json,
+) {
+  final raw = json['items'];
+  if (raw is! List) return const [];
+  return raw.whereType<Map>().map((item) {
+    final map = Map<String, dynamic>.from(item);
+    final parsed = DateTime.tryParse(map['last_date'] as String? ?? '');
+    return RecurringMerchantEntity(
+      displayName: map['display_name'] as String? ?? '',
+      merchantNormalized: map['merchant_normalized'] as String? ?? '',
+      count: (map['count'] as num?)?.toInt() ?? 0,
+      averageAmount: (map['average_amount'] as num?)?.toDouble() ?? 0,
+      lastDate: parsed ?? DateTime(1970),
+    );
+  }).toList();
+}
+
+String? narrativeFromApi(Map<String, dynamic> json) {
+  final text = json['narrative'] as String?;
+  if (text == null || text.trim().isEmpty) return null;
+  return text.trim();
 }
 
 /// Maps Flutter/Firestore camelCase patch fields to FastAPI snake_case.

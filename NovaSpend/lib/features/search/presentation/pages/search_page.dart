@@ -475,6 +475,7 @@ class _SearchViewState extends State<_SearchView> {
       type: selected.value.type,
       paymentMethods: selected.value.paymentMethods,
       sources: selected.value.sources,
+      subscriptionsOnly: selected.value.subscriptionsOnly,
     );
   }
 

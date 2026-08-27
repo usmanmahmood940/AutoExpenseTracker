@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
-import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
-import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
+import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/balance_header.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
+import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/skeleton.dart';
+import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/analytics/presentation/provider/insights_provider.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_category_bars.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_kpi_row.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_merchant_list.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_narrative_card.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_recurring_list.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_trend_chart.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
-import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
+import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
+import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
+import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
@@ -53,27 +61,7 @@ class _InsightsView extends StatelessWidget {
 
     return AdaptiveScaffold(
       title: l10n.insightsTitle,
-      appBar: AppBar(
-        title: Text(l10n.insightsTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.insightsPrevMonth,
-            onPressed: provider.previousMonth,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Center(
-            child: Text(
-              DateFormat.yMMMM().format(provider.month),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          IconButton(
-            tooltip: l10n.insightsNextMonth,
-            onPressed: provider.nextMonth,
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(l10n.insightsTitle)),
       body: provider.isLoading && summary == null
           ? const _InsightsSkeleton()
           : provider.error != null && summary == null
@@ -81,99 +69,194 @@ class _InsightsView extends StatelessWidget {
                   error: provider.error,
                   onRetry: provider.retry,
                 )
-              : summary == null
-              ? Center(child: Text(l10n.insightsEmpty))
+              : summary == null || provider.isEmpty
+              ? Column(
+                  children: [
+                    _PeriodControls(provider: provider),
+                    Expanded(
+                      child: Center(child: Text(l10n.insightsEmpty)),
+                    ),
+                  ],
+                )
               : AppBusyContent(
                   busy: provider.isLoading,
                   child: ListView(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
-                  children: [
-                    BalanceHeader(
-                      label: l10n.insightsNet,
-                      amount: money.formatMoney(summary.net),
-                      subtitle: l10n.insightsThisMonth,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+                    children: [
+                      _PeriodControls(provider: provider),
+                      BalanceHeader(
+                        label: l10n.insightsNet,
+                        amount: money.formatMoney(summary.net),
+                        subtitle: _vsPreviousSubtitle(
+                          l10n,
+                          provider.netChangePercent,
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _StatCard(
-                              label: l10n.insightsSpent,
-                              value: money.formatMoney(summary.totalDebit),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: _StatCard(
-                              label: l10n.insightsIncome,
-                              value: money.formatMoney(summary.totalCredit),
-                            ),
-                          ),
-                        ],
+                      InsightsKpiRow(
+                        spentLabel: l10n.insightsSpent,
+                        spentValue: money.formatMoney(summary.totalDebit),
+                        receivedLabel: l10n.insightsIncome,
+                        receivedValue: money.formatMoney(summary.totalCredit),
+                        countLabel: l10n.insightsTransactions,
+                        countValue: '${summary.transactionCount}',
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _SectionTitle(l10n.insightsByCategory),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      child: AppCard(
-                        child: _HorizontalCategoryBars(
+                      if (provider.trend.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.lg),
+                        _PaddedSectionHeader(l10n.insightsTrends),
+                        InsightsTrendChart(
+                          points: provider.trend,
+                          formatMoney: money.formatMoney,
+                        ),
+                      ],
+                      if (provider.templateFacts.hasContent ||
+                          (provider.aiNarrative?.isNotEmpty ?? false)) ...[
+                        const SizedBox(height: AppSpacing.lg),
+                        InsightsNarrativeCard(
+                          facts: provider.templateFacts,
+                          formatMoney: money.formatMoney,
+                          aiNarrative: provider.aiNarrative,
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.lg),
+                      _PaddedSectionHeader(l10n.insightsByCategory),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        child: InsightsCategoryBars(
                           byCategory: summary.byCategory,
+                          totalSpent: summary.totalDebit,
+                          formatMoney: money.formatMoney,
+                          onCategoryTap: (key, displayName) {
+                            context.read<SearchProvider>().applyActivityFilters(
+                                  range: provider.activityDateRange,
+                                  categories: [displayName],
+                                );
+                            MainShellScope.selectTransactionsTab(context);
+                          },
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _SectionTitle(l10n.insightsTopMerchants),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      child: AppCard(
-                        child: Column(
-                          children: _topEntries(summary.byMerchant)
-                              .map(
-                                (e) => ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(e.key),
-                                  trailing: Text(
-                                    money.formatMoney(e.value),
-                                  ),
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => MerchantPage(
-                                          merchantNormalized:
-                                              normalizeMerchantKey(e.key),
-                                          displayName: e.key,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                              .toList(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _PaddedSectionHeader(l10n.insightsTopMerchants),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        child: InsightsMerchantList(
+                          summary: summary,
+                          formatMoney: money.formatMoney,
+                          visitLabel: l10n.insightsVisitCount,
                         ),
                       ),
-                    ),
-                  ],
+                      if (provider.recurring.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.lg),
+                        _PaddedSectionHeader(l10n.insightsRecurring),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: InsightsRecurringList(
+                            items: provider.recurring,
+                            formatMoney: money.formatMoney,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
     );
   }
 
-  List<MapEntry<String, double>> _topEntries(Map<String, double> map) {
-    final list = map.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return list.take(5).toList();
+  String? _vsPreviousSubtitle(AppLocalizations l10n, double? change) {
+    if (change == null) return null;
+    final percent = change.abs().round().toString();
+    if (change >= 0) return l10n.insightsChangeUp(percent);
+    return l10n.insightsChangeDown(percent);
   }
 }
 
-/// First-load placeholder mirroring the insights layout.
+class _PeriodControls extends StatelessWidget {
+  const _PeriodControls({required this.provider});
+
+  final InsightsProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final showChevrons = provider.preset != InsightsPeriodPreset.thisYear;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        0,
+      ),
+      child: Column(
+        children: [
+          AppSegmentedToggle<InsightsPeriodPreset>(
+            value: provider.preset,
+            onChanged: provider.setPreset,
+            segments: [
+              AppSegment(
+                value: InsightsPeriodPreset.thisMonth,
+                label: l10n.insightsThisMonth,
+              ),
+              AppSegment(
+                value: InsightsPeriodPreset.lastMonth,
+                label: l10n.insightsLastMonth,
+              ),
+              AppSegment(
+                value: InsightsPeriodPreset.thisYear,
+                label: l10n.insightsThisYear,
+              ),
+            ],
+          ),
+          if (showChevrons)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  tooltip: l10n.insightsPrevMonth,
+                  onPressed: provider.previousMonth,
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Text(
+                  DateFormat.yMMMM().format(provider.month),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                IconButton(
+                  tooltip: l10n.insightsNextMonth,
+                  onPressed: provider.nextMonth,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaddedSectionHeader extends StatelessWidget {
+  const _PaddedSectionHeader(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      child: SectionHeader(title: title),
+    );
+  }
+}
+
 class _InsightsSkeleton extends StatelessWidget {
   const _InsightsSkeleton();
 
@@ -188,206 +271,27 @@ class _InsightsSkeleton extends StatelessWidget {
           AppSpacing.xxl,
         ),
         children: [
+          const SkeletonBox(height: 40, radius: 20),
+          const SizedBox(height: AppSpacing.lg),
           const Center(child: SkeletonBox(width: 96, height: 12)),
           const SizedBox(height: AppSpacing.smPlus),
           const Center(child: SkeletonBox(width: 196, height: 34)),
           const SizedBox(height: AppSpacing.lg),
           const Row(
             children: [
-              Expanded(child: _StatCardBones()),
+              Expanded(child: SkeletonCard(child: SizedBox(height: 44))),
               SizedBox(width: AppSpacing.sm),
-              Expanded(child: _StatCardBones()),
+              Expanded(child: SkeletonCard(child: SizedBox(height: 44))),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(child: SkeletonCard(child: SizedBox(height: 44))),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           const SkeletonSectionHeader(titleWidth: 124),
           const SizedBox(height: AppSpacing.sm),
-          SkeletonCard(
-            child: Column(
-              children: [
-                for (var i = 0; i < 4; i++) ...[
-                  if (i != 0) const SizedBox(height: AppSpacing.smPlus2),
-                  const _CategoryBarBones(),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const SkeletonSectionHeader(titleWidth: 148),
-          const SizedBox(height: AppSpacing.sm),
-          const SkeletonCardList(cardCount: 1, linesPerCard: 4),
+          const SkeletonCard(child: SizedBox(height: 120)),
         ],
       ),
-    );
-  }
-}
-
-class _StatCardBones extends StatelessWidget {
-  const _StatCardBones();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SkeletonCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SkeletonBox(width: 64, height: 11),
-          SizedBox(height: AppSpacing.xs),
-          SkeletonBox(width: 96, height: 16),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryBarBones extends StatelessWidget {
-  const _CategoryBarBones();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            SkeletonBox(width: 104, height: 12),
-            Spacer(),
-            SkeletonBox(width: 56, height: 10),
-          ],
-        ),
-        SizedBox(height: AppSpacing.xs),
-        SkeletonBox(height: 8, radius: 4),
-      ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        0,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
-      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.55),
-                ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(value, style: Theme.of(context).textTheme.titleMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _HorizontalCategoryBars extends StatelessWidget {
-  const _HorizontalCategoryBars({required this.byCategory});
-
-  final Map<String, double> byCategory;
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = byCategory.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final top = entries.take(5).toList();
-
-    if (top.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Center(child: Text(context.l10n.insightsEmpty)),
-      );
-    }
-
-    final maxValue = top.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-
-    return Column(
-      children: [
-        for (final entry in top) ...[
-          _CategoryBarRow(
-            label: entry.key,
-            amount: AppCurrencyScope.of(context).formatMoney(entry.value),
-            fraction: maxValue > 0 ? entry.value / maxValue : 0,
-          ),
-          if (entry != top.last) const SizedBox(height: AppSpacing.sm),
-        ],
-      ],
-    );
-  }
-}
-
-class _CategoryBarRow extends StatelessWidget {
-  const _CategoryBarRow({
-    required this.label,
-    required this.amount,
-    required this.fraction,
-  });
-
-  final String label;
-  final String amount;
-  final double fraction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(amount, style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: fraction.clamp(0.0, 1.0),
-            minHeight: 8,
-            backgroundColor: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.08),
-            color: AppColors.accent,
-          ),
-        ),
-      ],
     );
   }
 }

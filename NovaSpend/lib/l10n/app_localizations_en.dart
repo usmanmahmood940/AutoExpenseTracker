@@ -726,19 +726,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsThisMonth => 'This month';
 
   @override
-  String get insightsSpent => 'Debit';
+  String get insightsLastMonth => 'Last month';
 
   @override
-  String get insightsIncome => 'Credit';
+  String get insightsThisYear => 'This year';
+
+  @override
+  String get insightsSpent => 'Spent';
+
+  @override
+  String get insightsIncome => 'Received';
 
   @override
   String get insightsNet => 'Net';
 
   @override
+  String get insightsTransactions => 'Transactions';
+
+  @override
   String get insightsVsPrevious => 'vs previous month';
 
   @override
-  String get insightsByCategory => 'By category';
+  String insightsChangeUp(String percent) {
+    return '↑ $percent% vs previous period';
+  }
+
+  @override
+  String insightsChangeDown(String percent) {
+    return '↓ $percent% vs previous period';
+  }
+
+  @override
+  String get insightsByCategory => 'Where money went';
 
   @override
   String get insightsTrends => 'Spend over time';
@@ -750,13 +769,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsCashFlow => 'Credit vs Debit';
 
   @override
-  String get insightsEmpty => 'No summary for this month yet';
+  String get insightsWhatChanged => 'What changed';
+
+  @override
+  String insightsNarrativeSpendUp(String percent) {
+    return 'You spent $percent% more than the previous period.';
+  }
+
+  @override
+  String insightsNarrativeSpendDown(String percent) {
+    return 'You spent $percent% less than the previous period.';
+  }
+
+  @override
+  String get insightsNarrativeSpendFlat =>
+      'You spent about the same as the previous period.';
+
+  @override
+  String insightsNarrativeTopCategory(String category, String percent) {
+    return '$category was $percent% of spend.';
+  }
+
+  @override
+  String insightsNarrativeTopMerchant(String merchant, String amount) {
+    return '$merchant was a top merchant at $amount.';
+  }
+
+  @override
+  String get insightsRecurring => 'Recurring';
+
+  @override
+  String insightsRecurringMeta(String count, String amount) {
+    return '$count · avg $amount';
+  }
+
+  @override
+  String insightsVisitCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count visits',
+      one: '1 visit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insightsEmpty => 'No summary for this period yet';
 
   @override
   String get insightsPrevMonth => 'Previous';
 
   @override
   String get insightsNextMonth => 'Next';
+
+  @override
+  String get activitySubscriptions => 'Subscriptions only';
 
   @override
   String get authUnlockTitle => 'Unlock NovaSpend';

@@ -176,6 +176,7 @@ class SearchProvider extends ChangeNotifier {
     String? type,
     List<String> paymentMethods = const [],
     List<String> sources = const [],
+    bool subscriptionsOnly = false,
   }) {
     final methods = List<String>.unmodifiable([...paymentMethods]..sort());
     final nextSources = List<String>.unmodifiable([...sources]..sort());
@@ -190,6 +191,7 @@ class SearchProvider extends ChangeNotifier {
       clearPaymentMethods: methods.isEmpty,
       sources: nextSources,
       clearSources: nextSources.isEmpty,
+      subscriptionsOnly: subscriptionsOnly,
     );
     if (next == query) return;
     query = next;
@@ -206,6 +208,24 @@ class SearchProvider extends ChangeNotifier {
       creditsOnly: false,
       clearPaymentMethods: true,
       clearSources: true,
+      subscriptionsOnly: false,
+    );
+    notifyListeners();
+    unawaited(runSearch(saveRecent: false));
+  }
+
+  void applyActivityFilters({
+    required DateRangeValue range,
+    List<String> categories = const [],
+    bool subscriptionsOnly = false,
+  }) {
+    _debounce?.cancel();
+    query = SearchQuery(
+      datePreset: range.preset,
+      dateFrom: range.from,
+      dateTo: range.to,
+      categories: List<String>.unmodifiable([...categories]..sort()),
+      subscriptionsOnly: subscriptionsOnly,
     );
     notifyListeners();
     unawaited(runSearch(saveRecent: false));

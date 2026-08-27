@@ -89,4 +89,31 @@ void main() {
     expect(patch.containsKey('isEdited'), isFalse);
     expect(patch.containsKey('updatedAt'), isFalse);
   });
+
+  test('monthlySummaryFromApi maps merchant stats and range bounds', () {
+    final summary = monthlySummaryFromApi({
+      'year_month': '2026-03',
+      'date_from': '2026-03-01',
+      'date_to': '2026-03-31',
+      'currency': 'PKR',
+      'total_debit': 700,
+      'total_credit': 0,
+      'net': -700,
+      'transaction_count': 2,
+      'by_category': {'Food & Dining': 700},
+      'by_merchant': {'KFC': 700},
+      'by_merchant_stats': {
+        'KFC': {
+          'amount': 700,
+          'visit_count': 2,
+          'merchant_normalized': 'kfc',
+        },
+      },
+    });
+
+    expect(summary.dateFrom, '2026-03-01');
+    expect(summary.byMerchant['KFC'], 700);
+    expect(summary.byMerchantStats['KFC']?.visitCount, 2);
+    expect(summary.byMerchantStats['KFC']?.merchantNormalized, 'kfc');
+  });
 }

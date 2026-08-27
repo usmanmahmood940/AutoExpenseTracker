@@ -1432,16 +1432,28 @@ abstract class AppLocalizations {
   /// **'This month'**
   String get insightsThisMonth;
 
+  /// No description provided for @insightsLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get insightsLastMonth;
+
+  /// No description provided for @insightsThisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get insightsThisYear;
+
   /// No description provided for @insightsSpent.
   ///
   /// In en, this message translates to:
-  /// **'Debit'**
+  /// **'Spent'**
   String get insightsSpent;
 
   /// No description provided for @insightsIncome.
   ///
   /// In en, this message translates to:
-  /// **'Credit'**
+  /// **'Received'**
   String get insightsIncome;
 
   /// No description provided for @insightsNet.
@@ -1450,16 +1462,34 @@ abstract class AppLocalizations {
   /// **'Net'**
   String get insightsNet;
 
+  /// No description provided for @insightsTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions'**
+  String get insightsTransactions;
+
   /// No description provided for @insightsVsPrevious.
   ///
   /// In en, this message translates to:
   /// **'vs previous month'**
   String get insightsVsPrevious;
 
+  /// No description provided for @insightsChangeUp.
+  ///
+  /// In en, this message translates to:
+  /// **'↑ {percent}% vs previous period'**
+  String insightsChangeUp(String percent);
+
+  /// No description provided for @insightsChangeDown.
+  ///
+  /// In en, this message translates to:
+  /// **'↓ {percent}% vs previous period'**
+  String insightsChangeDown(String percent);
+
   /// No description provided for @insightsByCategory.
   ///
   /// In en, this message translates to:
-  /// **'By category'**
+  /// **'Where money went'**
   String get insightsByCategory;
 
   /// No description provided for @insightsTrends.
@@ -1480,10 +1510,64 @@ abstract class AppLocalizations {
   /// **'Credit vs Debit'**
   String get insightsCashFlow;
 
+  /// No description provided for @insightsWhatChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'What changed'**
+  String get insightsWhatChanged;
+
+  /// No description provided for @insightsNarrativeSpendUp.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent {percent}% more than the previous period.'**
+  String insightsNarrativeSpendUp(String percent);
+
+  /// No description provided for @insightsNarrativeSpendDown.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent {percent}% less than the previous period.'**
+  String insightsNarrativeSpendDown(String percent);
+
+  /// No description provided for @insightsNarrativeSpendFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent about the same as the previous period.'**
+  String get insightsNarrativeSpendFlat;
+
+  /// No description provided for @insightsNarrativeTopCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'{category} was {percent}% of spend.'**
+  String insightsNarrativeTopCategory(String category, String percent);
+
+  /// No description provided for @insightsNarrativeTopMerchant.
+  ///
+  /// In en, this message translates to:
+  /// **'{merchant} was a top merchant at {amount}.'**
+  String insightsNarrativeTopMerchant(String merchant, String amount);
+
+  /// No description provided for @insightsRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get insightsRecurring;
+
+  /// No description provided for @insightsRecurringMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} · avg {amount}'**
+  String insightsRecurringMeta(String count, String amount);
+
+  /// No description provided for @insightsVisitCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 visit} other{{count} visits}}'**
+  String insightsVisitCount(int count);
+
   /// No description provided for @insightsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No summary for this month yet'**
+  /// **'No summary for this period yet'**
   String get insightsEmpty;
 
   /// No description provided for @insightsPrevMonth.
@@ -1497,6 +1581,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next'**
   String get insightsNextMonth;
+
+  /// No description provided for @activitySubscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions only'**
+  String get activitySubscriptions;
 
   /// No description provided for @authUnlockTitle.
   ///

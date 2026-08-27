@@ -32,6 +32,7 @@ class FilterSheetValue {
     this.type,
     this.paymentMethods = const [],
     this.sources = const [],
+    this.subscriptionsOnly = false,
   });
 
   factory FilterSheetValue.fromQuery(SearchQuery query) {
@@ -41,6 +42,7 @@ class FilterSheetValue {
       type: query.typeFilter,
       paymentMethods: query.paymentMethods,
       sources: query.sources,
+      subscriptionsOnly: query.subscriptionsOnly,
     );
   }
 
@@ -49,13 +51,15 @@ class FilterSheetValue {
   final String? type;
   final List<String> paymentMethods;
   final List<String> sources;
+  final bool subscriptionsOnly;
 
   bool get isEmpty =>
       amountMin == null &&
       amountMax == null &&
       type == null &&
       paymentMethods.isEmpty &&
-      sources.isEmpty;
+      sources.isEmpty &&
+      !subscriptionsOnly;
 }
 
 /// Bottom sheet for amount, type, payment method, and source filters.
@@ -98,6 +102,7 @@ class _FilterSheetState extends State<FilterSheet> {
   late final Set<String> _paymentMethods;
   late final Set<String> _sources;
   String? _type;
+  bool _subscriptionsOnly = false;
 
   @override
   void initState() {
@@ -108,6 +113,7 @@ class _FilterSheetState extends State<FilterSheet> {
     _min.addListener(_onAmountChanged);
     _max.addListener(_onAmountChanged);
     _type = initial?.type;
+    _subscriptionsOnly = initial?.subscriptionsOnly ?? false;
     _paymentMethods = {...?initial?.paymentMethods};
     _sources = {...?initial?.sources};
   }
@@ -129,6 +135,7 @@ class _FilterSheetState extends State<FilterSheet> {
     return _parseAmount(_min.text) == null &&
         _parseAmount(_max.text) == null &&
         _type == null &&
+        !_subscriptionsOnly &&
         _paymentMethods.isEmpty &&
         _sources.isEmpty;
   }
@@ -194,6 +201,7 @@ class _FilterSheetState extends State<FilterSheet> {
       type: _type,
       paymentMethods: _paymentMethods.toList(growable: false),
       sources: _sources.toList(growable: false),
+      subscriptionsOnly: _subscriptionsOnly,
     );
     Navigator.of(context).pop(
       value.isEmpty
@@ -207,6 +215,7 @@ class _FilterSheetState extends State<FilterSheet> {
     _max.clear();
     setState(() {
       _type = null;
+      _subscriptionsOnly = false;
       _paymentMethods.clear();
       _sources.clear();
     });
@@ -331,6 +340,17 @@ class _FilterSheetState extends State<FilterSheet> {
                                   selected: _type == 'credit',
                                   icon: Icons.south_west_rounded,
                                   onTap: () => _selectType('credit'),
+                                ),
+                                _FilterChip(
+                                  label: l10n.activitySubscriptions,
+                                  selected: _subscriptionsOnly,
+                                  icon: Icons.repeat_rounded,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() {
+                                      _subscriptionsOnly = !_subscriptionsOnly;
+                                    });
+                                  },
                                 ),
                               ],
                             ),
