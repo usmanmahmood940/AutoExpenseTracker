@@ -96,7 +96,7 @@ class _InsightsView extends StatelessWidget {
                         countLabel: l10n.insightsTransactions,
                         countValue: '${summary.transactionCount}',
                       ),
-                      if (provider.trend.isNotEmpty) ...[
+                      if (hasTrendChartContent(provider.trend)) ...[
                         const SizedBox(height: AppSpacing.lg),
                         _PaddedSectionHeader(l10n.insightsTrends),
                         InsightsTrendChart(

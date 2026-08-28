@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 
 void main() {
@@ -119,6 +120,24 @@ void main() {
           '2025-08',
         ],
       );
+    });
+  });
+
+  group('hasTrendChartContent', () {
+    test('requires at least three non-zero points', () {
+      final sparse = [
+        TrendPointEntity(date: DateTime(2026, 8, 1), debit: 0),
+        TrendPointEntity(date: DateTime(2026, 8, 2), debit: 500),
+        TrendPointEntity(date: DateTime(2026, 8, 3), debit: 0),
+        TrendPointEntity(date: DateTime(2026, 8, 4), debit: 200),
+      ];
+      final enough = [
+        ...sparse,
+        TrendPointEntity(date: DateTime(2026, 8, 5), debit: 100),
+      ];
+
+      expect(hasTrendChartContent(sparse), isFalse);
+      expect(hasTrendChartContent(enough), isTrue);
     });
   });
 

@@ -138,6 +138,10 @@ tests/
 | GET | `/period-stats` | Live SQL totals + highlights + week/month comparison. Replaces `getPeriodStats`. |
 | GET | `/analytics/summary` | Live SQL monthly summary (`year_month=YYYY-MM`). |
 | GET | `/analytics/summaries` | Recent months that have transactions (`limit`, default 6). |
+| GET | `/analytics/range` | Live SQL summary for an inclusive range (`from`, `to`). |
+| GET | `/analytics/trend` | Debit trend buckets for a range (`from`, `to`, optional `bucket=day\|week`). |
+| GET | `/analytics/recurring` | Recurring debit merchants for a range (`from`, `to`). |
+| GET | `/analytics/narrative` | Cached Gemini insights paragraph for a range (`from`, `to`), or `null` when unavailable. |
 | GET | `/merchants/{key}` | Merchant spend summary. |
 | GET | `/merchants/{key}/transactions` | That merchant's transactions. |
 | GET | `/merchants/{key}/category-override` | Saved "remember this merchant" category. `404` if none. |

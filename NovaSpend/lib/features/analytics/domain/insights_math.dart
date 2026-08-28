@@ -2,6 +2,7 @@
 library;
 
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 
 enum InsightsPeriodPreset { thisMonth, lastMonth, thisYear }
 
@@ -151,6 +152,10 @@ String compactAxisLabel(double value) {
     return k == k.roundToDouble() ? '${k.toInt()}K' : '${k.toStringAsFixed(1)}K';
   }
   return value.round().toString();
+}
+
+bool hasTrendChartContent(List<TrendPointEntity> points) {
+  return points.where((point) => point.debit > 0.0001).length >= 3;
 }
 
 String isoDay(DateTime value) {
