@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -70,6 +70,14 @@ def _base_filters(user_id, start: date, end: date):
     )
 
 
+def _iso_datetime(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat()
+
+
 def _amount_map(rows: list[tuple[str | None, Decimal]]) -> dict[str, float]:
     out: dict[str, float] = {}
     for key, value in rows:
@@ -110,6 +118,9 @@ async def _summary_for_range(
     total_debit = as_money(totals[0])
     total_credit = as_money(totals[1])
     count = int(totals[2])
+    source_updated_at = (
+        await session.execute(select(func.max(Transaction.updated_at)).where(*base))
+    ).scalar_one()
 
     by_category_rows = (
         await session.execute(
@@ -154,6 +165,7 @@ async def _summary_for_range(
         "total_credit": money_float(total_credit),
         "net": money_float(total_credit - total_debit),
         "transaction_count": count,
+        "source_updated_at": _iso_datetime(source_updated_at),
         "by_category": _amount_map(by_category_rows),
         "by_merchant": by_merchant,
         "by_merchant_stats": by_merchant_stats,

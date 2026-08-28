@@ -5,7 +5,16 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +42,11 @@ class AiSummary(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     date_to: Mapped[date] = mapped_column(Date, nullable=False)
     narrative: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str] = mapped_column(String(80), nullable=False)
+    transaction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

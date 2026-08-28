@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
 
 import httpx
 from sqlalchemy import select
@@ -27,6 +27,28 @@ Spent: {spent}. Received: {received}. Net: {net}. Transactions: {count}.
 Top categories (name: amount): {categories}
 Top merchants (name: amount): {merchants}
 """
+
+
+def _parse_source_updated_at(raw: str | None) -> datetime | None:
+    if not raw:
+        return None
+    parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _cache_is_valid(cached: AiSummary, summary: dict) -> bool:
+    expected_count = int(summary.get("transaction_count") or 0)
+    if cached.transaction_count != expected_count:
+        return False
+    summary_updated = _parse_source_updated_at(summary.get("source_updated_at"))
+    cached_updated = cached.source_updated_at
+    if summary_updated is None and cached_updated is None:
+        return True
+    if summary_updated is None or cached_updated is None:
+        return False
+    return summary_updated == cached_updated.astimezone(UTC)
 
 
 async def _get_cached_narrative(
@@ -97,6 +119,20 @@ def _facts_prompt(summary: dict) -> str:
     )
 
 
+def _apply_narrative_row(
+    row: AiSummary,
+    *,
+    narrative: str,
+    model: str,
+    summary: dict,
+) -> None:
+    row.narrative = narrative
+    row.model = model
+    row.transaction_count = int(summary.get("transaction_count") or 0)
+    row.source_updated_at = _parse_source_updated_at(summary.get("source_updated_at"))
+    row.generated_at = datetime.now(UTC)
+
+
 async def get_narrative(
     session: AsyncSession,
     *,
@@ -106,21 +142,22 @@ async def get_narrative(
 ) -> dict:
     start = parse_iso_date(date_from, "from")
     end = parse_iso_date(date_to, "to")
-    cached = await _get_cached_narrative(
-        session, user=user, date_from=start, date_to=end
-    )
-    if cached is not None:
-        return {
-            "narrative": cached.narrative,
-            "source": "cache",
-            "model": cached.model,
-        }
 
     summary = await analytics_service.get_range_summary(
         session, user=user, date_from=date_from, date_to=date_to
     )
     if int(summary.get("transaction_count") or 0) == 0:
         return {"narrative": None, "source": "none", "model": None}
+
+    cached = await _get_cached_narrative(
+        session, user=user, date_from=start, date_to=end
+    )
+    if cached is not None and _cache_is_valid(cached, summary):
+        return {
+            "narrative": cached.narrative,
+            "source": "cache",
+            "model": cached.model,
+        }
 
     api_key = get_settings().gemini_api_key or ""
     if not api_key:
@@ -130,14 +167,22 @@ async def get_narrative(
     if not text:
         return {"narrative": None, "source": "none", "model": None}
 
-    row = AiSummary(
-        user_id=user.id,
-        date_from=start,
-        date_to=end,
-        narrative=text,
-        model=model,
-    )
-    session.add(row)
+    if cached is not None:
+        _apply_narrative_row(cached, narrative=text, model=model, summary=summary)
+    else:
+        row = AiSummary(
+            user_id=user.id,
+            date_from=start,
+            date_to=end,
+            narrative=text,
+            model=model,
+            transaction_count=int(summary.get("transaction_count") or 0),
+            source_updated_at=_parse_source_updated_at(
+                summary.get("source_updated_at")
+            ),
+        )
+        session.add(row)
+
     try:
         await session.commit()
     except IntegrityError:
@@ -145,7 +190,7 @@ async def get_narrative(
         cached = await _get_cached_narrative(
             session, user=user, date_from=start, date_to=end
         )
-        if cached is not None:
+        if cached is not None and _cache_is_valid(cached, summary):
             return {
                 "narrative": cached.narrative,
                 "source": "cache",

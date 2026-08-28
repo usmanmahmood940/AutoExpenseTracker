@@ -7,15 +7,18 @@ this table is what a later cache can switch to.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models.ai_summary import AiSummary
 from app.db.models.monthly_summary import MonthlySummary
 from app.db.models.user import User
 from app.services.analytics import _summary_for, list_recent_summaries
 from app.services.money import as_money
+
+AI_SUMMARY_RETENTION_DAYS = 180
 
 
 async def recompute_month(
@@ -52,9 +55,19 @@ async def recompute_for_date(
     )
 
 
+async def purge_stale_ai_summaries(session: AsyncSession) -> int:
+    cutoff = datetime.now(UTC) - timedelta(days=AI_SUMMARY_RETENTION_DAYS)
+    result = await session.execute(
+        delete(AiSummary).where(AiSummary.generated_at < cutoff)
+    )
+    await session.commit()
+    return int(result.rowcount or 0)
+
+
 async def recompute_recent(
     session: AsyncSession, *, user_id: uuid.UUID | None, limit: int = 6
 ) -> int:
+    await purge_stale_ai_summaries(session)
     stmt = select(User)
     if user_id is not None:
         stmt = stmt.where(User.id == user_id)

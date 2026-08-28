@@ -134,6 +134,50 @@ def test_narrative_cache_hit(api_client: TestClient, monkeypatch) -> None:
     assert calls["n"] == 1
 
 
+def test_narrative_regenerates_when_data_changes(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from types import SimpleNamespace
+
+    from app.services import insights_narrative
+
+    calls = {"n": 0}
+
+    async def fake_generate(api_key: str, prompt: str) -> tuple[str, str]:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return "You spent PKR 500 at KFC.", "fake-model"
+        return "You spent PKR 700 at KFC and Daraz.", "fake-model"
+
+    monkeypatch.setattr(
+        insights_narrative,
+        "get_settings",
+        lambda: SimpleNamespace(gemini_api_key="test-key"),
+    )
+    monkeypatch.setattr(
+        insights_narrative,
+        "generate_spend_narrative_text",
+        fake_generate,
+    )
+
+    _post_tx(api_client, merchant="KFC", amount=500, tx_date="2026-03-10")
+    first = api_client.get(
+        "/analytics/narrative", params={"from": "2026-03-01", "to": "2026-03-31"}
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["source"] == "gemini"
+    assert calls["n"] == 1
+
+    _post_tx(api_client, merchant="Daraz", amount=200, tx_date="2026-03-20")
+    second = api_client.get(
+        "/analytics/narrative", params={"from": "2026-03-01", "to": "2026-03-31"}
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["source"] == "gemini"
+    assert second.json()["narrative"] == "You spent PKR 700 at KFC and Daraz."
+    assert calls["n"] == 2
+
+
 def test_narrative_empty_without_gemini(api_client: TestClient, monkeypatch) -> None:
     from types import SimpleNamespace
 
