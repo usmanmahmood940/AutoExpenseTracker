@@ -732,19 +732,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsThisYear => 'This year';
 
   @override
-  String get insightsSpent => 'Spent';
+  String get insightsSpent => 'Total spent';
 
   @override
-  String get insightsIncome => 'Received';
+  String get insightsIncome => 'Total received';
 
   @override
-  String get insightsNet => 'Net';
+  String get insightsNet => 'Net flow';
 
   @override
   String get insightsTransactions => 'Transactions';
 
   @override
-  String get insightsVsPrevious => 'vs previous month';
+  String get insightsVsPrevious => 'vs previous period';
+
+  @override
+  String get insightsVsLastMonth => 'vs last month';
+
+  @override
+  String get insightsVsLastYear => 'vs last year';
 
   @override
   String insightsChangeUp(String percent) {
@@ -764,9 +770,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsTopMerchants => 'Top merchants';
-
-  @override
-  String get insightsCashFlow => 'Credit vs Debit';
 
   @override
   String get insightsWhatChanged => 'What changed';
@@ -816,6 +819,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsEmpty => 'No summary for this period yet';
+
+  @override
+  String get insightsEmptyHint =>
+      'Add transactions or pick another period to see your spending story.';
+
+  @override
+  String get insightsTryLastMonth => 'Try last month';
+
+  @override
+  String get insightsOtherCategory => 'Other';
 
   @override
   String get insightsPrevMonth => 'Previous';

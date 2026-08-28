@@ -12,16 +12,51 @@ class InsightsNarrativeCard extends StatelessWidget {
     required this.facts,
     required this.formatMoney,
     this.aiNarrative,
+    this.isLoadingNarrative = false,
     super.key,
   });
 
   final InsightsNarrativeFacts facts;
   final String Function(double amount) formatMoney;
   final String? aiNarrative;
+  final bool isLoadingNarrative;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (isLoadingNarrative && (aiNarrative?.trim().isEmpty ?? true)) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.insightsWhatChanged,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                height: 48,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final text = aiNarrative?.trim().isNotEmpty == true
         ? aiNarrative!.trim()
         : _templateText(l10n, facts, formatMoney, context);

@@ -1447,19 +1447,19 @@ abstract class AppLocalizations {
   /// No description provided for @insightsSpent.
   ///
   /// In en, this message translates to:
-  /// **'Spent'**
+  /// **'Total spent'**
   String get insightsSpent;
 
   /// No description provided for @insightsIncome.
   ///
   /// In en, this message translates to:
-  /// **'Received'**
+  /// **'Total received'**
   String get insightsIncome;
 
   /// No description provided for @insightsNet.
   ///
   /// In en, this message translates to:
-  /// **'Net'**
+  /// **'Net flow'**
   String get insightsNet;
 
   /// No description provided for @insightsTransactions.
@@ -1471,8 +1471,20 @@ abstract class AppLocalizations {
   /// No description provided for @insightsVsPrevious.
   ///
   /// In en, this message translates to:
-  /// **'vs previous month'**
+  /// **'vs previous period'**
   String get insightsVsPrevious;
+
+  /// No description provided for @insightsVsLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last month'**
+  String get insightsVsLastMonth;
+
+  /// No description provided for @insightsVsLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last year'**
+  String get insightsVsLastYear;
 
   /// No description provided for @insightsChangeUp.
   ///
@@ -1503,12 +1515,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Top merchants'**
   String get insightsTopMerchants;
-
-  /// No description provided for @insightsCashFlow.
-  ///
-  /// In en, this message translates to:
-  /// **'Credit vs Debit'**
-  String get insightsCashFlow;
 
   /// No description provided for @insightsWhatChanged.
   ///
@@ -1569,6 +1575,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No summary for this period yet'**
   String get insightsEmpty;
+
+  /// No description provided for @insightsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add transactions or pick another period to see your spending story.'**
+  String get insightsEmptyHint;
+
+  /// No description provided for @insightsTryLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Try last month'**
+  String get insightsTryLastMonth;
+
+  /// No description provided for @insightsOtherCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get insightsOtherCategory;
 
   /// No description provided for @insightsPrevMonth.
   ///

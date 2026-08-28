@@ -86,6 +86,8 @@ flutter:
     - assets/icons/icon_reference_id.svg
     - assets/icons/icon_highest_spend.svg
     - assets/icons/icon_highest_received.svg
+    - assets/icons/icon_net_flow.svg
+    - assets/icons/icon_transactions.svg
     - assets/icons/icon_clock.svg
     - assets/icons/icon_calendar.svg
     - assets/icons/icon_sort.svg

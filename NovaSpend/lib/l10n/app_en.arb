@@ -314,11 +314,13 @@
   "insightsThisMonth": "This month",
   "insightsLastMonth": "Last month",
   "insightsThisYear": "This year",
-  "insightsSpent": "Spent",
-  "insightsIncome": "Received",
-  "insightsNet": "Net",
+  "insightsSpent": "Total spent",
+  "insightsIncome": "Total received",
+  "insightsNet": "Net flow",
   "insightsTransactions": "Transactions",
-  "insightsVsPrevious": "vs previous month",
+  "insightsVsPrevious": "vs previous period",
+  "insightsVsLastMonth": "vs last month",
+  "insightsVsLastYear": "vs last year",
   "insightsChangeUp": "↑ {percent}% vs previous period",
   "@insightsChangeUp": {
     "placeholders": {
@@ -334,7 +336,6 @@
   "insightsByCategory": "Where money went",
   "insightsTrends": "Spend over time",
   "insightsTopMerchants": "Top merchants",
-  "insightsCashFlow": "Credit vs Debit",
   "insightsWhatChanged": "What changed",
   "insightsNarrativeSpendUp": "You spent {percent}% more than the previous period.",
   "@insightsNarrativeSpendUp": {
@@ -378,6 +379,9 @@
     }
   },
   "insightsEmpty": "No summary for this period yet",
+  "insightsEmptyHint": "Add transactions or pick another period to see your spending story.",
+  "insightsTryLastMonth": "Try last month",
+  "insightsOtherCategory": "Other",
   "insightsPrevMonth": "Previous",
   "insightsNextMonth": "Next",
   "activitySubscriptions": "Subscriptions only",

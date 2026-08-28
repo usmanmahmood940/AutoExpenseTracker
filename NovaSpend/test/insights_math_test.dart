@@ -4,6 +4,58 @@ import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 
 void main() {
+  group('displayableNetChangePercent', () {
+    test('hides change when previous net was negative', () {
+      expect(displayableNetChangePercent(100, -50), isNull);
+      expect(displayableNetChangePercent(100, 50), closeTo(100, 0.001));
+    });
+  });
+
+  group('otherCategorySpend', () {
+    test('returns remainder outside top five', () {
+      final other = otherCategorySpend(
+        {
+          'a': 100,
+          'b': 90,
+          'c': 80,
+          'd': 70,
+          'e': 60,
+          'f': 50,
+          'g': 40,
+        },
+        490,
+      );
+      expect(other, isNotNull);
+      expect(other!.amount, 90);
+      expect(other.share, closeTo(90 / 490, 0.001));
+    });
+
+    test('is null when five or fewer categories', () {
+      expect(
+        otherCategorySpend({'Food': 100, 'Fuel': 50}, 150),
+        isNull,
+      );
+    });
+  });
+
+  group('alignPreviousTrendValues', () {
+    test('maps by index and pads with zero', () {
+      final current = [
+        TrendPointEntity(date: DateTime(2026, 3, 1), debit: 100),
+        TrendPointEntity(date: DateTime(2026, 3, 2), debit: 200),
+        TrendPointEntity(date: DateTime(2026, 3, 3), debit: 50),
+      ];
+      final previous = [
+        TrendPointEntity(date: DateTime(2026, 2, 1), debit: 80),
+        TrendPointEntity(date: DateTime(2026, 2, 2), debit: 120),
+      ];
+      expect(
+        alignPreviousTrendValues(current: current, previous: previous),
+        [80, 120, 0],
+      );
+    });
+  });
+
   group('percentChange', () {
     test('returns null when previous is zero', () {
       expect(percentChange(100, 0), isNull);

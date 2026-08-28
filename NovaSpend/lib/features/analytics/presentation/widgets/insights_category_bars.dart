@@ -15,18 +15,23 @@ class InsightsCategoryBars extends StatelessWidget {
     required this.byCategory,
     required this.totalSpent,
     required this.formatMoney,
+    required this.otherLabel,
     this.onCategoryTap,
+    this.onOtherTap,
     super.key,
   });
 
   final Map<String, double> byCategory;
   final double totalSpent;
   final String Function(double amount) formatMoney;
+  final String otherLabel;
   final void Function(String categoryKey, String displayName)? onCategoryTap;
+  final VoidCallback? onOtherTap;
 
   @override
   Widget build(BuildContext context) {
     final top = topEntries(byCategory);
+    final other = otherCategorySpend(byCategory, totalSpent);
     if (top.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -48,6 +53,15 @@ class InsightsCategoryBars extends StatelessWidget {
               amount: top[i].value,
               totalSpent: totalSpent,
               onTap: onCategoryTap,
+            ),
+          ],
+          if (other != null) ...[
+            const SizedBox(height: AppSpacing.smPlus2),
+            _OtherCategoryRow(
+              label: otherLabel,
+              amountLabel: formatMoney(other.amount),
+              share: other.share,
+              onTap: onOtherTap,
             ),
           ],
         ],
@@ -90,64 +104,154 @@ class _CategoryBarRow extends StatelessWidget {
     final storedHex =
         CategoryColorScope.maybeOf(context)?.hexFor(categoryKey);
     final color = categoryColor(categoryKey, storedHex: storedHex);
+    final percent = (share * 100).round();
+    final semanticsLabel =
+        '$displayName, $percent percent of spend, $amountLabel';
 
-    return InkWell(
-      onTap: onTap == null ? null : () => onTap!(categoryKey, displayName),
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Row(
-        children: [
-          CategoryAvatar(category: categoryKey, size: 36),
-          const SizedBox(width: AppSpacing.smPlus2),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium,
+    return Semantics(
+      label: semanticsLabel,
+      button: onTap != null,
+      child: InkWell(
+        onTap: onTap == null ? null : () => onTap!(categoryKey, displayName),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Row(
+          children: [
+            CategoryAvatar(category: categoryKey, size: 36),
+            const SizedBox(width: AppSpacing.smPlus2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      '${(share * 100).round()}%',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.55),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        '$percent%',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.55),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: share.clamp(0.0, 1.0),
-                    minHeight: 8,
-                    backgroundColor:
-                        theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                    color: color,
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.xs),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: share.clamp(0.0, 1.0),
+                      minHeight: 8,
+                      backgroundColor:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 96),
-            child: Text(
-              amountLabel,
-              textAlign: TextAlign.end,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall,
+            const SizedBox(width: AppSpacing.sm),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 96),
+              child: Text(
+                amountLabel,
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OtherCategoryRow extends StatelessWidget {
+  const _OtherCategoryRow({
+    required this.label,
+    required this.amountLabel,
+    required this.share,
+    required this.onTap,
+  });
+
+  final String label;
+  final String amountLabel;
+  final double share;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final percent = (share * 100).round();
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
+
+    return Semantics(
+      label: '$label, $percent percent of spend, $amountLabel',
+      button: onTap != null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              child: Icon(Icons.more_horiz, size: 18, color: muted),
+            ),
+            const SizedBox(width: AppSpacing.smPlus2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text('$percent%', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: share.clamp(0.0, 1.0),
+                      minHeight: 8,
+                      backgroundColor:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                      color: muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 96),
+              child: Text(
+                amountLabel,
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

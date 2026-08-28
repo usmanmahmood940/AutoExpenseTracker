@@ -20,13 +20,13 @@ class AppSegment<T> {
 class AppSegmentedToggle<T> extends StatefulWidget {
   const AppSegmentedToggle({
     required this.segments,
-    required this.value,
     required this.onChanged,
+    this.value,
     super.key,
   });
 
   final List<AppSegment<T>> segments;
-  final T value;
+  final T? value;
   final ValueChanged<T> onChanged;
 
   @override
@@ -37,7 +37,7 @@ class _AppSegmentedToggleState<T> extends State<AppSegmentedToggle<T>> {
   /// Local selection shown instantly on tap; cleared when [widget.value] catches up.
   T? _optimistic;
 
-  T get _displayed => _optimistic ?? widget.value;
+  T? get _displayed => _optimistic ?? widget.value;
 
   @override
   void didUpdateWidget(covariant AppSegmentedToggle<T> oldWidget) {
