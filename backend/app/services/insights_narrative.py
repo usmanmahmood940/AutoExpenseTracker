@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -25,6 +27,24 @@ Spent: {spent}. Received: {received}. Net: {net}. Transactions: {count}.
 Top categories (name: amount): {categories}
 Top merchants (name: amount): {merchants}
 """
+
+
+async def _get_cached_narrative(
+    session: AsyncSession,
+    *,
+    user: User,
+    date_from: date,
+    date_to: date,
+) -> AiSummary | None:
+    return (
+        await session.execute(
+            select(AiSummary).where(
+                AiSummary.user_id == user.id,
+                AiSummary.date_from == date_from,
+                AiSummary.date_to == date_to,
+            )
+        )
+    ).scalar_one_or_none()
 
 
 async def generate_spend_narrative_text(api_key: str, prompt: str) -> tuple[str, str]:
@@ -86,15 +106,9 @@ async def get_narrative(
 ) -> dict:
     start = parse_iso_date(date_from, "from")
     end = parse_iso_date(date_to, "to")
-    cached = (
-        await session.execute(
-            select(AiSummary).where(
-                AiSummary.user_id == user.id,
-                AiSummary.date_from == start,
-                AiSummary.date_to == end,
-            )
-        )
-    ).scalar_one_or_none()
+    cached = await _get_cached_narrative(
+        session, user=user, date_from=start, date_to=end
+    )
     if cached is not None:
         return {
             "narrative": cached.narrative,
@@ -124,5 +138,18 @@ async def get_narrative(
         model=model,
     )
     session.add(row)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        cached = await _get_cached_narrative(
+            session, user=user, date_from=start, date_to=end
+        )
+        if cached is not None:
+            return {
+                "narrative": cached.narrative,
+                "source": "cache",
+                "model": cached.model,
+            }
+        raise
     return {"narrative": text, "source": "gemini", "model": model}

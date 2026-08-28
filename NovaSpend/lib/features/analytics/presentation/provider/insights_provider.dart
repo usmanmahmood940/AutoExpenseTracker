@@ -29,7 +29,7 @@ class InsightsProvider extends ChangeNotifier {
   int _loadToken = 0;
 
   /// Production Cloud Run may not have `/analytics/range` yet. After the first
-  /// failure we sum monthly `/analytics/summary` and skip the new extras.
+  /// failure we sum monthly `/analytics/summary` for range summaries.
   bool _rangeUnavailable = false;
 
   DateTime get month => _month;
@@ -204,7 +204,6 @@ class InsightsProvider extends ChangeNotifier {
     }
 
     if (token != _loadToken || summary == null) return;
-    if (_rangeUnavailable) return;
     await _loadExtras(uid, token, bounds);
   }
 
