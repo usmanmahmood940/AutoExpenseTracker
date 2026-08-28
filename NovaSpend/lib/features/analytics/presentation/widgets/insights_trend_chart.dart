@@ -19,8 +19,7 @@ class InsightsTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nonzero = points.where((p) => p.debit > 0.0001).length;
-    if (nonzero < 3) return const SizedBox.shrink();
+    if (!hasTrendChartContent(points)) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
     final maxY = points.fold<double>(0, (m, p) => p.debit > m ? p.debit : m);
