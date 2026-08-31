@@ -11,6 +11,7 @@ class SectionHeader extends StatelessWidget {
     this.actionLabel,
     this.onActionTap,
     this.showActionChevron = false,
+    this.trailing,
     super.key,
   });
 
@@ -18,6 +19,7 @@ class SectionHeader extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onActionTap;
   final bool showActionChevron;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +41,9 @@ class SectionHeader extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (actionLabel != null && onActionTap != null)
+        if (trailing != null)
+          trailing!
+        else if (actionLabel != null && onActionTap != null)
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onActionTap,

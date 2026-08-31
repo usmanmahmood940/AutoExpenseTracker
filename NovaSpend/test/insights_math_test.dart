@@ -126,6 +126,57 @@ void main() {
     });
   });
 
+  group('topMerchantsForSort', () {
+    final summary = MonthlySummaryEntity(
+      yearMonth: '2026-03',
+      currency: 'PKR',
+      totalDebit: 700,
+      totalCredit: 10000,
+      net: 9300,
+      transactionCount: 3,
+      byCategory: const {'Food & Dining': 700},
+      byMerchant: const {'KFC': 700, 'Shell': 100},
+      byMerchantReceived: const {'Payroll': 10000},
+      byMerchantStats: const {
+        'KFC': MerchantSpendStat(
+          amount: 700,
+          visitCount: 2,
+          merchantNormalized: 'kfc',
+        ),
+        'Shell': MerchantSpendStat(
+          amount: 100,
+          visitCount: 5,
+          merchantNormalized: 'shell',
+        ),
+      },
+      byMerchantReceivedStats: const {
+        'Payroll': MerchantSpendStat(
+          amount: 10000,
+          visitCount: 1,
+          merchantNormalized: 'payroll',
+        ),
+      },
+    );
+
+    test('sorts by amount spent', () {
+      final rows = topMerchantsForSort(summary, TopMerchantSort.amountSpent);
+      expect(rows.map((row) => row.name).toList(), ['KFC', 'Shell']);
+      expect(rows.first.displayAmount, 700);
+    });
+
+    test('sorts by amount received', () {
+      final rows = topMerchantsForSort(summary, TopMerchantSort.amountReceived);
+      expect(rows.single.name, 'Payroll');
+      expect(rows.single.displayAmount, 10000);
+    });
+
+    test('sorts by visits', () {
+      final rows = topMerchantsForSort(summary, TopMerchantSort.visits);
+      expect(rows.first.name, 'Shell');
+      expect(rows.first.visits, 5);
+    });
+  });
+
   group('insightsRange', () {
     final now = DateTime(2026, 8, 27);
 

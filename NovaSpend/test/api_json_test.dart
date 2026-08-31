@@ -109,10 +109,19 @@ void main() {
           'merchant_normalized': 'kfc',
         },
       },
+      'by_merchant_received': {'Payroll': 10000},
+      'by_merchant_received_stats': {
+        'Payroll': {
+          'amount': 10000,
+          'visit_count': 1,
+          'merchant_normalized': 'payroll',
+        },
+      },
     });
 
     expect(summary.dateFrom, '2026-03-01');
     expect(summary.byMerchant['KFC'], 700);
+    expect(summary.byMerchantReceived['Payroll'], 10000);
     expect(summary.byMerchantStats['KFC']?.visitCount, 2);
     expect(summary.byMerchantStats['KFC']?.merchantNormalized, 'kfc');
   });

@@ -1516,6 +1516,24 @@ abstract class AppLocalizations {
   /// **'Top merchants'**
   String get insightsTopMerchants;
 
+  /// No description provided for @insightsTopMerchantsSortSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'By amount spent'**
+  String get insightsTopMerchantsSortSpent;
+
+  /// No description provided for @insightsTopMerchantsSortReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'By amount received'**
+  String get insightsTopMerchantsSortReceived;
+
+  /// No description provided for @insightsTopMerchantsSortVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'By visits'**
+  String get insightsTopMerchantsSortVisits;
+
   /// No description provided for @insightsWhatChanged.
   ///
   /// In en, this message translates to:

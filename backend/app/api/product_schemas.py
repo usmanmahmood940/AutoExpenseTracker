@@ -153,6 +153,10 @@ class MonthlySummaryOut(BaseModel):
     by_category: dict[str, float]
     by_merchant: dict[str, float]
     by_merchant_stats: dict[str, MerchantSpendStatOut] = Field(default_factory=dict)
+    by_merchant_received: dict[str, float] = Field(default_factory=dict)
+    by_merchant_received_stats: dict[str, MerchantSpendStatOut] = Field(
+        default_factory=dict
+    )
 
 
 class TrendPointOut(BaseModel):

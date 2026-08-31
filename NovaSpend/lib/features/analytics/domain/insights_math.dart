@@ -1,10 +1,27 @@
 /// Comparison, ranking, and copy facts for Insights. Pure Dart — no Flutter.
 library;
 
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 
 enum InsightsPeriodPreset { thisMonth, lastMonth, thisYear }
+
+enum TopMerchantSort { amountSpent, amountReceived, visits }
+
+class TopMerchantRowData {
+  const TopMerchantRowData({
+    required this.name,
+    required this.displayAmount,
+    required this.merchantNormalized,
+    this.visits,
+  });
+
+  final String name;
+  final double displayAmount;
+  final String merchantNormalized;
+  final int? visits;
+}
 
 class InsightsNarrativeFacts {
   const InsightsNarrativeFacts({
@@ -98,6 +115,97 @@ List<MapEntry<String, double>> topEntries(
     ..sort((a, b) => b.value.compareTo(a.value));
   if (list.length <= limit) return list;
   return list.take(limit).toList();
+}
+
+List<TopMerchantRowData> topMerchantsForSort(
+  MonthlySummaryEntity summary,
+  TopMerchantSort sort, {
+  int limit = 5,
+}) {
+  switch (sort) {
+    case TopMerchantSort.amountSpent:
+      return topEntries(summary.byMerchant, limit: limit)
+          .map((entry) => _merchantRowFromSpend(summary, entry.key, entry.value))
+          .toList();
+    case TopMerchantSort.amountReceived:
+      return topEntries(summary.byMerchantReceived, limit: limit)
+          .map(
+            (entry) => _merchantRowFromReceived(summary, entry.key, entry.value),
+          )
+          .toList();
+    case TopMerchantSort.visits:
+      final names = <String>{
+        ...summary.byMerchant.keys,
+        ...summary.byMerchantReceived.keys,
+        ...summary.byMerchantStats.keys,
+        ...summary.byMerchantReceivedStats.keys,
+      };
+      final rows = <TopMerchantRowData>[];
+      for (final name in names) {
+        final visits = _merchantVisitCount(summary, name);
+        if (visits <= 0) continue;
+        rows.add(
+          TopMerchantRowData(
+            name: name,
+            displayAmount: summary.byMerchant[name] ??
+                summary.byMerchantReceived[name] ??
+                0,
+            visits: visits,
+            merchantNormalized: _merchantNormalized(summary, name),
+          ),
+        );
+      }
+      rows.sort((a, b) => b.visits!.compareTo(a.visits!));
+      if (rows.length <= limit) return rows;
+      return rows.take(limit).toList();
+  }
+}
+
+TopMerchantRowData _merchantRowFromSpend(
+  MonthlySummaryEntity summary,
+  String name,
+  double amount,
+) {
+  return TopMerchantRowData(
+    name: name,
+    displayAmount: amount,
+    visits: summary.byMerchantStats[name]?.visitCount,
+    merchantNormalized: _merchantNormalized(summary, name),
+  );
+}
+
+TopMerchantRowData _merchantRowFromReceived(
+  MonthlySummaryEntity summary,
+  String name,
+  double amount,
+) {
+  return TopMerchantRowData(
+    name: name,
+    displayAmount: amount,
+    visits: summary.byMerchantReceivedStats[name]?.visitCount,
+    merchantNormalized: _merchantNormalized(summary, name, preferReceived: true),
+  );
+}
+
+int _merchantVisitCount(MonthlySummaryEntity summary, String name) {
+  return (summary.byMerchantStats[name]?.visitCount ?? 0) +
+      (summary.byMerchantReceivedStats[name]?.visitCount ?? 0);
+}
+
+String _merchantNormalized(
+  MonthlySummaryEntity summary,
+  String name, {
+  bool preferReceived = false,
+}) {
+  if (preferReceived) {
+    final received = summary.byMerchantReceivedStats[name]?.merchantNormalized;
+    if (received != null && received.isNotEmpty) return received;
+  }
+  final spent = summary.byMerchantStats[name]?.merchantNormalized;
+  if (spent != null && spent.isNotEmpty) return spent;
+  final received = summary.byMerchantReceivedStats[name]?.merchantNormalized;
+  if (received != null && received.isNotEmpty) return received;
+  return normalizeMerchantKey(name);
 }
 
 String merchantInitials(String name) {
@@ -252,6 +360,7 @@ MonthlySummaryEntity mergeMonthlySummaries(
   var count = 0;
   var currency = 'PKR';
   final stats = <String, MerchantSpendStat>{};
+  final receivedStats = <String, MerchantSpendStat>{};
   for (final item in items) {
     currency = item.currency;
     debit += item.totalDebit;
@@ -264,6 +373,20 @@ MonthlySummaryEntity mergeMonthlySummaries(
         return;
       }
       stats[key] = MerchantSpendStat(
+        amount: existing.amount + stat.amount,
+        visitCount: existing.visitCount + stat.visitCount,
+        merchantNormalized: existing.merchantNormalized.isNotEmpty
+            ? existing.merchantNormalized
+            : stat.merchantNormalized,
+      );
+    });
+    item.byMerchantReceivedStats.forEach((key, stat) {
+      final existing = receivedStats[key];
+      if (existing == null) {
+        receivedStats[key] = stat;
+        return;
+      }
+      receivedStats[key] = MerchantSpendStat(
         amount: existing.amount + stat.amount,
         visitCount: existing.visitCount + stat.visitCount,
         merchantNormalized: existing.merchantNormalized.isNotEmpty
@@ -284,5 +407,7 @@ MonthlySummaryEntity mergeMonthlySummaries(
     byCategory: _sumMaps(items.map((e) => e.byCategory)),
     byMerchant: _sumMaps(items.map((e) => e.byMerchant)),
     byMerchantStats: stats,
+    byMerchantReceived: _sumMaps(items.map((e) => e.byMerchantReceived)),
+    byMerchantReceivedStats: receivedStats,
   );
 }

@@ -28,6 +28,8 @@ class MonthlySummaryEntity extends Equatable {
     this.dateFrom,
     this.dateTo,
     this.byMerchantStats = const {},
+    this.byMerchantReceived = const {},
+    this.byMerchantReceivedStats = const {},
     this.updatedAt,
   });
 
@@ -42,6 +44,8 @@ class MonthlySummaryEntity extends Equatable {
   final Map<String, double> byCategory;
   final Map<String, double> byMerchant;
   final Map<String, MerchantSpendStat> byMerchantStats;
+  final Map<String, double> byMerchantReceived;
+  final Map<String, MerchantSpendStat> byMerchantReceivedStats;
   final DateTime? updatedAt;
 
   @override
@@ -57,6 +61,8 @@ class MonthlySummaryEntity extends Equatable {
         byCategory,
         byMerchant,
         byMerchantStats,
+        byMerchantReceived,
+        byMerchantReceivedStats,
         updatedAt,
       ];
 }

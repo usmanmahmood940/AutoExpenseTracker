@@ -39,6 +39,8 @@ def test_monthly_summary_debits_only_in_breakdowns(api_client: TestClient) -> No
     assert "Payroll" not in body["by_merchant"]
     assert body["by_merchant_stats"]["KFC"]["visit_count"] == 2
     assert body["by_merchant_stats"]["KFC"]["amount"] == 700.0
+    assert body["by_merchant_received"]["Payroll"] == 10000.0
+    assert body["by_merchant_received_stats"]["Payroll"]["visit_count"] == 1
     assert body["date_from"] == "2026-03-01"
     assert body["date_to"] == "2026-03-31"
 

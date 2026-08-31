@@ -141,6 +141,18 @@ async def _summary_for_range(
             .group_by(Transaction.merchant, Transaction.merchant_normalized)
         )
     ).all()
+    by_merchant_received_rows = (
+        await session.execute(
+            select(
+                Transaction.merchant,
+                Transaction.merchant_normalized,
+                func.sum(Transaction.amount),
+                func.count(Transaction.id),
+            )
+            .where(*base, Transaction.type == TransactionType.credit)
+            .group_by(Transaction.merchant, Transaction.merchant_normalized)
+        )
+    ).all()
 
     by_merchant: dict[str, float] = {}
     by_merchant_stats: dict[str, dict] = {}
@@ -151,6 +163,20 @@ async def _summary_for_range(
         name = merchant or "Unknown"
         by_merchant[name] = amount
         by_merchant_stats[name] = {
+            "amount": amount,
+            "visit_count": int(visits),
+            "merchant_normalized": normalized or normalize_merchant_key(name),
+        }
+
+    by_merchant_received: dict[str, float] = {}
+    by_merchant_received_stats: dict[str, dict] = {}
+    for merchant, normalized, amount_raw, visits in by_merchant_received_rows:
+        amount = money_float(amount_raw)
+        if abs(amount) <= 0.0001:
+            continue
+        name = merchant or "Unknown"
+        by_merchant_received[name] = amount
+        by_merchant_received_stats[name] = {
             "amount": amount,
             "visit_count": int(visits),
             "merchant_normalized": normalized or normalize_merchant_key(name),
@@ -169,6 +195,8 @@ async def _summary_for_range(
         "by_category": _amount_map(by_category_rows),
         "by_merchant": by_merchant,
         "by_merchant_stats": by_merchant_stats,
+        "by_merchant_received": by_merchant_received,
+        "by_merchant_received_stats": by_merchant_received_stats,
     }
 
 

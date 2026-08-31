@@ -336,6 +336,9 @@
   "insightsByCategory": "Where money went",
   "insightsTrends": "Spend over time",
   "insightsTopMerchants": "Top merchants",
+  "insightsTopMerchantsSortSpent": "By amount spent",
+  "insightsTopMerchantsSortReceived": "By amount received",
+  "insightsTopMerchantsSortVisits": "By visits",
   "insightsWhatChanged": "What changed",
   "insightsNarrativeHeadlineSpendUp": "You spent {percent}% more this month",
   "@insightsNarrativeHeadlineSpendUp": {

@@ -8,23 +8,22 @@ import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 
-import '../../../../core/constants/app_constants.dart';
-
 class InsightsMerchantList extends StatelessWidget {
   const InsightsMerchantList({
     required this.summary,
     required this.formatMoney,
+    required this.sort,
     super.key,
   });
 
   final MonthlySummaryEntity summary;
   final String Function(double amount) formatMoney;
+  final TopMerchantSort sort;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final stats = summary.byMerchantStats;
-    final top = topEntries(summary.byMerchant);
+    final top = topMerchantsForSort(summary, sort);
     if (top.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -38,16 +37,12 @@ class InsightsMerchantList extends StatelessWidget {
         children: [
           for (var i = 0; i < top.length; i++)
             _MerchantRow(
-              name: top[i].key,
-              amount: top[i].value,
-              amountLabel: formatMoney(top[i].value),
-              visits: stats[top[i].key]?.visitCount,
-              merchantNormalized: stats[top[i].key]?.merchantNormalized ??
-                  normalizeMerchantKey(top[i].key),
-              formatMoney: formatMoney,
+              row: top[i],
+              amountLabel: formatMoney(top[i].displayAmount),
               showDivider: i != top.length - 1,
               textTheme: theme.textTheme,
               brightness: theme.brightness,
+              formatMoney: formatMoney,
             ),
         ],
       ),
@@ -57,26 +52,20 @@ class InsightsMerchantList extends StatelessWidget {
 
 class _MerchantRow extends StatelessWidget {
   const _MerchantRow({
-    required this.name,
-    required this.amount,
+    required this.row,
     required this.amountLabel,
-    required this.merchantNormalized,
     required this.formatMoney,
     required this.showDivider,
     required this.textTheme,
     required this.brightness,
-    this.visits,
   });
 
-  final String name;
-  final double amount;
+  final TopMerchantRowData row;
   final String amountLabel;
-  final String merchantNormalized;
   final String Function(double amount) formatMoney;
   final bool showDivider;
   final TextTheme textTheme;
   final Brightness brightness;
-  final int? visits;
 
   @override
   Widget build(BuildContext context) {
@@ -87,13 +76,14 @@ class _MerchantRow extends StatelessWidget {
     final muted = textTheme.bodySmall?.copyWith(
       color: cs.onSurface.withValues(alpha: 0.55),
     );
+    final visits = row.visits;
     final String? meta;
-    if (visits != null && visits! > 0) {
-      final visitsLabel = context.l10n.insightsVisitCount(visits!);
-      meta = visits! > 3
+    if (visits != null && visits > 0) {
+      final visitsLabel = context.l10n.insightsVisitCount(visits);
+      meta = visits > 3 && row.displayAmount > 0
           ? context.l10n.insightsMerchantMeta(
               visitsLabel,
-              formatMoney(amount / visits!),
+              formatMoney(row.displayAmount / visits),
             )
           : visitsLabel;
     } else {
@@ -104,14 +94,16 @@ class _MerchantRow extends StatelessWidget {
       children: [
         Semantics(
           button: true,
-          label: meta != null ? '$name, $meta, $amountLabel' : '$name, $amountLabel',
+          label: meta != null
+              ? '${row.name}, $meta, $amountLabel'
+              : '${row.name}, $amountLabel',
           child: InkWell(
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => MerchantPage(
-                    merchantNormalized: merchantNormalized,
-                    displayName: name,
+                    merchantNormalized: row.merchantNormalized,
+                    displayName: row.name,
                   ),
                 ),
               );
@@ -126,7 +118,7 @@ class _MerchantRow extends StatelessWidget {
                     radius: 20,
                     backgroundColor: accentFill,
                     child: Text(
-                      _avatarLetter(name),
+                      _avatarLetter(row.name),
                       style: textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: accentInk,
@@ -139,7 +131,7 @@ class _MerchantRow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          name,
+                          row.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.bodyMedium?.copyWith(

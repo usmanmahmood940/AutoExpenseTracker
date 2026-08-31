@@ -12,11 +12,13 @@ import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/skeleton.dart';
+import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/analytics/presentation/provider/insights_provider.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_category_bars.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_kpi_row.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_merchant_list.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_merchant_sort_dropdown.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_narrative_card.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_recurring_list.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_trend_chart.dart';
@@ -177,20 +179,9 @@ class _InsightsView extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.lg),
-                                _PaddedSectionHeader(
-                                  l10n.insightsTopMerchants,
-                                  actionLabel: l10n.homeViewAllInsights,
-                                  onActionTap: () =>
-                                      _openActivityForRange(context, provider),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                  ),
-                                  child: InsightsMerchantList(
-                                    summary: summary,
-                                    formatMoney: money.formatMoney,
-                                  ),
+                                _TopMerchantsSection(
+                                  summary: summary,
+                                  formatMoney: money.formatMoney,
                                 ),
                                 if (provider.recurring.isNotEmpty) ...[
                                   const SizedBox(height: AppSpacing.lg),
@@ -376,11 +367,13 @@ class _PaddedSectionHeader extends StatelessWidget {
     this.title, {
     this.actionLabel,
     this.onActionTap,
+    this.trailing,
   });
 
   final String title;
   final String? actionLabel;
   final VoidCallback? onActionTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +389,48 @@ class _PaddedSectionHeader extends StatelessWidget {
         actionLabel: actionLabel,
         onActionTap: onActionTap,
         showActionChevron: onActionTap != null,
+        trailing: trailing,
       ),
+    );
+  }
+}
+
+class _TopMerchantsSection extends StatefulWidget {
+  const _TopMerchantsSection({
+    required this.summary,
+    required this.formatMoney,
+  });
+
+  final MonthlySummaryEntity summary;
+  final String Function(double amount) formatMoney;
+
+  @override
+  State<_TopMerchantsSection> createState() => _TopMerchantsSectionState();
+}
+
+class _TopMerchantsSectionState extends State<_TopMerchantsSection> {
+  TopMerchantSort _sort = TopMerchantSort.amountSpent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _PaddedSectionHeader(
+          context.l10n.insightsTopMerchants,
+          trailing: InsightsMerchantSortDropdown(
+            value: _sort,
+            onChanged: (next) => setState(() => _sort = next),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: InsightsMerchantList(
+            summary: widget.summary,
+            formatMoney: widget.formatMoney,
+            sort: _sort,
+          ),
+        ),
+      ],
     );
   }
 }

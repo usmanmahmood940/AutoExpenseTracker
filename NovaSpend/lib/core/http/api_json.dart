@@ -210,6 +210,8 @@ MonthlySummaryEntity monthlySummaryFromApi(Map<String, dynamic> json) {
     byCategory: numMap(json['by_category']),
     byMerchant: numMap(json['by_merchant']),
     byMerchantStats: statsMap(json['by_merchant_stats']),
+    byMerchantReceived: numMap(json['by_merchant_received']),
+    byMerchantReceivedStats: statsMap(json['by_merchant_received_stats']),
   );
 }
 

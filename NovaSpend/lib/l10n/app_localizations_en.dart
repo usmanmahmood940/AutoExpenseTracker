@@ -772,6 +772,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsTopMerchants => 'Top merchants';
 
   @override
+  String get insightsTopMerchantsSortSpent => 'By amount spent';
+
+  @override
+  String get insightsTopMerchantsSortReceived => 'By amount received';
+
+  @override
+  String get insightsTopMerchantsSortVisits => 'By visits';
+
+  @override
   String get insightsWhatChanged => 'What changed';
 
   @override
