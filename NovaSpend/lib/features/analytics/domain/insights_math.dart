@@ -9,6 +9,7 @@ enum InsightsPeriodPreset { thisMonth, lastMonth, thisYear }
 class InsightsNarrativeFacts {
   const InsightsNarrativeFacts({
     this.spendChangePercent,
+    this.spendDelta,
     this.topCategory,
     this.topCategoryShare,
     this.topMerchant,
@@ -16,6 +17,7 @@ class InsightsNarrativeFacts {
   });
 
   final double? spendChangePercent;
+  final double? spendDelta;
   final String? topCategory;
 
   /// Share of total spent, 0–1.
@@ -171,6 +173,8 @@ InsightsNarrativeFacts narrativeFacts({
     spendChangePercent: previousSpent == null
         ? null
         : percentChange(spent, previousSpent),
+    spendDelta:
+        previousSpent == null ? null : spent - previousSpent,
     topCategory: topCategory?.key,
     topCategoryShare: topCategory == null
         ? null

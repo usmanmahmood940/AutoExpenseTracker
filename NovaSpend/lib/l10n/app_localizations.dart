@@ -1522,6 +1522,78 @@ abstract class AppLocalizations {
   /// **'What changed'**
   String get insightsWhatChanged;
 
+  /// No description provided for @insightsNarrativeHeadlineSpendUp.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent {percent}% more this month'**
+  String insightsNarrativeHeadlineSpendUp(String percent);
+
+  /// No description provided for @insightsNarrativeHeadlineSpendDown.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent {percent}% less this month'**
+  String insightsNarrativeHeadlineSpendDown(String percent);
+
+  /// No description provided for @insightsNarrativeHeadlineSpendUpGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent {percent}% more'**
+  String insightsNarrativeHeadlineSpendUpGeneric(String percent);
+
+  /// No description provided for @insightsNarrativeHeadlineSpendDownGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent {percent}% less'**
+  String insightsNarrativeHeadlineSpendDownGeneric(String percent);
+
+  /// No description provided for @insightsNarrativeHeadlineSpendFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spending stayed about the same'**
+  String get insightsNarrativeHeadlineSpendFlat;
+
+  /// No description provided for @insightsNarrativeSpendDeltaUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spending increased by {amount} compared to last month.'**
+  String insightsNarrativeSpendDeltaUp(String amount);
+
+  /// No description provided for @insightsNarrativeSpendDeltaDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spending decreased by {amount} compared to last month.'**
+  String insightsNarrativeSpendDeltaDown(String amount);
+
+  /// No description provided for @insightsNarrativeSpendDeltaUpGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spending increased by {amount} compared to the previous period.'**
+  String insightsNarrativeSpendDeltaUpGeneric(String amount);
+
+  /// No description provided for @insightsNarrativeSpendDeltaDownGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spending decreased by {amount} compared to the previous period.'**
+  String insightsNarrativeSpendDeltaDownGeneric(String amount);
+
+  /// No description provided for @insightsNarrativeSpendDeltaFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent about the same as last month.'**
+  String get insightsNarrativeSpendDeltaFlat;
+
+  /// No description provided for @insightsNarrativeSpendDeltaFlatGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'You spent about the same as the previous period.'**
+  String get insightsNarrativeSpendDeltaFlatGeneric;
+
+  /// No description provided for @insightsSeeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'See details'**
+  String get insightsSeeDetails;
+
   /// No description provided for @insightsNarrativeSpendUp.
   ///
   /// In en, this message translates to:
@@ -1558,17 +1630,29 @@ abstract class AppLocalizations {
   /// **'Recurring'**
   String get insightsRecurring;
 
+  /// No description provided for @insightsRecurringChargeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 charge} other{{count} charges}}'**
+  String insightsRecurringChargeCount(int count);
+
   /// No description provided for @insightsRecurringMeta.
   ///
   /// In en, this message translates to:
-  /// **'{count} · avg {amount}'**
-  String insightsRecurringMeta(String count, String amount);
+  /// **'{charges} · Last {date}'**
+  String insightsRecurringMeta(String charges, String date);
 
   /// No description provided for @insightsVisitCount.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 visit} other{{count} visits}}'**
   String insightsVisitCount(int count);
+
+  /// No description provided for @insightsMerchantMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'{visits} • Avg. {amount}'**
+  String insightsMerchantMeta(String visits, String amount);
 
   /// No description provided for @insightsEmpty.
   ///

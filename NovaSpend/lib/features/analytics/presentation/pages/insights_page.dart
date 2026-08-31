@@ -141,6 +141,10 @@ class _InsightsView extends StatelessWidget {
                                     formatMoney: money.formatMoney,
                                     aiNarrative: provider.aiNarrative,
                                     isLoadingNarrative: provider.isLoadingNarrative,
+                                    useMonthComparisonCopy:
+                                        provider.preset ==
+                                                InsightsPeriodPreset.thisMonth &&
+                                            !provider.chevronOverride,
                                   ),
                                 ],
                                 const SizedBox(height: AppSpacing.lg),
@@ -186,7 +190,6 @@ class _InsightsView extends StatelessWidget {
                                   child: InsightsMerchantList(
                                     summary: summary,
                                     formatMoney: money.formatMoney,
-                                    visitLabel: l10n.insightsVisitCount,
                                   ),
                                 ),
                                 if (provider.recurring.isNotEmpty) ...[

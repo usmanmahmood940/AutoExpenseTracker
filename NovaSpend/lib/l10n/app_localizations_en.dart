@@ -775,6 +775,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsWhatChanged => 'What changed';
 
   @override
+  String insightsNarrativeHeadlineSpendUp(String percent) {
+    return 'You spent $percent% more this month';
+  }
+
+  @override
+  String insightsNarrativeHeadlineSpendDown(String percent) {
+    return 'You spent $percent% less this month';
+  }
+
+  @override
+  String insightsNarrativeHeadlineSpendUpGeneric(String percent) {
+    return 'You spent $percent% more';
+  }
+
+  @override
+  String insightsNarrativeHeadlineSpendDownGeneric(String percent) {
+    return 'You spent $percent% less';
+  }
+
+  @override
+  String get insightsNarrativeHeadlineSpendFlat =>
+      'Your spending stayed about the same';
+
+  @override
+  String insightsNarrativeSpendDeltaUp(String amount) {
+    return 'Your spending increased by $amount compared to last month.';
+  }
+
+  @override
+  String insightsNarrativeSpendDeltaDown(String amount) {
+    return 'Your spending decreased by $amount compared to last month.';
+  }
+
+  @override
+  String insightsNarrativeSpendDeltaUpGeneric(String amount) {
+    return 'Your spending increased by $amount compared to the previous period.';
+  }
+
+  @override
+  String insightsNarrativeSpendDeltaDownGeneric(String amount) {
+    return 'Your spending decreased by $amount compared to the previous period.';
+  }
+
+  @override
+  String get insightsNarrativeSpendDeltaFlat =>
+      'You spent about the same as last month.';
+
+  @override
+  String get insightsNarrativeSpendDeltaFlatGeneric =>
+      'You spent about the same as the previous period.';
+
+  @override
+  String get insightsSeeDetails => 'See details';
+
+  @override
   String insightsNarrativeSpendUp(String percent) {
     return 'You spent $percent% more than the previous period.';
   }
@@ -802,8 +857,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsRecurring => 'Recurring';
 
   @override
-  String insightsRecurringMeta(String count, String amount) {
-    return '$count · avg $amount';
+  String insightsRecurringChargeCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count charges',
+      one: '1 charge',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightsRecurringMeta(String charges, String date) {
+    return '$charges · Last $date';
   }
 
   @override
@@ -815,6 +881,11 @@ class AppLocalizationsEn extends AppLocalizations {
       one: '1 visit',
     );
     return '$_temp0';
+  }
+
+  @override
+  String insightsMerchantMeta(String visits, String amount) {
+    return '$visits • Avg. $amount';
   }
 
   @override

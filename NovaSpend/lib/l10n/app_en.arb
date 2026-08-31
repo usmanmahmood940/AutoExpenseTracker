@@ -337,6 +337,58 @@
   "insightsTrends": "Spend over time",
   "insightsTopMerchants": "Top merchants",
   "insightsWhatChanged": "What changed",
+  "insightsNarrativeHeadlineSpendUp": "You spent {percent}% more this month",
+  "@insightsNarrativeHeadlineSpendUp": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeHeadlineSpendDown": "You spent {percent}% less this month",
+  "@insightsNarrativeHeadlineSpendDown": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeHeadlineSpendUpGeneric": "You spent {percent}% more",
+  "@insightsNarrativeHeadlineSpendUpGeneric": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeHeadlineSpendDownGeneric": "You spent {percent}% less",
+  "@insightsNarrativeHeadlineSpendDownGeneric": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "insightsNarrativeHeadlineSpendFlat": "Your spending stayed about the same",
+  "insightsNarrativeSpendDeltaUp": "Your spending increased by {amount} compared to last month.",
+  "@insightsNarrativeSpendDeltaUp": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "insightsNarrativeSpendDeltaDown": "Your spending decreased by {amount} compared to last month.",
+  "@insightsNarrativeSpendDeltaDown": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "insightsNarrativeSpendDeltaUpGeneric": "Your spending increased by {amount} compared to the previous period.",
+  "@insightsNarrativeSpendDeltaUpGeneric": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "insightsNarrativeSpendDeltaDownGeneric": "Your spending decreased by {amount} compared to the previous period.",
+  "@insightsNarrativeSpendDeltaDownGeneric": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "insightsNarrativeSpendDeltaFlat": "You spent about the same as last month.",
+  "insightsNarrativeSpendDeltaFlatGeneric": "You spent about the same as the previous period.",
+  "insightsSeeDetails": "See details",
   "insightsNarrativeSpendUp": "You spent {percent}% more than the previous period.",
   "@insightsNarrativeSpendUp": {
     "placeholders": {
@@ -365,17 +417,30 @@
     }
   },
   "insightsRecurring": "Recurring",
-  "insightsRecurringMeta": "{count} · avg {amount}",
+  "insightsRecurringChargeCount": "{count, plural, =1{1 charge} other{{count} charges}}",
+  "@insightsRecurringChargeCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "insightsRecurringMeta": "{charges} · Last {date}",
   "@insightsRecurringMeta": {
     "placeholders": {
-      "count": {"type": "String"},
-      "amount": {"type": "String"}
+      "charges": {"type": "String"},
+      "date": {"type": "String"}
     }
   },
   "insightsVisitCount": "{count, plural, =1{1 visit} other{{count} visits}}",
   "@insightsVisitCount": {
     "placeholders": {
       "count": {"type": "int"}
+    }
+  },
+  "insightsMerchantMeta": "{visits} • Avg. {amount}",
+  "@insightsMerchantMeta": {
+    "placeholders": {
+      "visits": {"type": "String"},
+      "amount": {"type": "String"}
     }
   },
   "insightsEmpty": "No summary for this period yet",

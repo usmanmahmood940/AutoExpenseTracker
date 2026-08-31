@@ -118,6 +118,7 @@ void main() {
         previousSpent: 80,
       );
       expect(facts.spendChangePercent, closeTo(25, 0.001));
+      expect(facts.spendDelta, closeTo(20, 0.001));
       expect(facts.topCategory, 'Food & Dining');
       expect(facts.topCategoryShare, closeTo(0.4, 0.001));
       expect(facts.topMerchant, 'KFC');
