@@ -23,6 +23,7 @@ import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.d
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
+import 'package:nova_spend/features/settings/presentation/pages/settings_page.dart';
 import 'package:nova_spend/features/settings/presentation/pages/review_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -314,11 +315,14 @@ class _HomeBody extends StatelessWidget {
       return ErrorStateView(error: home.error, onRetry: home.refresh);
     }
     if (home.items.isEmpty) {
+      final uid = context.read<AuthProvider>().uid;
       return EmptyStateView(
         title: l10n.homeEmpty,
         message: l10n.homeEmptyHint,
         actionLabel: l10n.homeEmptySetupCta,
-        onActionTap: () => MainShellScope.selectSettingsTab(context),
+        onActionTap: uid == null
+            ? null
+            : () => openShortcutSetupGuide(context, uid: uid),
       );
     }
     if (home.periodItems.isEmpty) {

@@ -30,6 +30,11 @@ class AppConstants {
   static const String privacyUrl =
       'https://auto-expense-tracker-2026.firebaseapp.com/privacy';
 
+  static const String appVersion = '1.1.0';
+
+  static const String feedbackMailto =
+      'mailto:support@novaspend.app?subject=NovaSpend%20Feedback';
+
   /// Dev override: `--dart-define=SKIP_EMAIL_VERIFICATION_CHECK=true`
   static const bool kSkipEmailVerificationCheck = bool.fromEnvironment(
     'SKIP_EMAIL_VERIFICATION_CHECK',
