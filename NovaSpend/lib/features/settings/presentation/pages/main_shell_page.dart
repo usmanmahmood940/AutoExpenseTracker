@@ -8,6 +8,7 @@ import 'package:nova_spend/features/search/presentation/provider/search_provider
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
 import 'package:nova_spend/features/settings/presentation/pages/settings_page.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/home_page.dart';
+import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
 
@@ -41,12 +42,23 @@ class _MainShellPageState extends State<MainShellPage> {
     final l10n = context.l10n;
     final uid = context.watch<AuthProvider>().uid;
 
-    return ChangeNotifierProvider(
-      create: (_) {
-        final search = sl<SearchProvider>();
-        if (uid != null) search.start(uid);
-        return search;
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) {
+            final home = sl<HomeProvider>();
+            if (uid != null) home.start(uid);
+            return home;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final search = sl<SearchProvider>();
+            if (uid != null) search.start(uid);
+            return search;
+          },
+        ),
+      ],
       child: Builder(
         builder: (context) {
           return MainShellScope(

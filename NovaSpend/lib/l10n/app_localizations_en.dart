@@ -1305,6 +1305,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonLoading => 'Loading…';
 
   @override
+  String get splashTagline => 'Track spending, simply';
+
+  @override
   String amountFormat(String currency, String amount) {
     return '$currency $amount';
   }

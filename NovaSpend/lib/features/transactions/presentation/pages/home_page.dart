@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
-import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
@@ -58,17 +57,10 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    return ChangeNotifierProvider(
-      create: (_) {
-        final provider = sl<HomeProvider>();
-        provider.start(uid);
-        return provider;
-      },
-      child: _HomeView(
-        reviewBannerDismissed: _reviewBannerDismissed,
-        onDismissReviewBanner: () =>
-            setState(() => _reviewBannerDismissed = true),
-      ),
+    return _HomeView(
+      reviewBannerDismissed: _reviewBannerDismissed,
+      onDismissReviewBanner: () =>
+          setState(() => _reviewBannerDismissed = true),
     );
   }
 }

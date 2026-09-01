@@ -610,6 +610,7 @@
   "commonConfirm": "Confirm",
   "commonAll": "All",
   "commonLoading": "Loading…",
+  "splashTagline": "Track spending, simply",
   "amountFormat": "{currency} {amount}",
   "@amountFormat": {
     "placeholders": {

@@ -2410,6 +2410,12 @@ abstract class AppLocalizations {
   /// **'Loading…'**
   String get commonLoading;
 
+  /// No description provided for @splashTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Track spending, simply'**
+  String get splashTagline;
+
   /// No description provided for @amountFormat.
   ///
   /// In en, this message translates to:
