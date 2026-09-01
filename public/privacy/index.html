@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — NovaSpend</title>
+    <meta
+      name="description"
+      content="NovaSpend Privacy Policy — how we collect, use, and protect your data."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="/">
+          <span class="logo">N</span>
+          <span>NovaSpend</span>
+        </a>
+        <div class="nav-links">
+          <a href="/terms">Terms &amp; Conditions</a>
+        </div>
+      </header>
+
+      <main class="card">
+        <h1>Privacy Policy</h1>
+        <p class="meta">Effective date: September 1, 2026</p>
+
+        <p>
+          NovaSpend ("we", "us", or "our") helps you track personal spending by
+          processing bank SMS alerts you choose to forward through iOS
+          Shortcuts. This Privacy Policy explains what information we collect,
+          how we use it, and the choices you have.
+        </p>
+
+        <h2>Information we collect</h2>
+        <ul>
+          <li>
+            <strong>Account information:</strong> email address and authentication
+            identifiers when you create an account (via Firebase Authentication).
+          </li>
+          <li>
+            <strong>Transaction data:</strong> SMS text, parsed merchant, amount,
+            date, bank, category, and related metadata you send through the ingest
+            webhook.
+          </li>
+          <li>
+            <strong>Device information:</strong> push notification tokens if you
+            enable alerts, and optional biometric lock preferences stored on your
+            device.
+          </li>
+          <li>
+            <strong>Usage data:</strong> basic diagnostics such as sync timestamps
+            and error logs needed to operate the service.
+          </li>
+        </ul>
+
+        <h2>How we use information</h2>
+        <ul>
+          <li>Provide transaction tracking, search, insights, and exports.</li>
+          <li>Parse and categorize spending from SMS content you submit.</li>
+          <li>Authenticate your account and keep the service secure.</li>
+          <li>Send account-related emails (verification, password reset).</li>
+          <li>Improve parsing accuracy and product reliability.</li>
+        </ul>
+
+        <h2>How data is processed</h2>
+        <p>
+          When you configure iOS Shortcuts, SMS content is sent to our API
+          hosted on Google Cloud Run and stored in our database (PostgreSQL).
+          Authentication is handled by Firebase. We do not sell your personal
+          information.
+        </p>
+
+        <h2>Data retention</h2>
+        <p>
+          We retain account and transaction data while your account is active.
+          You may delete individual transactions in the app or delete your
+          account from Settings. When you delete your account, we remove
+          associated personal data from our systems, subject to reasonable
+          backup retention periods.
+        </p>
+
+        <h2>Sharing</h2>
+        <p>
+          We use infrastructure and service providers (for example Google Cloud,
+          Firebase, and email delivery providers) only to operate NovaSpend. We
+          may disclose information if required by law or to protect users and the
+          service.
+        </p>
+
+        <h2>Security</h2>
+        <p>
+          We use HTTPS, authenticated API access, and industry-standard cloud
+          security practices. No method of transmission or storage is 100%
+          secure, so we cannot guarantee absolute security.
+        </p>
+
+        <h2>Your choices</h2>
+        <ul>
+          <li>Stop sending SMS data by disabling or removing your Shortcut.</li>
+          <li>Edit or delete transactions in the app.</li>
+          <li>Export your data as CSV from Settings.</li>
+          <li>Delete your account from Settings.</li>
+          <li>Contact us to ask questions about your data.</li>
+        </ul>
+
+        <h2>Children</h2>
+        <p>
+          NovaSpend is not intended for children under 13, and we do not knowingly
+          collect personal information from children.
+        </p>
+
+        <h2>Changes</h2>
+        <p>
+          We may update this Privacy Policy from time to time. We will revise the
+          effective date above when we do. Continued use of NovaSpend after
+          changes means you accept the updated policy.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Email us at
+          <a href="mailto:support@novaspend.app">support@novaspend.app</a>.
+        </p>
+      </main>
+
+      <footer>
+        <p><a href="/">NovaSpend</a> · <a href="/terms">Terms &amp; Conditions</a></p>
+      </footer>
+    </div>
+  </body>
+</html>
