@@ -90,7 +90,7 @@ void main() {
     expect(patch.containsKey('updatedAt'), isFalse);
   });
 
-  test('monthlySummaryFromApi maps merchant stats and range bounds', () {
+  test('monthlySummaryFromApi maps top merchants and range bounds', () {
     final summary = monthlySummaryFromApi({
       'year_month': '2026-03',
       'date_from': '2026-03-01',
@@ -101,28 +101,37 @@ void main() {
       'net': -700,
       'transaction_count': 2,
       'by_category': {'Food & Dining': 700},
-      'by_merchant': {'KFC': 700},
-      'by_merchant_stats': {
-        'KFC': {
+      'top_merchants_spent': [
+        {
+          'display_name': 'KFC',
+          'merchant_normalized': 'kfc',
           'amount': 700,
           'visit_count': 2,
-          'merchant_normalized': 'kfc',
         },
-      },
-      'by_merchant_received': {'Payroll': 10000},
-      'by_merchant_received_stats': {
-        'Payroll': {
+      ],
+      'top_merchants_received': [
+        {
+          'display_name': 'Payroll',
+          'merchant_normalized': 'payroll',
           'amount': 10000,
           'visit_count': 1,
-          'merchant_normalized': 'payroll',
         },
-      },
+      ],
+      'top_merchants_by_visits': [
+        {
+          'display_name': 'KFC',
+          'merchant_normalized': 'kfc',
+          'amount': 700,
+          'visit_count': 2,
+        },
+      ],
     });
 
     expect(summary.dateFrom, '2026-03-01');
-    expect(summary.byMerchant['KFC'], 700);
-    expect(summary.byMerchantReceived['Payroll'], 10000);
-    expect(summary.byMerchantStats['KFC']?.visitCount, 2);
-    expect(summary.byMerchantStats['KFC']?.merchantNormalized, 'kfc');
+    expect(summary.topMerchantsSpent.single.displayName, 'KFC');
+    expect(summary.topMerchantsSpent.single.amount, 700);
+    expect(summary.topMerchantsReceived.single.displayName, 'Payroll');
+    expect(summary.topMerchantsSpent.single.visitCount, 2);
+    expect(summary.topMerchantsSpent.single.merchantNormalized, 'kfc');
   });
 }

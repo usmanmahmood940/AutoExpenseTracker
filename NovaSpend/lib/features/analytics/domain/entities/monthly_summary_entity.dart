@@ -1,18 +1,25 @@
 import 'package:equatable/equatable.dart';
 
-class MerchantSpendStat extends Equatable {
-  const MerchantSpendStat({
+class TopMerchantEntity extends Equatable {
+  const TopMerchantEntity({
+    required this.displayName,
+    required this.merchantNormalized,
     required this.amount,
     required this.visitCount,
-    required this.merchantNormalized,
   });
 
+  final String displayName;
+  final String merchantNormalized;
   final double amount;
   final int visitCount;
-  final String merchantNormalized;
 
   @override
-  List<Object?> get props => [amount, visitCount, merchantNormalized];
+  List<Object?> get props => [
+        displayName,
+        merchantNormalized,
+        amount,
+        visitCount,
+      ];
 }
 
 class MonthlySummaryEntity extends Equatable {
@@ -24,12 +31,11 @@ class MonthlySummaryEntity extends Equatable {
     required this.net,
     required this.transactionCount,
     required this.byCategory,
-    required this.byMerchant,
     this.dateFrom,
     this.dateTo,
-    this.byMerchantStats = const {},
-    this.byMerchantReceived = const {},
-    this.byMerchantReceivedStats = const {},
+    this.topMerchantsSpent = const [],
+    this.topMerchantsReceived = const [],
+    this.topMerchantsByVisits = const [],
     this.updatedAt,
   });
 
@@ -42,10 +48,9 @@ class MonthlySummaryEntity extends Equatable {
   final double net;
   final int transactionCount;
   final Map<String, double> byCategory;
-  final Map<String, double> byMerchant;
-  final Map<String, MerchantSpendStat> byMerchantStats;
-  final Map<String, double> byMerchantReceived;
-  final Map<String, MerchantSpendStat> byMerchantReceivedStats;
+  final List<TopMerchantEntity> topMerchantsSpent;
+  final List<TopMerchantEntity> topMerchantsReceived;
+  final List<TopMerchantEntity> topMerchantsByVisits;
   final DateTime? updatedAt;
 
   @override
@@ -59,10 +64,9 @@ class MonthlySummaryEntity extends Equatable {
         net,
         transactionCount,
         byCategory,
-        byMerchant,
-        byMerchantStats,
-        byMerchantReceived,
-        byMerchantReceivedStats,
+        topMerchantsSpent,
+        topMerchantsReceived,
+        topMerchantsByVisits,
         updatedAt,
       ];
 }

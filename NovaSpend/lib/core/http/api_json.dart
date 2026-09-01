@@ -181,21 +181,17 @@ MonthlySummaryEntity monthlySummaryFromApi(Map<String, dynamic> json) {
     );
   }
 
-  Map<String, MerchantSpendStat> statsMap(dynamic raw) {
-    if (raw is! Map) return {};
-    final out = <String, MerchantSpendStat>{};
-    raw.forEach((key, value) {
-      if (value is Map) {
-        final map = Map<String, dynamic>.from(value);
-        out[key.toString()] = MerchantSpendStat(
-          amount: (map['amount'] as num?)?.toDouble() ?? 0,
-          visitCount: (map['visit_count'] as num?)?.toInt() ?? 0,
-          merchantNormalized: map['merchant_normalized'] as String? ??
-              key.toString().toLowerCase(),
-        );
-      }
-    });
-    return out;
+  List<TopMerchantEntity> topMerchants(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((item) {
+      final map = Map<String, dynamic>.from(item);
+      return TopMerchantEntity(
+        displayName: map['display_name'] as String? ?? 'Unknown',
+        merchantNormalized: map['merchant_normalized'] as String? ?? '',
+        amount: (map['amount'] as num?)?.toDouble() ?? 0,
+        visitCount: (map['visit_count'] as num?)?.toInt() ?? 0,
+      );
+    }).toList();
   }
 
   return MonthlySummaryEntity(
@@ -208,10 +204,9 @@ MonthlySummaryEntity monthlySummaryFromApi(Map<String, dynamic> json) {
     net: (json['net'] as num?)?.toDouble() ?? 0,
     transactionCount: (json['transaction_count'] as num?)?.toInt() ?? 0,
     byCategory: numMap(json['by_category']),
-    byMerchant: numMap(json['by_merchant']),
-    byMerchantStats: statsMap(json['by_merchant_stats']),
-    byMerchantReceived: numMap(json['by_merchant_received']),
-    byMerchantReceivedStats: statsMap(json['by_merchant_received_stats']),
+    topMerchantsSpent: topMerchants(json['top_merchants_spent']),
+    topMerchantsReceived: topMerchants(json['top_merchants_received']),
+    topMerchantsByVisits: topMerchants(json['top_merchants_by_visits']),
   );
 }
 
