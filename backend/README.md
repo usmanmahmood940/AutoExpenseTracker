@@ -9,6 +9,9 @@ Follow section 6 (Migration order). Phases A–F freeze are done (2026-08-23):
 Flutter + Shortcuts hit this service; Firestore/Functions stay deployed as
 rollback for a few days (step 11).
 
+Next up: [`../docs/encryption-and-rag-plan.md`](../docs/encryption-and-rag-plan.md)
+— field-level SMS encryption (Option A) + pgvector RAG for chat and smart Insights.
+
 ## Status
 
 | Phase | Scope | State |
@@ -19,6 +22,8 @@ rollback for a few days (step 11).
 | D | Ingest + workers | **done (deployed)** |
 | E | Flutter ApiClient (dev) | **done** (needs step 5 data before Home looks real) |
 | F | Prod migrate + freeze + cutover | **dual-run** (step 11) |
+| E1 | SMS payload encryption (`field_crypto`) | planned — see encryption-and-rag plan §8.1 |
+| R1–R4 | pgvector RAG, smart cards, chat API | planned — see encryption-and-rag plan §8.2–8.5 |
 
 ## Requirements
 
