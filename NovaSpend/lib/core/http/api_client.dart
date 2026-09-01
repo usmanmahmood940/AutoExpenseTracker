@@ -20,7 +20,6 @@ class ApiClient {
         _ownsClient = client == null,
         _idTokenFetcher = idTokenFetcher ?? _defaultIdToken;
 
-  static const int _maxLoggedBodyChars = 4000;
   static const Duration _timeout = Duration(seconds: 30);
 
   final http.Client _client;
@@ -182,8 +181,8 @@ class ApiClient {
     if (!kDebugMode) return;
     debugPrint(
       '[API] → $method $uri\n'
-      '  headers: ${_redactHeaders(headers)}\n'
-      '  body: ${_truncate(body ?? '')}',
+      '  headers: $headers\n'
+      '  body: ${body ?? ''}',
     );
   }
 
@@ -196,37 +195,8 @@ class ApiClient {
     if (!kDebugMode) return;
     debugPrint(
       '[API] ← $method $path ${response.statusCode} (${elapsedMs}ms)\n'
-      '  body: ${_truncate(response.body)}',
+      '  body: ${response.body}',
     );
-  }
-
-  Map<String, String> _redactHeaders(Map<String, String> headers) {
-    return headers.map((key, value) {
-      if (key.toLowerCase() == 'authorization') {
-        return MapEntry(key, _redactToken(value));
-      }
-      return MapEntry(key, value);
-    });
-  }
-
-  String _redactToken(String value) {
-    if (value.startsWith('Bearer ')) {
-      final token = value.substring(7);
-      return 'Bearer ${_mask(token)}';
-    }
-    return _mask(value);
-  }
-
-  String _mask(String value) {
-    if (value.length <= 12) return '***';
-    return '${value.substring(0, 6)}…${value.substring(value.length - 4)}'
-        ' (${value.length} chars)';
-  }
-
-  String _truncate(String value) {
-    if (value.length <= _maxLoggedBodyChars) return value;
-    return '${value.substring(0, _maxLoggedBodyChars)}… '
-        '(truncated, ${value.length} chars total)';
   }
 
   void dispose() {
