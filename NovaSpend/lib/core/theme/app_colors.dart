@@ -13,6 +13,9 @@ abstract final class AppColors {
   /// Deeper "primary" green — for icons/wordmark on light surfaces.
   static const Color primaryStrong = Color(0xFF006C49);
 
+  /// Full-screen splash background — matches [assets/branding/app_icon.png].
+  static const Color splashBackground = Color(0xFF0D4A32);
+
   /// Text/glyph color on an [accent] emerald fill (on-primary-container).
   static const Color onAccent = Color(0xFF00422B);
 
