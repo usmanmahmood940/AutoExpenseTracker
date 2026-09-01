@@ -221,6 +221,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionAbout => 'About';
 
   @override
+  String get settingsSectionPreferences => 'Preferences';
+
+  @override
+  String get settingsSectionSupport => 'Support';
+
+  @override
+  String get settingsSectionLegal => 'Legal';
+
+  @override
+  String get settingsShortcutSetup => 'Shortcut setup';
+
+  @override
+  String get settingsShortcutSetupSubtitle => 'Set up automatic SMS import';
+
+  @override
+  String get settingsShortcutSetupTitle => 'Shortcut setup';
+
+  @override
+  String get settingsShortcutNonIos =>
+      'Automatic SMS import uses iOS Shortcuts. You can still copy your user ID and webhook URL here for reference.';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String get settingsAboutBody =>
+      'NovaSpend helps you track spending automatically from bank SMS messages. Set up the iOS Shortcut once, and your transactions stay organized without manual entry.';
+
+  @override
+  String get settingsFeedback => 'Feedback';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy Policy';
+
+  @override
+  String get settingsTermsAndConditions => 'Terms & Conditions';
+
+  @override
+  String get settingsOpenLinkFailed => 'Could not open link';
+
+  @override
   String get settingsFixParsing => 'Fix parsing issues';
 
   @override
@@ -458,6 +499,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get merchantEmpty => 'No transactions for this merchant';
+
+  @override
+  String get merchantFilterEmpty => 'No transactions match this filter';
+
+  @override
+  String get merchantLifetimeSpentLabel => 'Lifetime spent';
+
+  @override
+  String merchantStatVisits(String count) {
+    return '$count visits';
+  }
+
+  @override
+  String merchantStatAverage(String amount) {
+    return '$amount avg';
+  }
+
+  @override
+  String get merchantThisMonthTitle => 'This month';
+
+  @override
+  String get merchantStatSpentLabel => 'Spent';
+
+  @override
+  String get merchantStatVisitsLabel => 'Visits';
+
+  @override
+  String get merchantStatAvgLabel => 'Avg';
+
+  @override
+  String merchantInsightThisMonth(String visits, String amount) {
+    return 'You visited $visits times this month, averaging $amount per visit.';
+  }
+
+  @override
+  String get merchantFilterAll => 'All';
+
+  @override
+  String get merchantFilterThisMonth => 'This month';
+
+  @override
+  String get merchantFilterLast3Months => 'Last 3 months';
 
   @override
   String get commonDismiss => 'Dismiss';
@@ -915,6 +998,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsNextMonth => 'Next';
+
+  @override
+  String get insightsSectionTrendEmpty =>
+      'Not enough spending data to show a trend for this period.';
+
+  @override
+  String get insightsSectionCategoriesEmpty =>
+      'No spending by category for this period.';
+
+  @override
+  String get insightsSectionMerchantsEmpty =>
+      'No merchant activity for this period.';
+
+  @override
+  String get insightsSectionRecurringEmpty =>
+      'No recurring charges detected for this period.';
+
+  @override
+  String get insightsSectionNarrativeEmpty =>
+      'Not enough data to summarize what changed.';
 
   @override
   String get activitySubscriptions => 'Subscriptions only';

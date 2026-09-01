@@ -83,6 +83,19 @@
   "settingsSectionSetup": "Setup",
   "settingsSectionAdvanced": "Advanced",
   "settingsSectionAbout": "About",
+  "settingsSectionPreferences": "Preferences",
+  "settingsSectionSupport": "Support",
+  "settingsSectionLegal": "Legal",
+  "settingsShortcutSetup": "Shortcut setup",
+  "settingsShortcutSetupSubtitle": "Set up automatic SMS import",
+  "settingsShortcutSetupTitle": "Shortcut setup",
+  "settingsShortcutNonIos": "Automatic SMS import uses iOS Shortcuts. You can still copy your user ID and webhook URL here for reference.",
+  "settingsAbout": "About",
+  "settingsAboutBody": "NovaSpend helps you track spending automatically from bank SMS messages. Set up the iOS Shortcut once, and your transactions stay organized without manual entry.",
+  "settingsFeedback": "Feedback",
+  "settingsPrivacyPolicy": "Privacy Policy",
+  "settingsTermsAndConditions": "Terms & Conditions",
+  "settingsOpenLinkFailed": "Could not open link",
   "settingsFixParsing": "Fix parsing issues",
   "settingsVersion": "Version {version}",
   "@settingsVersion": {
@@ -206,6 +219,34 @@
   },
   "merchantAllTransactions": "All transactions",
   "merchantEmpty": "No transactions for this merchant",
+  "merchantFilterEmpty": "No transactions match this filter",
+  "merchantLifetimeSpentLabel": "Lifetime spent",
+  "merchantStatVisits": "{count} visits",
+  "@merchantStatVisits": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "merchantStatAverage": "{amount} avg",
+  "@merchantStatAverage": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "merchantThisMonthTitle": "This month",
+  "merchantStatSpentLabel": "Spent",
+  "merchantStatVisitsLabel": "Visits",
+  "merchantStatAvgLabel": "Avg",
+  "merchantInsightThisMonth": "You visited {visits} times this month, averaging {amount} per visit.",
+  "@merchantInsightThisMonth": {
+    "placeholders": {
+      "visits": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "merchantFilterAll": "All",
+  "merchantFilterThisMonth": "This month",
+  "merchantFilterLast3Months": "Last 3 months",
   "commonDismiss": "Dismiss",
   "feedTitle": "Transactions",
   "feedEmpty": "No transactions yet",
@@ -452,6 +493,11 @@
   "insightsOtherCategory": "Other",
   "insightsPrevMonth": "Previous",
   "insightsNextMonth": "Next",
+  "insightsSectionTrendEmpty": "Not enough spending data to show a trend for this period.",
+  "insightsSectionCategoriesEmpty": "No spending by category for this period.",
+  "insightsSectionMerchantsEmpty": "No merchant activity for this period.",
+  "insightsSectionRecurringEmpty": "No recurring charges detected for this period.",
+  "insightsSectionNarrativeEmpty": "Not enough data to summarize what changed.",
   "activitySubscriptions": "Subscriptions only",
   "authUnlockTitle": "Unlock NovaSpend",
   "authUnlockSubtitle": "Authenticate to view your finances",

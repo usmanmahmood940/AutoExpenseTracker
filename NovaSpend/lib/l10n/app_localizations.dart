@@ -502,6 +502,84 @@ abstract class AppLocalizations {
   /// **'About'**
   String get settingsSectionAbout;
 
+  /// No description provided for @settingsSectionPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get settingsSectionPreferences;
+
+  /// No description provided for @settingsSectionSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get settingsSectionSupport;
+
+  /// No description provided for @settingsSectionLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get settingsSectionLegal;
+
+  /// No description provided for @settingsShortcutSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut setup'**
+  String get settingsShortcutSetup;
+
+  /// No description provided for @settingsShortcutSetupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up automatic SMS import'**
+  String get settingsShortcutSetupSubtitle;
+
+  /// No description provided for @settingsShortcutSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut setup'**
+  String get settingsShortcutSetupTitle;
+
+  /// No description provided for @settingsShortcutNonIos.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic SMS import uses iOS Shortcuts. You can still copy your user ID and webhook URL here for reference.'**
+  String get settingsShortcutNonIos;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsAboutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'NovaSpend helps you track spending automatically from bank SMS messages. Set up the iOS Shortcut once, and your transactions stay organized without manual entry.'**
+  String get settingsAboutBody;
+
+  /// No description provided for @settingsFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get settingsFeedback;
+
+  /// No description provided for @settingsPrivacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get settingsPrivacyPolicy;
+
+  /// No description provided for @settingsTermsAndConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & Conditions'**
+  String get settingsTermsAndConditions;
+
+  /// No description provided for @settingsOpenLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open link'**
+  String get settingsOpenLinkFailed;
+
   /// No description provided for @settingsFixParsing.
   ///
   /// In en, this message translates to:
@@ -921,6 +999,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No transactions for this merchant'**
   String get merchantEmpty;
+
+  /// No description provided for @merchantFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions match this filter'**
+  String get merchantFilterEmpty;
+
+  /// No description provided for @merchantLifetimeSpentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime spent'**
+  String get merchantLifetimeSpentLabel;
+
+  /// No description provided for @merchantStatVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} visits'**
+  String merchantStatVisits(String count);
+
+  /// No description provided for @merchantStatAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} avg'**
+  String merchantStatAverage(String amount);
+
+  /// No description provided for @merchantThisMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get merchantThisMonthTitle;
+
+  /// No description provided for @merchantStatSpentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent'**
+  String get merchantStatSpentLabel;
+
+  /// No description provided for @merchantStatVisitsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get merchantStatVisitsLabel;
+
+  /// No description provided for @merchantStatAvgLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg'**
+  String get merchantStatAvgLabel;
+
+  /// No description provided for @merchantInsightThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'You visited {visits} times this month, averaging {amount} per visit.'**
+  String merchantInsightThisMonth(String visits, String amount);
+
+  /// No description provided for @merchantFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get merchantFilterAll;
+
+  /// No description provided for @merchantFilterThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get merchantFilterThisMonth;
+
+  /// No description provided for @merchantFilterLast3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 3 months'**
+  String get merchantFilterLast3Months;
 
   /// No description provided for @commonDismiss.
   ///
@@ -1707,6 +1857,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next'**
   String get insightsNextMonth;
+
+  /// No description provided for @insightsSectionTrendEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough spending data to show a trend for this period.'**
+  String get insightsSectionTrendEmpty;
+
+  /// No description provided for @insightsSectionCategoriesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No spending by category for this period.'**
+  String get insightsSectionCategoriesEmpty;
+
+  /// No description provided for @insightsSectionMerchantsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No merchant activity for this period.'**
+  String get insightsSectionMerchantsEmpty;
+
+  /// No description provided for @insightsSectionRecurringEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recurring charges detected for this period.'**
+  String get insightsSectionRecurringEmpty;
+
+  /// No description provided for @insightsSectionNarrativeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data to summarize what changed.'**
+  String get insightsSectionNarrativeEmpty;
 
   /// No description provided for @activitySubscriptions.
   ///
