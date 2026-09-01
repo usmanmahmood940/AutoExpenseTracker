@@ -97,12 +97,12 @@ async def generate_spend_narrative_text(api_key: str, prompt: str) -> tuple[str,
 
 def _facts_prompt(summary: dict) -> str:
     categories = summary.get("by_category") or {}
-    merchants = summary.get("by_merchant") or {}
     top_categories = sorted(categories.items(), key=lambda item: item[1], reverse=True)[
         :5
     ]
-    top_merchants = sorted(merchants.items(), key=lambda item: item[1], reverse=True)[
-        :5
+    top_merchants = [
+        (item["display_name"], item["amount"])
+        for item in (summary.get("top_merchants_spent") or [])[:5]
     ]
     return _PROMPT.format(
         currency=summary.get("currency") or "PKR",

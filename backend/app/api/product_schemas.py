@@ -141,6 +141,13 @@ class MerchantSpendStatOut(BaseModel):
     merchant_normalized: str
 
 
+class TopMerchantOut(BaseModel):
+    display_name: str
+    merchant_normalized: str
+    amount: float
+    visit_count: int
+
+
 class MonthlySummaryOut(BaseModel):
     year_month: str = ""
     date_from: str | None = None
@@ -151,12 +158,9 @@ class MonthlySummaryOut(BaseModel):
     net: float
     transaction_count: int
     by_category: dict[str, float]
-    by_merchant: dict[str, float]
-    by_merchant_stats: dict[str, MerchantSpendStatOut] = Field(default_factory=dict)
-    by_merchant_received: dict[str, float] = Field(default_factory=dict)
-    by_merchant_received_stats: dict[str, MerchantSpendStatOut] = Field(
-        default_factory=dict
-    )
+    top_merchants_spent: list[TopMerchantOut] = Field(default_factory=list)
+    top_merchants_received: list[TopMerchantOut] = Field(default_factory=list)
+    top_merchants_by_visits: list[TopMerchantOut] = Field(default_factory=list)
 
 
 class TrendPointOut(BaseModel):

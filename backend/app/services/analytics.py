@@ -20,6 +20,7 @@ from app.services.transactions import parse_iso_date
 
 YEAR_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SIMILAR_AMOUNT_RATIO = Decimal("0.05")
+TOP_MERCHANT_LIMIT = 5
 
 
 def parse_year_month(value: str) -> str:
@@ -85,6 +86,117 @@ def _amount_map(rows: list[tuple[str | None, Decimal]]) -> dict[str, float]:
         if abs(amount) > 0.0001:
             out[key or "Unknown"] = amount
     return out
+
+
+def _merchant_stats_by_norm(
+    rows: list[tuple[str | None, str | None, Decimal, int]],
+) -> dict[str, dict]:
+    """Aggregate merchant rows by normalized key so name variants share one bucket."""
+    stats: dict[str, dict] = {}
+    for merchant, normalized, amount_raw, visits in rows:
+        amount = money_float(amount_raw)
+        if abs(amount) <= 0.0001:
+            continue
+        display = merchant or "Unknown"
+        norm = normalized or normalize_merchant_key(display)
+        if norm not in stats:
+            stats[norm] = {
+                "display_name": display,
+                "amount": 0.0,
+                "visit_count": 0,
+                "merchant_normalized": norm,
+            }
+        stats[norm]["amount"] += amount
+        stats[norm]["visit_count"] += int(visits)
+        if len(display) > len(stats[norm]["display_name"]):
+            stats[norm]["display_name"] = display
+    return stats
+
+
+def _visit_totals_by_norm(
+    rows: list[tuple[str | None, str | None, int]],
+) -> dict[str, dict]:
+    """Count every transaction (debit + credit) per merchant, merged by normalized key."""
+    merged: dict[str, dict] = {}
+    for normalized, merchant, visits in rows:
+        display = merchant or "Unknown"
+        norm = (normalized or "").strip() or normalize_merchant_key(display)
+        if norm not in merged:
+            merged[norm] = {
+                "display_name": display,
+                "merchant_normalized": norm,
+                "visit_count": 0,
+            }
+        merged[norm]["visit_count"] += int(visits)
+        if len(display) > len(merged[norm]["display_name"]):
+            merged[norm]["display_name"] = display
+    return merged
+
+
+def _top_merchant_row(data: dict, *, amount: float | None = None) -> dict:
+    return {
+        "display_name": data["display_name"],
+        "merchant_normalized": data["merchant_normalized"],
+        "amount": amount if amount is not None else data["amount"],
+        "visit_count": data.get("visit_count", 0),
+    }
+
+
+def _top_merchants_from_stats(
+    stats_by_norm: dict[str, dict],
+    *,
+    sort_key: str = "amount",
+    limit: int = TOP_MERCHANT_LIMIT,
+) -> list[dict]:
+    items = list(stats_by_norm.values())
+    items.sort(key=lambda item: item[sort_key], reverse=True)
+    return [_top_merchant_row(item) for item in items[:limit]]
+
+
+def _top_merchants_by_visits(
+    spent_stats: dict[str, dict],
+    received_stats: dict[str, dict],
+    visit_totals: dict[str, dict],
+    *,
+    limit: int = TOP_MERCHANT_LIMIT,
+) -> list[dict]:
+    all_norms = set(spent_stats) | set(received_stats) | set(visit_totals)
+    rows: list[dict] = []
+    for norm in all_norms:
+        visits = visit_totals.get(norm, {})
+        spent = spent_stats.get(norm, {})
+        received = received_stats.get(norm, {})
+        display = max(
+            (
+                spent.get("display_name"),
+                received.get("display_name"),
+                visits.get("display_name"),
+            ),
+            key=lambda value: len(value or ""),
+            default="Unknown",
+        )
+        spent_amount = spent.get("amount", 0.0)
+        received_amount = received.get("amount", 0.0)
+        amount = spent_amount if spent_amount > 0 else received_amount
+        visit_count = visits.get("visit_count", 0)
+        if visit_count <= 0:
+            visit_count = spent.get("visit_count", 0) + received.get("visit_count", 0)
+        if visit_count <= 0 and amount <= 0:
+            continue
+        rows.append(
+            {
+                "display_name": display or "Unknown",
+                "merchant_normalized": norm,
+                "amount": amount,
+                "visit_count": visit_count,
+            }
+        )
+    rows.sort(key=lambda item: item["visit_count"], reverse=True)
+    return rows[:limit]
+
+
+def _by_merchant_map(stats_by_norm: dict[str, dict]) -> dict[str, float]:
+    return {data["display_name"]: data["amount"] for data in stats_by_norm.values()}
 
 
 async def _summary_for_range(
@@ -154,33 +266,20 @@ async def _summary_for_range(
         )
     ).all()
 
-    by_merchant: dict[str, float] = {}
-    by_merchant_stats: dict[str, dict] = {}
-    for merchant, normalized, amount_raw, visits in by_merchant_rows:
-        amount = money_float(amount_raw)
-        if abs(amount) <= 0.0001:
-            continue
-        name = merchant or "Unknown"
-        by_merchant[name] = amount
-        by_merchant_stats[name] = {
-            "amount": amount,
-            "visit_count": int(visits),
-            "merchant_normalized": normalized or normalize_merchant_key(name),
-        }
-
-    by_merchant_received: dict[str, float] = {}
-    by_merchant_received_stats: dict[str, dict] = {}
-    for merchant, normalized, amount_raw, visits in by_merchant_received_rows:
-        amount = money_float(amount_raw)
-        if abs(amount) <= 0.0001:
-            continue
-        name = merchant or "Unknown"
-        by_merchant_received[name] = amount
-        by_merchant_received_stats[name] = {
-            "amount": amount,
-            "visit_count": int(visits),
-            "merchant_normalized": normalized or normalize_merchant_key(name),
-        }
+    spent_stats = _merchant_stats_by_norm(by_merchant_rows)
+    received_stats = _merchant_stats_by_norm(by_merchant_received_rows)
+    visit_rows = (
+        await session.execute(
+            select(
+                Transaction.merchant_normalized,
+                func.min(Transaction.merchant),
+                func.count(Transaction.id),
+            )
+            .where(*base)
+            .group_by(Transaction.merchant_normalized)
+        )
+    ).all()
+    visit_totals = _visit_totals_by_norm(visit_rows)
 
     return {
         "year_month": year_month,
@@ -193,10 +292,14 @@ async def _summary_for_range(
         "transaction_count": count,
         "source_updated_at": _iso_datetime(source_updated_at),
         "by_category": _amount_map(by_category_rows),
-        "by_merchant": by_merchant,
-        "by_merchant_stats": by_merchant_stats,
-        "by_merchant_received": by_merchant_received,
-        "by_merchant_received_stats": by_merchant_received_stats,
+        "top_merchants_spent": _top_merchants_from_stats(spent_stats),
+        "top_merchants_received": _top_merchants_from_stats(received_stats),
+        "top_merchants_by_visits": _top_merchants_by_visits(
+            spent_stats,
+            received_stats,
+            visit_totals,
+        ),
+        "by_merchant": _by_merchant_map(spent_stats),
     }
 
 

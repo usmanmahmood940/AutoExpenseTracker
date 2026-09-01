@@ -35,12 +35,16 @@ def test_monthly_summary_debits_only_in_breakdowns(api_client: TestClient) -> No
     assert body["transaction_count"] == 3
     assert body["by_category"]["Food & Dining"] == 700.0
     assert "Income" not in body["by_category"]
-    assert body["by_merchant"]["KFC"] == 700.0
-    assert "Payroll" not in body["by_merchant"]
-    assert body["by_merchant_stats"]["KFC"]["visit_count"] == 2
-    assert body["by_merchant_stats"]["KFC"]["amount"] == 700.0
-    assert body["by_merchant_received"]["Payroll"] == 10000.0
-    assert body["by_merchant_received_stats"]["Payroll"]["visit_count"] == 1
+    spent = body["top_merchants_spent"]
+    assert len(spent) == 1
+    assert spent[0]["display_name"] == "KFC"
+    assert spent[0]["amount"] == 700.0
+    assert spent[0]["visit_count"] == 2
+    received = body["top_merchants_received"]
+    assert len(received) == 1
+    assert received[0]["display_name"] == "Payroll"
+    assert received[0]["amount"] == 10000.0
+    assert received[0]["visit_count"] == 1
     assert body["date_from"] == "2026-03-01"
     assert body["date_to"] == "2026-03-31"
 
@@ -52,6 +56,41 @@ def test_monthly_summary_debits_only_in_breakdowns(api_client: TestClient) -> No
 
     recent = api_client.get("/analytics/summaries", params={"limit": 6}).json()
     assert [item["year_month"] for item in recent["items"]] == ["2026-04", "2026-03"]
+
+
+def test_merchant_stats_merge_name_variants(api_client: TestClient) -> None:
+    _post_tx(api_client, merchant="W.ANJUM", amount=700, tx_date="2026-03-07")
+    _post_tx(api_client, merchant="W.ANJUM", amount=552, tx_date="2026-03-11")
+    _post_tx(
+        api_client,
+        merchant="W.Anjum",
+        amount=711,
+        tx_date="2026-03-10",
+        tx_type="credit",
+        category="Transfer",
+    )
+    _post_tx(
+        api_client,
+        merchant="W.ANJUM",
+        amount=240,
+        tx_date="2026-03-28",
+        tx_type="credit",
+        category="Transfer",
+    )
+
+    body = api_client.get(
+        "/analytics/summary", params={"year_month": "2026-03"}
+    ).json()
+    spent = body["top_merchants_spent"]
+    assert len(spent) == 1
+    assert spent[0]["display_name"] == "W.ANJUM"
+    assert spent[0]["visit_count"] == 2
+    received = body["top_merchants_received"]
+    assert len(received) == 1
+    assert received[0]["visit_count"] == 2
+    by_visits = body["top_merchants_by_visits"]
+    assert len(by_visits) == 1
+    assert by_visits[0]["visit_count"] == 4
 
 
 def test_range_summary_and_daily_trend(api_client: TestClient) -> None:
@@ -66,7 +105,7 @@ def test_range_summary_and_daily_trend(api_client: TestClient) -> None:
     body = ranged.json()
     assert body["total_debit"] == 700.0
     assert body["transaction_count"] == 2
-    assert "April" not in body["by_merchant"]
+    assert all(item["display_name"] != "April" for item in body["top_merchants_spent"])
 
     trend = api_client.get(
         "/analytics/trend",
