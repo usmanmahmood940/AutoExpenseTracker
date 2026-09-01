@@ -134,6 +134,7 @@ Future<void> configureDependencies({
     () => MerchantProvider(
       getMerchantSummary: sl(),
       getMerchantTransactions: sl(),
+      transactionRepository: sl(),
     ),
   );
 

@@ -4,13 +4,16 @@ import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
-import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/provider/merchant_provider.dart';
+import 'package:nova_spend/features/merchants/presentation/widgets/merchant_filter_chips.dart';
+import 'package:nova_spend/features/merchants/presentation/widgets/merchant_hero_card.dart';
+import 'package:nova_spend/features/merchants/presentation/widgets/merchant_month_stats_card.dart';
+import 'package:nova_spend/features/merchants/presentation/widgets/merchant_remember_category_card.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/day_group_header.dart';
@@ -67,14 +70,12 @@ class _MerchantView extends StatelessWidget {
     final summary = provider.summary;
     final title = summary?.displayName ?? fallbackTitle;
     final money = AppCurrencyScope.of(context);
-    final grouped = _groupByDay(provider.items);
-    final days = grouped.keys.toList();
+    final visibleItems = provider.filteredItems;
+    final grouped = _groupByDay(visibleItems);
+    final days = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return AdaptiveScaffold(
       title: title,
-      appBar: AppBar(
-        title: Text(title),
-      ),
       body: provider.isLoading && provider.items.isEmpty
           ? const _MerchantSkeleton()
           : provider.error != null && provider.items.isEmpty
@@ -95,97 +96,68 @@ class _MerchantView extends StatelessWidget {
                     child: ListView(
                       padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
                       children: [
+                        if (summary != null) ...[
+                          MerchantHeroCard(
+                            summary: summary,
+                            formatMoney: money.formatMoney,
+                          ),
+                          MerchantMonthStatsCard(
+                            summary: summary,
+                            formatMoney: money.formatMoney,
+                          ),
+                          MerchantInsightLine(
+                            summary: summary,
+                            formatMoney: money.formatMoney,
+                          ),
+                        ],
+                        const MerchantRememberCategoryCard(),
+                        MerchantFilterChips(
+                          selected: provider.filter,
+                          onSelected: provider.setFilter,
+                        ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
                             AppSpacing.md,
-                            AppSpacing.lg,
+                            AppSpacing.sm,
                             AppSpacing.md,
                             AppSpacing.sm,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              if (summary != null) ...[
-                                Text(
-                                  l10n.merchantTotalVisits(
-                                    money.formatMoney(summary.totalSpent),
-                                    '${summary.visitCount}',
-                                  ),
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  l10n.merchantAverage(
-                                    money.formatMoney(summary.averageSpent),
-                                  ),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        if (summary != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                            ),
-                            child: AppCard(
-                              child: Text(
-                                l10n.merchantThisMonth(
-                                  money.formatMoney(summary.thisMonthSpent),
-                                  '${summary.thisMonthVisits}',
-                                ),
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: AppSpacing.lg),
-                        if (provider.error != null)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.md,
-                              0,
-                              AppSpacing.md,
-                              AppSpacing.md,
-                            ),
-                            child: LoadErrorBanner(
-                              error: provider.error,
-                              onRetry: provider.refresh,
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
                           ),
                           child: Text(
                             l10n.merchantAllTransactions,
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.sm),
                         if (provider.items.isEmpty)
                           Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             child: Center(child: Text(l10n.merchantEmpty)),
                           )
+                        else if (visibleItems.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Center(child: Text(l10n.merchantFilterEmpty)),
+                          )
                         else
-                          ..._buildListItems(context, days, grouped, provider),
+                          ..._buildListItems(
+                            context,
+                            days,
+                            grouped,
+                            provider,
+                            money.formatMoney,
+                          ),
+                        if (provider.error != null && provider.items.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.md,
+                              AppSpacing.md,
+                              AppSpacing.md,
+                              0,
+                            ),
+                            child: LoadErrorBanner(
+                              error: provider.error,
+                              onRetry: provider.loadMore,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -211,10 +183,26 @@ class _MerchantView extends StatelessWidget {
     List<String> days,
     Map<String, List<TransactionEntity>> grouped,
     MerchantProvider provider,
+    String Function(double amount) formatMoney,
   ) {
+    final l10n = context.l10n;
     final widgets = <Widget>[];
     for (final day in days) {
       final txs = grouped[day]!;
+      final spent = txs
+          .where((t) => t.type != 'credit')
+          .fold<double>(0, (sum, t) => sum + t.amount);
+      final received = txs
+          .where((t) => t.type == 'credit')
+          .fold<double>(0, (sum, t) => sum + t.amount);
+      final summary = dayGroupSummary(
+        spent: spent,
+        received: received,
+        spentPrefix: l10n.homeDayGroupSpent,
+        netPrefix: l10n.homeDayGroupNet,
+        formatMoney: formatMoney,
+      );
+
       widgets
         ..add(
           Padding(
@@ -227,9 +215,12 @@ class _MerchantView extends StatelessWidget {
             child: DayGroupHeader(
               label: relativeDayLabel(
                 day,
-                today: context.l10n.homePeriodToday,
-                yesterday: context.l10n.commonYesterday,
+                today: l10n.homePeriodToday,
+                yesterday: l10n.commonYesterday,
               ),
+              summaryPrefix: summary.prefix,
+              summaryAmount: summary.amount,
+              summaryAmountColor: summary.amountColor,
             ),
           ),
         )
@@ -277,13 +268,38 @@ class _MerchantSkeleton extends StatelessWidget {
           AppSpacing.xxl,
         ),
         children: const [
-          SkeletonBox(width: 180, height: 24),
-          SizedBox(height: AppSpacing.smPlus),
-          SkeletonBox(width: 148, height: 16),
-          SizedBox(height: AppSpacing.xs),
-          SkeletonBox(width: 112, height: 12),
+          SkeletonCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 48, height: 48),
+                SizedBox(height: AppSpacing.md),
+                SkeletonBox(width: 120, height: 12),
+                SizedBox(height: AppSpacing.xs),
+                SkeletonBox(width: 160, height: 28),
+                SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(child: SkeletonBox(height: 36)),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(child: SkeletonBox(height: 36)),
+                  ],
+                ),
+              ],
+            ),
+          ),
           SizedBox(height: AppSpacing.md),
-          SkeletonCard(child: SkeletonBox(width: 200, height: 14)),
+          SkeletonCard(
+            child: Row(
+              children: [
+                Expanded(child: SkeletonBox(height: 40)),
+                SizedBox(width: AppSpacing.sm),
+                Expanded(child: SkeletonBox(height: 40)),
+                SizedBox(width: AppSpacing.sm),
+                Expanded(child: SkeletonBox(height: 40)),
+              ],
+            ),
+          ),
           SizedBox(height: AppSpacing.lg),
           SkeletonSectionHeader(titleWidth: 132),
           SizedBox(height: AppSpacing.sm),
