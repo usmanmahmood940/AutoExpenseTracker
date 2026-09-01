@@ -8,7 +8,6 @@ import 'package:nova_spend/core/widgets/category_color_scope.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/categories/presentation/widgets/category_catalog_scope.dart';
-import 'package:nova_spend/l10n/app_strings.dart';
 
 class InsightsCategoryBars extends StatelessWidget {
   const InsightsCategoryBars({
@@ -33,10 +32,7 @@ class InsightsCategoryBars extends StatelessWidget {
     final top = topEntries(byCategory);
     final other = otherCategorySpend(byCategory, totalSpent);
     if (top.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Center(child: Text(context.l10n.insightsEmpty)),
-      );
+      return const SizedBox.shrink();
     }
 
     final catalog = CategoryCatalogScope.of(context);

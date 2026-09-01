@@ -103,7 +103,6 @@ void main() {
         spent: 0,
         transactionCount: 0,
         byCategory: const {},
-        byMerchant: const {},
         previousSpent: 100,
       );
       expect(facts.hasContent, isFalse);
@@ -114,7 +113,20 @@ void main() {
         spent: 100,
         transactionCount: 4,
         byCategory: const {'Food & Dining': 40, 'Fuel': 10},
-        byMerchant: const {'KFC': 25, 'Shell': 10},
+        topMerchantsSpent: const [
+          TopMerchantEntity(
+            displayName: 'KFC',
+            merchantNormalized: 'kfc',
+            amount: 25,
+            visitCount: 2,
+          ),
+          TopMerchantEntity(
+            displayName: 'Shell',
+            merchantNormalized: 'shell',
+            amount: 10,
+            visitCount: 1,
+          ),
+        ],
         previousSpent: 80,
       );
       expect(facts.spendChangePercent, closeTo(25, 0.001));
@@ -127,35 +139,50 @@ void main() {
   });
 
   group('topMerchantsForSort', () {
-    final summary = MonthlySummaryEntity(
+    const summary = MonthlySummaryEntity(
       yearMonth: '2026-03',
       currency: 'PKR',
       totalDebit: 700,
       totalCredit: 10000,
       net: 9300,
       transactionCount: 3,
-      byCategory: const {'Food & Dining': 700},
-      byMerchant: const {'KFC': 700, 'Shell': 100},
-      byMerchantReceived: const {'Payroll': 10000},
-      byMerchantStats: const {
-        'KFC': MerchantSpendStat(
+      byCategory: {'Food & Dining': 700},
+      topMerchantsSpent: [
+        TopMerchantEntity(
+          displayName: 'KFC',
+          merchantNormalized: 'kfc',
           amount: 700,
           visitCount: 2,
-          merchantNormalized: 'kfc',
         ),
-        'Shell': MerchantSpendStat(
+        TopMerchantEntity(
+          displayName: 'Shell',
+          merchantNormalized: 'shell',
           amount: 100,
           visitCount: 5,
-          merchantNormalized: 'shell',
         ),
-      },
-      byMerchantReceivedStats: const {
-        'Payroll': MerchantSpendStat(
+      ],
+      topMerchantsReceived: [
+        TopMerchantEntity(
+          displayName: 'Payroll',
+          merchantNormalized: 'payroll',
           amount: 10000,
           visitCount: 1,
-          merchantNormalized: 'payroll',
         ),
-      },
+      ],
+      topMerchantsByVisits: [
+        TopMerchantEntity(
+          displayName: 'Shell',
+          merchantNormalized: 'shell',
+          amount: 100,
+          visitCount: 5,
+        ),
+        TopMerchantEntity(
+          displayName: 'W.ANJUM',
+          merchantNormalized: 'w.anjum',
+          amount: 1252,
+          visitCount: 5,
+        ),
+      ],
     );
 
     test('sorts by amount spent', () {
@@ -255,7 +282,14 @@ void main() {
         net: -80,
         transactionCount: 2,
         byCategory: {'Food': 100},
-        byMerchant: {'KFC': 100},
+        topMerchantsSpent: [
+          TopMerchantEntity(
+            displayName: 'KFC',
+            merchantNormalized: 'kfc',
+            amount: 100,
+            visitCount: 2,
+          ),
+        ],
       );
       const feb = MonthlySummaryEntity(
         yearMonth: '2025-02',
@@ -265,7 +299,20 @@ void main() {
         net: -50,
         transactionCount: 1,
         byCategory: {'Food': 30, 'Fuel': 20},
-        byMerchant: {'KFC': 30, 'PSO': 20},
+        topMerchantsSpent: [
+          TopMerchantEntity(
+            displayName: 'KFC',
+            merchantNormalized: 'kfc',
+            amount: 30,
+            visitCount: 1,
+          ),
+          TopMerchantEntity(
+            displayName: 'PSO',
+            merchantNormalized: 'pso',
+            amount: 20,
+            visitCount: 1,
+          ),
+        ],
       );
       final merged = mergeMonthlySummaries(
         [jan, feb],
@@ -277,7 +324,8 @@ void main() {
       expect(merged.net, -130);
       expect(merged.transactionCount, 3);
       expect(merged.byCategory['Food'], 130);
-      expect(merged.byMerchant['KFC'], 130);
+      expect(merged.topMerchantsSpent.first.displayName, 'KFC');
+      expect(merged.topMerchantsSpent.first.amount, 130);
       expect(merged.dateFrom, '2025-01-01');
       expect(merged.dateTo, '2025-02-28');
     });

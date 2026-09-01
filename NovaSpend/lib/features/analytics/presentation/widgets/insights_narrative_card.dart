@@ -5,6 +5,7 @@ import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_category_bars.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_skeleton.dart';
 import 'package:nova_spend/features/categories/presentation/widgets/category_catalog_scope.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -31,24 +32,7 @@ class InsightsNarrativeCard extends StatelessWidget {
     final accentInk = AppColors.navActiveForeground(brightness);
 
     if (isLoadingNarrative && (aiNarrative?.trim().isEmpty ?? true)) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        child: _NarrativeCardShell(
-          child: SizedBox(
-            height: 72,
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: accentInk,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+      return const InsightsNarrativeSkeleton();
     }
 
     final copy = _resolveCopy(context);

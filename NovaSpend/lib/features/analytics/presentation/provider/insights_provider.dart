@@ -7,6 +7,18 @@ import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/analytics/domain/repositories/analytics_repository.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 
+class _InsightsExtras {
+  const _InsightsExtras({
+    required this.trend,
+    required this.previousTrend,
+    required this.recurring,
+  });
+
+  final List<TrendPointEntity> trend;
+  final List<TrendPointEntity> previousTrend;
+  final List<RecurringMerchantEntity> recurring;
+}
+
 class InsightsProvider extends ChangeNotifier {
   InsightsProvider({required AnalyticsRepository repository})
       : _repository = repository;
@@ -14,6 +26,8 @@ class InsightsProvider extends ChangeNotifier {
   final AnalyticsRepository _repository;
   final Map<String, MonthlySummaryEntity> _summaryCache = {};
   final Map<String, MonthlySummaryEntity?> _previousSummaryCache = {};
+  final Map<String, _InsightsExtras> _extrasCache = {};
+  final Map<String, String?> _narrativeCache = {};
 
   InsightsPeriodPreset preset = InsightsPeriodPreset.thisMonth;
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
@@ -124,7 +138,7 @@ class InsightsProvider extends ChangeNotifier {
       spent: current.totalDebit,
       transactionCount: current.transactionCount,
       byCategory: current.byCategory,
-      byMerchant: current.byMerchant,
+      topMerchantsSpent: current.topMerchantsSpent,
       previousSpent: previousSummary?.totalDebit,
     );
   }
@@ -205,25 +219,28 @@ class InsightsProvider extends ChangeNotifier {
     final uid = _uid;
     if (uid == null) return;
     final token = ++_loadToken;
-    error = null;
-    isLoading = true;
-    trend = const [];
-    recurring = const [];
-    previousTrend = const [];
 
     final bounds = range;
     final rangeKey = _rangeKey(bounds);
-    if (_narrativeRangeKey != rangeKey) {
-      aiNarrative = null;
-      _narrativeRangeKey = null;
-    }
-    notifyListeners();
-
-    final previous = previousInsightsRange(
+    final previousBounds = previousInsightsRange(
       preset: _chevronOverride ? InsightsPeriodPreset.thisMonth : preset,
       from: bounds.from,
       to: bounds.to,
     );
+    final previousKey = _rangeKey(previousBounds);
+
+    if (forceRefresh) {
+      _clearCaches();
+    }
+
+    _hydrateFromCache(rangeKey: rangeKey, previousKey: previousKey);
+
+    error = null;
+    isLoading = summary == null;
+    isLoadingExtras = summary != null && !_extrasCache.containsKey(rangeKey);
+    isLoadingNarrative =
+        summary != null && !_narrativeCache.containsKey(rangeKey);
+    notifyListeners();
 
     try {
       if (preset == InsightsPeriodPreset.thisYear && !_chevronOverride) {
@@ -234,7 +251,7 @@ class InsightsProvider extends ChangeNotifier {
         );
         final previousFuture = _rangeOrMonthly(
           uid,
-          previous,
+          previousBounds,
           forceRefresh: forceRefresh,
         );
         summary = await currentFuture;
@@ -253,7 +270,7 @@ class InsightsProvider extends ChangeNotifier {
         );
         final previousFuture = _cachedPreviousSummary(
           uid,
-          previous,
+          previousBounds,
           () => _tryPreviousMonth(uid, prevYm),
           forceRefresh: forceRefresh,
         );
@@ -270,12 +287,45 @@ class InsightsProvider extends ChangeNotifier {
     } finally {
       if (token == _loadToken) {
         isLoading = false;
+        if (summary != null) {
+          isLoadingExtras = !_extrasCache.containsKey(rangeKey);
+          isLoadingNarrative = !_narrativeCache.containsKey(rangeKey);
+        } else {
+          isLoadingExtras = false;
+          isLoadingNarrative = false;
+        }
         notifyListeners();
       }
     }
 
     if (token != _loadToken || summary == null) return;
-    await _loadExtras(uid, token, bounds);
+    await _loadExtras(uid, token, bounds, rangeKey: rangeKey);
+  }
+
+  void _hydrateFromCache({
+    required String rangeKey,
+    required String previousKey,
+  }) {
+    summary = _summaryCache[rangeKey];
+    previousSummary = _previousSummaryCache[previousKey];
+
+    final extras = _extrasCache[rangeKey];
+    if (extras != null) {
+      trend = extras.trend;
+      previousTrend = extras.previousTrend;
+      recurring = extras.recurring;
+    } else {
+      trend = const [];
+      previousTrend = const [];
+      recurring = const [];
+    }
+
+    if (_narrativeRangeKey != rangeKey) {
+      aiNarrative = _narrativeCache[rangeKey];
+      if (aiNarrative == null) {
+        _narrativeRangeKey = null;
+      }
+    }
   }
 
   Future<MonthlySummaryEntity?> _tryPreviousMonth(
@@ -335,37 +385,54 @@ class InsightsProvider extends ChangeNotifier {
   Future<void> _loadExtras(
     String uid,
     int token,
-    ({DateTime from, DateTime to}) bounds,
-  ) async {
-    isLoadingExtras = true;
-    isLoadingNarrative = true;
-    notifyListeners();
+    ({DateTime from, DateTime to}) bounds, {
+    required String rangeKey,
+  }) async {
+    if (_extrasCache.containsKey(rangeKey)) {
+      isLoadingExtras = false;
+      isLoadingNarrative = !_narrativeCache.containsKey(rangeKey);
+      notifyListeners();
+      if (_narrativeCache.containsKey(rangeKey)) return;
+    } else {
+      isLoadingExtras = true;
+      isLoadingNarrative = true;
+      notifyListeners();
+    }
 
-    final rangeKey = _rangeKey(bounds);
     final previousBounds = previousRange;
     final trendFuture = _tryTrend(uid, bounds);
     final previousTrendFuture = _tryTrend(uid, previousBounds);
     final recurringFuture = _tryRecurring(uid, bounds);
     final narrativeFuture = _tryNarrative(uid, bounds);
 
-    final results = await Future.wait([
-      trendFuture,
-      previousTrendFuture,
-      recurringFuture,
-    ]);
-    trend = results[0] as List<TrendPointEntity>;
-    previousTrend = results[1] as List<TrendPointEntity>;
-    recurring = results[2] as List<RecurringMerchantEntity>;
-    if (token != _loadToken) return;
+    if (!_extrasCache.containsKey(rangeKey)) {
+      final results = await Future.wait([
+        trendFuture,
+        previousTrendFuture,
+        recurringFuture,
+      ]);
+      trend = results[0] as List<TrendPointEntity>;
+      previousTrend = results[1] as List<TrendPointEntity>;
+      recurring = results[2] as List<RecurringMerchantEntity>;
+      if (token != _loadToken) return;
 
-    isLoadingExtras = false;
-    notifyListeners();
+      _extrasCache[rangeKey] = _InsightsExtras(
+        trend: trend,
+        previousTrend: previousTrend,
+        recurring: recurring,
+      );
+      isLoadingExtras = false;
+      notifyListeners();
+    }
 
-    aiNarrative = await narrativeFuture;
-    if (token != _loadToken) return;
-    _narrativeRangeKey = rangeKey;
-    isLoadingNarrative = false;
-    notifyListeners();
+    if (!_narrativeCache.containsKey(rangeKey)) {
+      aiNarrative = await narrativeFuture;
+      if (token != _loadToken) return;
+      _narrativeCache[rangeKey] = aiNarrative;
+      _narrativeRangeKey = rangeKey;
+      isLoadingNarrative = false;
+      notifyListeners();
+    }
   }
 
   Future<MonthlySummaryEntity?> _cachedSummary(
@@ -448,6 +515,9 @@ class InsightsProvider extends ChangeNotifier {
   void _clearCaches() {
     _summaryCache.clear();
     _previousSummaryCache.clear();
+    _extrasCache.clear();
+    _narrativeCache.clear();
+    _narrativeRangeKey = null;
   }
 
   String _rangeKey(({DateTime from, DateTime to}) bounds) {

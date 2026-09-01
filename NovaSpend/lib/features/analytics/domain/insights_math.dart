@@ -119,93 +119,23 @@ List<MapEntry<String, double>> topEntries(
 
 List<TopMerchantRowData> topMerchantsForSort(
   MonthlySummaryEntity summary,
-  TopMerchantSort sort, {
-  int limit = 5,
-}) {
-  switch (sort) {
-    case TopMerchantSort.amountSpent:
-      return topEntries(summary.byMerchant, limit: limit)
-          .map((entry) => _merchantRowFromSpend(summary, entry.key, entry.value))
-          .toList();
-    case TopMerchantSort.amountReceived:
-      return topEntries(summary.byMerchantReceived, limit: limit)
-          .map(
-            (entry) => _merchantRowFromReceived(summary, entry.key, entry.value),
-          )
-          .toList();
-    case TopMerchantSort.visits:
-      final names = <String>{
-        ...summary.byMerchant.keys,
-        ...summary.byMerchantReceived.keys,
-        ...summary.byMerchantStats.keys,
-        ...summary.byMerchantReceivedStats.keys,
-      };
-      final rows = <TopMerchantRowData>[];
-      for (final name in names) {
-        final visits = _merchantVisitCount(summary, name);
-        if (visits <= 0) continue;
-        rows.add(
-          TopMerchantRowData(
-            name: name,
-            displayAmount: summary.byMerchant[name] ??
-                summary.byMerchantReceived[name] ??
-                0,
-            visits: visits,
-            merchantNormalized: _merchantNormalized(summary, name),
-          ),
-        );
-      }
-      rows.sort((a, b) => b.visits!.compareTo(a.visits!));
-      if (rows.length <= limit) return rows;
-      return rows.take(limit).toList();
-  }
-}
-
-TopMerchantRowData _merchantRowFromSpend(
-  MonthlySummaryEntity summary,
-  String name,
-  double amount,
+  TopMerchantSort sort,
 ) {
-  return TopMerchantRowData(
-    name: name,
-    displayAmount: amount,
-    visits: summary.byMerchantStats[name]?.visitCount,
-    merchantNormalized: _merchantNormalized(summary, name),
-  );
-}
-
-TopMerchantRowData _merchantRowFromReceived(
-  MonthlySummaryEntity summary,
-  String name,
-  double amount,
-) {
-  return TopMerchantRowData(
-    name: name,
-    displayAmount: amount,
-    visits: summary.byMerchantReceivedStats[name]?.visitCount,
-    merchantNormalized: _merchantNormalized(summary, name, preferReceived: true),
-  );
-}
-
-int _merchantVisitCount(MonthlySummaryEntity summary, String name) {
-  return (summary.byMerchantStats[name]?.visitCount ?? 0) +
-      (summary.byMerchantReceivedStats[name]?.visitCount ?? 0);
-}
-
-String _merchantNormalized(
-  MonthlySummaryEntity summary,
-  String name, {
-  bool preferReceived = false,
-}) {
-  if (preferReceived) {
-    final received = summary.byMerchantReceivedStats[name]?.merchantNormalized;
-    if (received != null && received.isNotEmpty) return received;
-  }
-  final spent = summary.byMerchantStats[name]?.merchantNormalized;
-  if (spent != null && spent.isNotEmpty) return spent;
-  final received = summary.byMerchantReceivedStats[name]?.merchantNormalized;
-  if (received != null && received.isNotEmpty) return received;
-  return normalizeMerchantKey(name);
+  final merchants = switch (sort) {
+    TopMerchantSort.amountSpent => summary.topMerchantsSpent,
+    TopMerchantSort.amountReceived => summary.topMerchantsReceived,
+    TopMerchantSort.visits => summary.topMerchantsByVisits,
+  };
+  return merchants
+      .map(
+        (merchant) => TopMerchantRowData(
+          name: merchant.displayName,
+          displayAmount: merchant.amount,
+          visits: merchant.visitCount,
+          merchantNormalized: merchant.merchantNormalized,
+        ),
+      )
+      .toList();
 }
 
 String merchantInitials(String name) {
@@ -267,16 +197,16 @@ InsightsNarrativeFacts narrativeFacts({
   required double spent,
   required int transactionCount,
   required Map<String, double> byCategory,
-  required Map<String, double> byMerchant,
+  List<TopMerchantEntity> topMerchantsSpent = const [],
   double? previousSpent,
 }) {
   if (transactionCount <= 0 && spent.abs() < 0.0001) {
     return const InsightsNarrativeFacts();
   }
   final categories = topEntries(byCategory, limit: 1);
-  final merchants = topEntries(byMerchant, limit: 1);
   final topCategory = categories.isEmpty ? null : categories.first;
-  final topMerchant = merchants.isEmpty ? null : merchants.first;
+  final topMerchant =
+      topMerchantsSpent.isEmpty ? null : topMerchantsSpent.first;
   return InsightsNarrativeFacts(
     spendChangePercent: previousSpent == null
         ? null
@@ -287,8 +217,8 @@ InsightsNarrativeFacts narrativeFacts({
     topCategoryShare: topCategory == null
         ? null
         : shareOfTotal(topCategory.value, spent),
-    topMerchant: topMerchant?.key,
-    topMerchantAmount: topMerchant?.value,
+    topMerchant: topMerchant?.displayName,
+    topMerchantAmount: topMerchant?.amount,
   );
 }
 
@@ -350,6 +280,35 @@ Map<String, double> _sumMaps(Iterable<Map<String, double>> maps) {
   return out;
 }
 
+List<TopMerchantEntity> _mergeTopMerchants(
+  Iterable<List<TopMerchantEntity>> lists, {
+  required num Function(TopMerchantEntity) sortValue,
+  int limit = 5,
+}) {
+  final byNorm = <String, TopMerchantEntity>{};
+  for (final list in lists) {
+    for (final merchant in list) {
+      final existing = byNorm[merchant.merchantNormalized];
+      if (existing == null) {
+        byNorm[merchant.merchantNormalized] = merchant;
+        continue;
+      }
+      byNorm[merchant.merchantNormalized] = TopMerchantEntity(
+        displayName: merchant.displayName.length > existing.displayName.length
+            ? merchant.displayName
+            : existing.displayName,
+        merchantNormalized: merchant.merchantNormalized,
+        amount: existing.amount + merchant.amount,
+        visitCount: existing.visitCount + merchant.visitCount,
+      );
+    }
+  }
+  final sorted = byNorm.values.toList()
+    ..sort((a, b) => sortValue(b).compareTo(sortValue(a)));
+  if (sorted.length <= limit) return sorted;
+  return sorted.take(limit).toList();
+}
+
 MonthlySummaryEntity mergeMonthlySummaries(
   List<MonthlySummaryEntity> items, {
   required DateTime from,
@@ -359,41 +318,11 @@ MonthlySummaryEntity mergeMonthlySummaries(
   var credit = 0.0;
   var count = 0;
   var currency = 'PKR';
-  final stats = <String, MerchantSpendStat>{};
-  final receivedStats = <String, MerchantSpendStat>{};
   for (final item in items) {
     currency = item.currency;
     debit += item.totalDebit;
     credit += item.totalCredit;
     count += item.transactionCount;
-    item.byMerchantStats.forEach((key, stat) {
-      final existing = stats[key];
-      if (existing == null) {
-        stats[key] = stat;
-        return;
-      }
-      stats[key] = MerchantSpendStat(
-        amount: existing.amount + stat.amount,
-        visitCount: existing.visitCount + stat.visitCount,
-        merchantNormalized: existing.merchantNormalized.isNotEmpty
-            ? existing.merchantNormalized
-            : stat.merchantNormalized,
-      );
-    });
-    item.byMerchantReceivedStats.forEach((key, stat) {
-      final existing = receivedStats[key];
-      if (existing == null) {
-        receivedStats[key] = stat;
-        return;
-      }
-      receivedStats[key] = MerchantSpendStat(
-        amount: existing.amount + stat.amount,
-        visitCount: existing.visitCount + stat.visitCount,
-        merchantNormalized: existing.merchantNormalized.isNotEmpty
-            ? existing.merchantNormalized
-            : stat.merchantNormalized,
-      );
-    });
   }
   return MonthlySummaryEntity(
     yearMonth: '',
@@ -405,9 +334,17 @@ MonthlySummaryEntity mergeMonthlySummaries(
     net: credit - debit,
     transactionCount: count,
     byCategory: _sumMaps(items.map((e) => e.byCategory)),
-    byMerchant: _sumMaps(items.map((e) => e.byMerchant)),
-    byMerchantStats: stats,
-    byMerchantReceived: _sumMaps(items.map((e) => e.byMerchantReceived)),
-    byMerchantReceivedStats: receivedStats,
+    topMerchantsSpent: _mergeTopMerchants(
+      items.map((e) => e.topMerchantsSpent),
+      sortValue: (merchant) => merchant.amount,
+    ),
+    topMerchantsReceived: _mergeTopMerchants(
+      items.map((e) => e.topMerchantsReceived),
+      sortValue: (merchant) => merchant.amount,
+    ),
+    topMerchantsByVisits: _mergeTopMerchants(
+      items.map((e) => e.topMerchantsByVisits),
+      sortValue: (merchant) => merchant.visitCount,
+    ),
   );
 }

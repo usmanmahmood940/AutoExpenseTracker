@@ -39,10 +39,10 @@ class InsightsMerchantList extends StatelessWidget {
             _MerchantRow(
               row: top[i],
               amountLabel: formatMoney(top[i].displayAmount),
+              formatMoney: formatMoney,
               showDivider: i != top.length - 1,
               textTheme: theme.textTheme,
               brightness: theme.brightness,
-              formatMoney: formatMoney,
             ),
         ],
       ),
