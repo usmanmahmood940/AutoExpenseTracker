@@ -93,7 +93,7 @@ class LoginSignupForm extends StatelessWidget {
               l10n.appTitle,
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: AppColors.accent,
+                color: AppColors.primaryInk(theme.brightness),
               ),
               textAlign: TextAlign.center,
             ),
@@ -179,7 +179,7 @@ class LoginSignupForm extends StatelessWidget {
               Text(
                 infoText!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.accent,
+                  color: AppColors.primaryInk(theme.brightness),
                 ),
               ),
             ],

@@ -6,7 +6,7 @@ import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/locale/app_locale_controller.dart';
 import 'package:nova_spend/core/locale/app_locale_scope.dart';
 import 'package:nova_spend/core/theme/app_theme.dart';
-import 'package:nova_spend/features/splash/presentation/pages/splash_gate.dart';
+import 'package:nova_spend/features/auth/presentation/pages/auth_gate.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/categories/presentation/widgets/category_color_binder.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
@@ -58,7 +58,7 @@ class NovaSpendApp extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                     GlobalCupertinoLocalizations.delegate,
                   ],
-                  home: const SplashGate(),
+                  home: const AuthGate(),
                 );
               },
             ),

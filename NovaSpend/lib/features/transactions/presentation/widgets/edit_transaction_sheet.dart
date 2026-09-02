@@ -558,11 +558,11 @@ class _AmountField extends StatelessWidget {
                 ),
                 child: Text(
                   symbol,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
-                    color: AppColors.primaryStrong,
+                    color: AppColors.primaryInk(Theme.of(context).brightness),
                   ),
                 ),
               ),
@@ -576,14 +576,16 @@ class _AmountField extends StatelessWidget {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
                   ],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
                     letterSpacing: -0.6,
-                    color: AppColors.primaryStrong,
+                    color: AppColors.primaryInk(Theme.of(context).brightness),
                   ),
-                  cursorColor: AppColors.primaryStrong,
+                  cursorColor: AppColors.primaryInk(
+                    Theme.of(context).brightness,
+                  ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     isDense: true,
@@ -1029,10 +1031,10 @@ class _RememberToggle extends StatelessWidget {
               color: iconFill,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.auto_awesome,
               size: 20,
-              color: AppColors.primaryStrong,
+              color: AppColors.primaryInk(Theme.of(context).brightness),
             ),
           ),
           const SizedBox(width: 16),

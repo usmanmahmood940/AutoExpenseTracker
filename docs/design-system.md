@@ -2,20 +2,20 @@
 name: NovaSpend
 colors:
   light:
-    surface: '#f9f9f9'
-    surface-dim: '#dadada'
-    surface-bright: '#f9f9f9'
+    surface: '#f6faf8'
+    surface-dim: '#e4ebe7'
+    surface-bright: '#f6faf8'
     surface-container-lowest: '#ffffff'
-    surface-container-low: '#f3f3f3'
-    surface-container: '#eeeeee'
-    surface-container-high: '#e8e8e8'
-    surface-container-highest: '#e2e2e2'
-    on-surface: '#1a1c1c'
+    surface-container-low: '#f0f5f2'
+    surface-container: '#e8efeb'
+    surface-container-high: '#e4ebe7'
+    surface-container-highest: '#e4ebe7'
+    on-surface: '#141917'
     on-surface-variant: '#3c4a42'
     inverse-surface: '#2f3131'
-    inverse-on-surface: '#f0f1f1'
-    outline: '#6c7a71'
-    outline-variant: '#bbcabf'
+    inverse-on-surface: '#e8edea'
+    outline: '#8fa396'
+    outline-variant: '#c5d4cb'
     surface-tint: '#006c49'
     primary: '#006c49'
     on-primary: '#ffffff'
@@ -46,29 +46,29 @@ colors:
     tertiary-fixed-dim: '#ffb3af'
     on-tertiary-fixed: '#410005'
     on-tertiary-fixed-variant: '#842225'
-    background: '#f9f9f9'
-    on-background: '#1a1c1c'
-    surface-variant: '#e2e2e2'
+    background: '#f6faf8'
+    on-background: '#141917'
+    surface-variant: '#e4ebe7'
   # Derived from the light tokens (fixed/inverse roles + Material baseline error).
   # Neutral surfaces reuse the values already shipping in AppColors so dark mode
   # doesn't regress. Roles marked "approx" below have no source token to derive
   # from exactly — re-verify with a proper M3 tonal palette generator before
   # treating them as final.
   dark:
-    surface: '#1c1c1e'
-    surface-dim: '#141416'
-    surface-bright: '#2f3131' # = light.inverse-surface
-    surface-container-lowest: '#131414'
-    surface-container-low: '#1c1c1e'
-    surface-container: '#202222'
-    surface-container-high: '#2c2c2e'
-    surface-container-highest: '#363838'
-    on-surface: '#f0f1f1' # = light.inverse-on-surface
-    on-surface-variant: '#bbcabf' # approx (= light.outline-variant)
-    inverse-surface: '#f9f9f9' # = light.surface
-    inverse-on-surface: '#1a1c1c' # = light.on-surface
-    outline: '#869287' # approx
-    outline-variant: '#3a3a3c' # approx
+    surface: '#121614'
+    surface-dim: '#0a1f18'
+    surface-bright: '#242b28'
+    surface-container-lowest: '#0f1211'
+    surface-container-low: '#161a18'
+    surface-container: '#1c2220'
+    surface-container-high: '#242b28'
+    surface-container-highest: '#2e3632'
+    on-surface: '#e8edea'
+    on-surface-variant: '#9caea4'
+    inverse-surface: '#f6faf8'
+    inverse-on-surface: '#141917'
+    outline: '#4a5650'
+    outline-variant: '#3a4340'
     surface-tint: '#4edea3'
     primary: '#4edea3' # = light.primary-fixed-dim / inverse-primary
     on-primary: '#002113' # = light.on-primary-fixed
@@ -87,9 +87,9 @@ colors:
     on-error: '#690005'
     error-container: '#93000a'
     on-error-container: '#ffdad6'
-    background: '#1c1c1e'
-    on-background: '#f0f1f1'
-    surface-variant: '#2c2c2e' # approx
+    background: '#121614'
+    on-background: '#e8edea'
+    surface-variant: '#242b28'
 typography:
   hero-display:
     fontFamily: Inter
@@ -159,20 +159,34 @@ The aesthetic is predominantly **Minimal Flat (90%)**, prioritizing legibility a
 
 ## Colors
 
-The palette is anchored by **Emerald** (`primary-container` / `#10B981`), used exclusively for positive financial momentum (income, savings goals, active states, and primary actions). The `primary` role (`#006C49`, a darker emerald) is reserved for text/icon contexts that need to sit directly on light surfaces (e.g. active nav icon, links), while `primary-container` is the vivid fill used on buttons and accent chips.
+The palette is anchored by **Emerald**. Roles must not collapse:
+
+- **`primary`** (`#006C49`) — on-light ink (links, nav glyph, wordmark) and **filled CTAs** (FAB, primary buttons) with `on-primary` white. White-on-`#10B981` fails WCAG; do not put body text or button labels on the vivid fill.
+- **`primary-container`** (`#10B981`) — credits, received amounts, chart series. Pair with `on-primary-container` (`#00422B`) if you ever fill a chip with it.
+- **`inverse-primary`** (`#4EDEA3`) — dark-mode ink, received amounts, and chart series.
 
 A **Soft Red** family is reserved strictly for high-impact debit details and critical alerts, to maintain the "calm" atmosphere. To avoid three competing reds, use each role for a distinct purpose rather than interchangeably:
 
 - **`error`** (`#BA1A1A`) — destructive actions and validation failures only (delete, form errors).
-- **`secondary`** (`#B61722`) — debit/negative-amount emphasis in transaction UI (e.g. an outlined amount, a "spent" delta).
+- **`secondary`** (`#B61722`) — debit/negative-amount emphasis in transaction UI (e.g. an outlined amount, a "spent" delta). Dark: `#FFB3AD`.
 - **`tertiary`** (`#A43A3A`) — reserved for a future second semantic need (e.g. a distinct "alert/attention" badge that isn't a hard error). Don't introduce a fourth red; if a component needs debit-red, use `secondary`.
 
 General rules:
 
 - **Primary Text:** `on-surface` — near-black in light mode, near-white in dark mode.
 - **Secondary/Muted Text:** `on-surface-variant`, roughly 60% visual weight of primary text.
-- **Backgrounds:** `background` — `#F9F9F9` (Light) / `#1C1C1E` (Dark) — base canvas, high-contrast separation from cards.
+- **Backgrounds:** `background` — `#F6FAF8` (Light) / `#121614` (Dark) — green-tinted canvas, high-contrast separation from cards.
 - **Borders:** `outline-variant` — subtle 1px strokes define structure without adding visual weight.
+
+### Gradients (restricted)
+
+Product chrome stays **flat**. Gradients are allowed only as:
+
+1. **Hero wash** — vertical mint/forest → canvas behind Home / Insights (`AppGradients.heroWash`).
+2. **Chart underfill** — emerald 35% → transparent under the primary series (`AppGradients.chartArea`).
+3. **Splash** — solid `#0D4A32` matching the app icon (no mint radial).
+
+Do **not** put gradients on FAB, filled buttons, or cards.
 
 ## Typography
 
@@ -195,9 +209,9 @@ The layout operates on a **strict 8px grid system**. Every spacing token must be
 
 Visual hierarchy is achieved through **Tonal Layers** rather than heavy shadows.
 
-1. **Base (Level 0):** `background`.
+1. **Base (Level 0):** `background`, with an optional **hero wash** (mint/forest → canvas) behind Home / Insights only.
 2. **Surface (Level 1):** Content cards (`surface-container-lowest` light / `surface-container-high` dark) with a 1px `outline-variant` border. No shadows here — keeps the "Flat" aesthetic.
-3. **Overlay (Level 2):** Bottom tab bars and sticky headers use a **Glassmorphic** effect (Backdrop Blur: 20px, Opacity: 80%) so content can scroll underneath while maintaining context.
+3. **Overlay (Level 2):** Bottom tab bars and sticky headers use a **Glassmorphic** effect (Backdrop Blur: 12–20px, Opacity: ~82%) so content can scroll underneath while maintaining context.
 
 Interactive elements (buttons) may use a very soft, low-opacity ambient shadow (4px blur, 5% black) only when placed on a colored background, so they feel "pressable."
 
@@ -229,37 +243,34 @@ The dashboard centerpiece.
 - **Bottom:** Smaller "Received" amount in `primary-container` (Emerald) with a subtle "+" prefix.
 
 ### Filter Chips & Controls
-- **Filter Chips:** Pill-shaped (`radius-roles.chip`), `surface-container-low` background, `label-metadata`-weight text (13px medium). Active state: `primary-container` background with `on-primary` text.
-- **Segmented Control:** A flat `surface-container` background with a sliding `primary-container` pill to indicate the active selection (e.g. Weekly/Monthly/Yearly).
-- **Bottom Tab Bar:** 10% glassmorphism blur. Icons are 24px linear strokes. Active tab uses `primary-container` (Emerald).
+- **Filter Chips:** Pill-shaped (`radius-roles.chip`), `surface-container-low` background, `label-metadata`-weight text (13px medium). Active state: pale `nav-active-fill` with `primary` / `inverse-primary` ink — not white-on-mint.
+- **Segmented Control:** A flat card track with a sliding **`primary`** pill (`#006C49`) and `on-primary` white label.
+- **Bottom Tab Bar:** 10% glassmorphism blur. Icons are 24px linear strokes. Active tab uses `primary` (light) / `inverse-primary` (dark) on a soft emerald fill.
 
 ### Input Fields
-Minimalist underline or `surface-container-low` fills. Focus state is a 2px `primary-container` bottom border rather than a full box glow.
+Minimalist underline or `surface-container-low` fills. Focus state is a 2px `primary` (`#006C49`) border rather than a full box glow.
 
 ---
 
 ## Dark Mode
 
-A `dark` color block is included in the frontmatter above. Confidence varies by role:
+Forest-charcoal neutrals (`#121614` canvas, `#242B28` cards) with `inverse-primary` (`#4EDEA3`) for ink, received amounts, and charts. Filled CTAs stay `primary` (`#006C49`) + white in both themes so FAB/buttons keep contrast.
 
-- **High confidence:** `primary*`, `secondary*`, `tertiary*` dark roles — derived directly from the `*-fixed` / `*-fixed-dim` / `inverse-*` tokens already present in the light spec (that's exactly what those M3 roles are for).
-- **High confidence:** `error*` dark roles — standard Material 3 baseline dark-error tones, independent of seed color.
-- **Medium confidence:** neutral surfaces (`surface`, `surface-container-*`, `background`) — reused from the app's existing shipped dark palette (`#1C1C1E` / `#2C2C2E` / `#3A3A3C`) rather than invented, so dark mode won't regress.
-- **Approximate — verify before relying on it:** `outline`, `outline-variant`, `surface-variant`, `on-surface-variant` in dark mode. These don't have a source token to derive from exactly. Before final implementation, run the seed color (`surface-tint` / `primary` = `#006C49`) through a proper M3 tonal palette generator (e.g. Material Theme Builder) and diff against the approximations here.
+Debit emphasis uses `secondary` `#FFB3AD` on dark surfaces. Do not introduce a fourth (coral) red.
 
-## Implementation Mapping (for the upcoming feature-by-feature revamp)
-
-This spec is the source of truth going forward. When each feature is revamped, map tokens to the existing Flutter theme files rather than inlining hex/px values:
+## Implementation Mapping
 
 | Token group | Target file |
 |---|---|
 | `colors.light` / `colors.dark` | `NovaSpend/lib/core/theme/app_colors.dart` |
+| Hero wash / chart underfill | `NovaSpend/lib/core/theme/app_gradients.dart` |
+| `ColorScheme` + CTA fills | `NovaSpend/lib/core/theme/app_theme.dart` |
 | `radius-roles` | `NovaSpend/lib/core/theme/app_radius.dart` |
 | `spacing` | `NovaSpend/lib/core/theme/app_spacing.dart` |
 | `typography` | `NovaSpend/lib/core/theme/app_theme.dart` (`_textTheme`) |
-| Motion (unchanged, already matches this system) | `NovaSpend/lib/core/theme/app_motion.dart` |
+| Motion | `NovaSpend/lib/core/theme/app_motion.dart` |
 
-No Dart files were changed in this pass — this doc only records the target theme. Existing tokens (`AppColors.accent = #10B981`, `AppRadius.lg = 20`, etc.) already happen to match large parts of this spec; the remaining gap is mainly the full M3 role set (surface containers, secondary/tertiary/error roles, dark mode) and the typography scale, which the next implementation pass should apply file by file.
+Flutter helpers: `AppColors.primaryInk` (links/icons), `positiveAmount` (credits/charts), `spendForeground` (debit emphasis). White-on-fill CTAs use `primaryStrong` + `onPrimary`.
 
 ## Improvements Applied vs. Original Draft
 

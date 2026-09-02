@@ -11,6 +11,7 @@ import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
+import 'package:nova_spend/core/widgets/hero_wash.dart';
 import 'package:nova_spend/core/widgets/period_overview_card.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
@@ -79,6 +80,7 @@ class _HomeSkeletonShell extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
+          const Positioned(top: 0, left: 0, right: 0, child: HeroWash()),
           Positioned.fill(
             child: CustomScrollView(
               clipBehavior: Clip.none,
@@ -91,7 +93,9 @@ class _HomeSkeletonShell extends StatelessWidget {
                     AppSpacing.md,
                     0,
                   ),
-                  sliver: const SliverToBoxAdapter(child: _PeriodToggleSkeleton()),
+                  sliver: const SliverToBoxAdapter(
+                    child: _PeriodToggleSkeleton(),
+                  ),
                 ),
                 const SliverPadding(
                   padding: EdgeInsets.only(top: _sectionGap),
@@ -119,17 +123,7 @@ class _HomeSkeletonShell extends StatelessWidget {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: GlassHeaderBar(
-              title: Text(
-                l10n.homeBrandName,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.025 * 24,
-                  color: AppColors.primaryStrong,
-                ),
-              ),
-            ),
+            child: const GlassHeaderBar.brand(),
           ),
           Positioned(
             right: AppSpacing.md,
@@ -201,6 +195,7 @@ class _HomeView extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
+          const Positioned(top: 0, left: 0, right: 0, child: HeroWash()),
           Positioned.fill(
             child: RefreshIndicator(
               edgeOffset: GlassHeaderBar.totalHeight(context),
@@ -246,17 +241,7 @@ class _HomeView extends StatelessWidget {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: GlassHeaderBar(
-              title: Text(
-                l10n.homeBrandName,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.025 * 24,
-                  color: AppColors.primaryStrong,
-                ),
-              ),
-            ),
+            child: const GlassHeaderBar.brand(),
           ),
           Positioned(
             right: AppSpacing.md,
@@ -529,7 +514,9 @@ class _Highlights extends StatelessWidget {
                     highlight: home.highestReceive,
                     label: l10n.homeHighestReceived,
                     iconAsset: 'assets/icons/icon_highest_received.svg',
-                    amountColor: AppColors.primaryStrong,
+                    amountColor: AppColors.positiveAmount(
+                      Theme.of(context).brightness,
+                    ),
                   ),
                 ),
               ],
@@ -562,8 +549,8 @@ Widget _highlightCard(
     category: highlight.category,
     paymentMethod: '',
   );
-  final hasMerchant = highlight.merchant.trim().isNotEmpty ||
-      resolved != kDefaultMerchant;
+  final hasMerchant =
+      highlight.merchant.trim().isNotEmpty || resolved != kDefaultMerchant;
   final merchant = hasMerchant ? resolved : highlight.category;
   final day = relativeDayLabel(
     highlight.transactionDate,
@@ -702,14 +689,14 @@ class _ShowMoreButton extends StatelessWidget {
                 l10n.homeShowMore,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primaryStrong,
+                  color: AppColors.primaryInk(brightness),
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
               Icon(
                 Icons.arrow_forward_rounded,
                 size: 16,
-                color: AppColors.primaryStrong,
+                color: AppColors.primaryInk(brightness),
               ),
             ],
           ),
@@ -751,10 +738,8 @@ void _openMerchantHighlight(BuildContext context, PeriodHighlight highlight) {
             : normalizeMerchantKey(highlight.merchant));
   Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => MerchantPage(
-        merchantNormalized: key,
-        displayName: display,
-      ),
+      builder: (_) =>
+          MerchantPage(merchantNormalized: key, displayName: display),
     ),
   );
 }

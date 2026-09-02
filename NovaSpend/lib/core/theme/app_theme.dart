@@ -5,7 +5,7 @@ import 'app_colors.dart';
 import 'app_radius.dart';
 import 'app_spacing.dart';
 
-/// Application theme — minimal surfaces, single green accent.
+/// Application theme — minimal surfaces, deep-green CTAs, vivid emerald accent.
 class AppTheme {
   AppTheme._();
 
@@ -15,36 +15,31 @@ class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.accent,
-      brightness: brightness,
-      primary: AppColors.accent,
-      surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-    );
+    final colorScheme = _colorScheme(brightness);
+    final surface = AppColors.surface(brightness);
+    final card = AppColors.card(brightness);
+    final border = AppColors.border(brightness);
 
     final textTheme = _textTheme(
       GoogleFonts.interTextTheme(
         isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
       ),
       colorScheme.onSurface,
+      colorScheme.onSurfaceVariant,
     );
 
     return ThemeData(
       brightness: brightness,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor:
-          isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      scaffoldBackgroundColor: surface,
       textTheme: textTheme,
       fontFamily: GoogleFonts.inter().fontFamily,
       cardTheme: CardThemeData(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          side: BorderSide(color: border),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -52,21 +47,25 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        backgroundColor:
-            isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        backgroundColor: surface,
         foregroundColor: colorScheme.onSurface,
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
+      // Flat deep-green CTA — not colorScheme.primary (mint in dark).
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primaryStrong,
+        foregroundColor: AppColors.onPrimary,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
+          borderRadius: BorderRadius.all(Radius.circular(AppRadius.xl)),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.primaryStrong,
+          foregroundColor: AppColors.onPrimary,
+          disabledBackgroundColor: AppColors.primaryStrong.withValues(
+            alpha: 0.38,
+          ),
+          disabledForegroundColor: AppColors.onPrimary.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.md,
@@ -76,24 +75,28 @@ class AppTheme {
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primaryInk(brightness),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+        fillColor: card,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.accent, width: 2),
+          borderSide: const BorderSide(
+            color: AppColors.primaryStrong,
+            width: 2,
+          ),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -101,13 +104,70 @@ class AppTheme {
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        color: border,
         space: AppSpacing.lg,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.onPrimary;
+          }
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primaryStrong;
+          }
+          return null;
+        }),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: AppColors.primaryInk(brightness),
       ),
     );
   }
 
-  static TextTheme _textTheme(TextTheme base, Color onSurface) {
+  static ColorScheme _colorScheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return ColorScheme(
+      brightness: brightness,
+      primary: isDark ? AppColors.inversePrimary : AppColors.primaryStrong,
+      onPrimary: isDark ? AppColors.onPrimaryDark : AppColors.onPrimary,
+      primaryContainer: isDark ? AppColors.primaryContainerDark : AppColors.accent,
+      onPrimaryContainer:
+          isDark ? const Color(0xFFA7F3D0) : AppColors.onAccent,
+      secondary: AppColors.spendForeground(brightness),
+      onSecondary: isDark ? const Color(0xFF410004) : AppColors.onPrimary,
+      secondaryContainer: isDark ? const Color(0xFF930013) : const Color(0xFFDA3437),
+      onSecondaryContainer:
+          isDark ? const Color(0xFFFFDAD7) : const Color(0xFFFFFBFF),
+      tertiary: isDark ? const Color(0xFFFFB3AF) : const Color(0xFFA43A3A),
+      onTertiary: isDark ? const Color(0xFF410005) : AppColors.onPrimary,
+      error: AppColors.errorForeground(brightness),
+      onError: isDark ? const Color(0xFF690005) : AppColors.onPrimary,
+      errorContainer:
+          isDark ? AppColors.errorContainerDark : AppColors.errorContainer,
+      onErrorContainer:
+          isDark ? AppColors.errorContainer : const Color(0xFF93000A),
+      surface: AppColors.surface(brightness),
+      onSurface: AppColors.onSurface(brightness),
+      onSurfaceVariant: AppColors.onSurfaceVariant(brightness),
+      outline: AppColors.outline(brightness),
+      outlineVariant: AppColors.border(brightness),
+      inverseSurface: isDark ? AppColors.surfaceLight : const Color(0xFF2F3131),
+      onInverseSurface:
+          isDark ? AppColors.onSurfaceLight : AppColors.onSurfaceDark,
+      inversePrimary:
+          isDark ? AppColors.primaryStrong : AppColors.inversePrimary,
+      surfaceTint: isDark ? AppColors.inversePrimary : AppColors.primaryStrong,
+    );
+  }
+
+  static TextTheme _textTheme(
+    TextTheme base,
+    Color onSurface,
+    Color onSurfaceVariant,
+  ) {
     return base.copyWith(
       displayMedium: base.displayMedium?.copyWith(
         fontSize: 40,
@@ -123,7 +183,7 @@ class AppTheme {
         color: onSurface.withValues(alpha: 0.87),
       ),
       bodySmall: base.bodySmall?.copyWith(
-        color: onSurface.withValues(alpha: 0.6),
+        color: onSurfaceVariant,
       ),
     );
   }

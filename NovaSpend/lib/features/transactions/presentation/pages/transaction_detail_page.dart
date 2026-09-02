@@ -85,7 +85,9 @@ class _DetailViewState extends State<_DetailView> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.spend),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
             child: Text(l10n.commonDelete),
           ),
         ],
@@ -475,7 +477,9 @@ class _HeroCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tx = transaction;
     final isCredit = tx.type == 'credit';
-    final amountColor = isCredit ? AppColors.accent : AppColors.spend;
+    final amountColor = isCredit
+        ? AppColors.positiveAmount(theme.brightness)
+        : AppColors.spendForeground(theme.brightness);
     final sign = isCredit ? '+ ' : '− ';
     final currency = AppCurrencyScope.of(context);
     final amountText = '$sign${currency.formatMoney(tx.amount)}';
@@ -516,7 +520,7 @@ class _HeroCard extends StatelessWidget {
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 20,
-                    color: AppColors.primaryStrong,
+                    color: AppColors.primaryInk(theme.brightness),
                   ),
                 ],
               ),
@@ -578,7 +582,7 @@ class _DateTimePill extends StatelessWidget {
     final isDark = brightness == Brightness.dark;
     final fill = isDark
         ? AppColors.neutralFill(brightness)
-        : AppColors.accent.withValues(alpha: 0.08);
+        : AppColors.accent.withValues(alpha: 0.10);
     final divider = AppColors.border(brightness).withValues(alpha: 0.45);
 
     return Container(
@@ -633,8 +637,8 @@ class _DateTimeSegment extends StatelessWidget {
           asset,
           width: 16,
           height: 16,
-          colorFilter: const ColorFilter.mode(
-            AppColors.primaryStrong,
+          colorFilter: ColorFilter.mode(
+            AppColors.primaryInk(Theme.of(context).brightness),
             BlendMode.srcIn,
           ),
         ),
@@ -809,8 +813,9 @@ class _StatusBadges extends StatelessWidget {
       chips.add(
         _StatusChip(
           label: l10n.transactionDuplicate,
-          foreground: AppColors.spend,
-          background: AppColors.spend.withValues(alpha: 0.12),
+          foreground: AppColors.spendForeground(theme.brightness),
+          background: AppColors.spendForeground(theme.brightness)
+              .withValues(alpha: 0.12),
           icon: Icons.copy_all_outlined,
         ),
       );
@@ -819,7 +824,7 @@ class _StatusBadges extends StatelessWidget {
       chips.add(
         _StatusChip(
           label: l10n.transactionRecurring,
-          foreground: AppColors.primaryStrong,
+          foreground: AppColors.primaryInk(theme.brightness),
           background: AppColors.accentMuted,
           icon: Icons.repeat,
         ),
@@ -900,7 +905,11 @@ class _DetailIconTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 18, color: AppColors.primaryStrong),
+      child: Icon(
+        icon,
+        size: 18,
+        color: AppColors.primaryInk(brightness),
+      ),
     );
   }
 }
@@ -995,7 +1004,7 @@ class _ReferenceBadge extends StatelessWidget {
               Icon(
                 Icons.copy_outlined,
                 size: 14,
-                color: AppColors.primaryStrong,
+                color: AppColors.primaryInk(Theme.of(context).brightness),
               ),
             ],
           ),
@@ -1036,8 +1045,8 @@ class _SmsExpandableCard extends StatelessWidget {
               color: muted,
             ),
           ),
-          iconColor: AppColors.primaryStrong,
-          collapsedIconColor: AppColors.primaryStrong,
+          iconColor: AppColors.primaryInk(theme.brightness),
+          collapsedIconColor: AppColors.primaryInk(theme.brightness),
           children: [
             Align(
               alignment: Alignment.centerLeft,

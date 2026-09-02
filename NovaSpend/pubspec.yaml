@@ -75,8 +75,11 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/branding/app_icon.png
+  image_path_android: assets/branding/app_icon_foreground.png
   adaptive_icon_background: "#0D4A32"
-  adaptive_icon_foreground: assets/branding/app_icon.png
+  adaptive_icon_foreground: assets/branding/app_icon_foreground.png
+  # Padding is baked into the foreground so circular launcher masks
+  # cannot clip the N, wallet, or arrow.
   adaptive_icon_foreground_inset: 0
   remove_alpha_ios: true
   background_color_ios: "#0D4A32"

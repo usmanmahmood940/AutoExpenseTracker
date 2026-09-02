@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:nova_spend/l10n/app_strings.dart';
 
 import '../theme/app_colors.dart';
 
@@ -19,6 +20,13 @@ class GlassHeaderBar extends StatelessWidget {
     super.key,
   });
 
+  /// Primary-tab header with the NovaSpend wordmark.
+  const GlassHeaderBar.brand({
+    this.actions,
+    this.barHeight = defaultBarHeight,
+    super.key,
+  }) : title = const BrandHeaderTitle();
+
   final Widget title;
   final List<Widget>? actions;
   final double barHeight;
@@ -30,7 +38,10 @@ class GlassHeaderBar extends StatelessWidget {
   static const double titleBottomPadding = 12;
 
   /// Total height including status-bar inset.
-  static double totalHeight(BuildContext context, {double barHeight = defaultBarHeight}) {
+  static double totalHeight(
+    BuildContext context, {
+    double barHeight = defaultBarHeight,
+  }) {
     return MediaQuery.paddingOf(context).top + barHeight;
   }
 
@@ -86,6 +97,25 @@ class GlassHeaderBar extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// NovaSpend wordmark for [GlassHeaderBar] on Home, Activity, Insights, Settings.
+class BrandHeaderTitle extends StatelessWidget {
+  const BrandHeaderTitle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      context.l10n.homeBrandName,
+      style: theme.textTheme.headlineSmall?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.025 * 24,
+        color: AppColors.primaryInk(theme.brightness),
       ),
     );
   }

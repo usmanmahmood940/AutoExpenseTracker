@@ -22,7 +22,9 @@ alwaysApply: false
 
 | Token | Location | Values |
 |-------|----------|--------|
-| Accent | `AppColors.accent` | Single green `#10B981` — only accent hue in the app |
+| Accent | `AppColors.accent` / `positiveAmount` | Vivid emerald `#10B981` — credits, charts (not body text) |
+| Primary CTA | `AppColors.primaryStrong` | Deep emerald `#006C49` — FAB, filled buttons, white-on-fill |
+| Ink | `AppColors.primaryInk(brightness)` | Deep green light / `#4EDEA3` dark — links, icons, labels |
 | Surfaces | `AppColors.surface/card/neutralFill/border(brightness)` | Light/dark pairs — never hardcode one mode |
 | Radius | `AppRadius` | `md` 16, `lg` 20, `xl` 24 |
 | Spacing | `AppSpacing` | `xs` 4 … `xxl` 48 — charts/lists need `lg`+ padding |

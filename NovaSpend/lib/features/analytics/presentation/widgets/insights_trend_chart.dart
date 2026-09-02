@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
+import 'package:nova_spend/core/theme/app_gradients.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
@@ -160,12 +161,12 @@ class InsightsTrendChart extends StatelessWidget {
                       spots: spots,
                       isCurved: true,
                       preventCurveOverShooting: true,
-                      color: AppColors.accent,
+                      color: AppColors.positiveAmount(theme.brightness),
                       barWidth: 2.5,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: !showPrevious,
-                        color: AppColors.accent.withValues(alpha: 0.12),
+                        gradient: AppGradients.chartArea(theme.brightness),
                       ),
                     ),
                   ],

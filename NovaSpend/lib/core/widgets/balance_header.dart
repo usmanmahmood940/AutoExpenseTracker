@@ -81,7 +81,7 @@ class BalanceHeader extends StatelessWidget {
                   ? theme.textTheme.titleMedium?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.accent,
+                      color: AppColors.positiveAmount(theme.brightness),
                     )
                   : theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -99,7 +99,7 @@ class BalanceHeader extends StatelessWidget {
               Text(
                 subtitle!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.accent,
+                  color: AppColors.positiveAmount(theme.brightness),
                 ),
                 textAlign: centered ? TextAlign.center : TextAlign.start,
               ),

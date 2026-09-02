@@ -68,7 +68,7 @@ class _MerchantFilterChip extends StatelessWidget {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
 
     return Material(
       color: selected

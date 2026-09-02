@@ -465,7 +465,7 @@ class _FilterSection extends StatelessWidget {
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primaryStrong,
+                    color: AppColors.primaryInk(theme.brightness),
                   ),
                 ),
             ],
@@ -597,7 +597,7 @@ class _AmountField extends StatelessWidget {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
     final border = AppColors.border(brightness);
     final warning = AppColors.warningForeground(brightness);
 
@@ -675,7 +675,7 @@ class _FilterChip extends StatelessWidget {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
     final border = AppColors.border(brightness);
 
     return Material(
@@ -722,7 +722,7 @@ class _FilterChip extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: accent,
+                      color: AppColors.primaryStrong,
                     ),
                     child: const Icon(
                       Icons.check_rounded,

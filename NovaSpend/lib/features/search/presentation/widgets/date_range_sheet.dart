@@ -476,7 +476,7 @@ class _EndpointTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
 
     return Material(
       color: active
@@ -550,7 +550,7 @@ class _DateRangeOption extends StatelessWidget {
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -629,7 +629,7 @@ class _DateRangeOption extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: accent,
+                      color: AppColors.primaryStrong,
                     ),
                     child: const Icon(
                       Icons.check_rounded,

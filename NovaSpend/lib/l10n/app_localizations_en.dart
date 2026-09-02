@@ -1308,6 +1308,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splashTagline => 'Track spending, simply';
 
   @override
+  String get splashTapToContinue => 'Tap to continue';
+
+  @override
+  String get splashSkipSemantics => 'Continue';
+
+  @override
+  String get splashLogoSemantics =>
+      'NovaSpend logo. Tap to replay the animation.';
+
+  @override
   String amountFormat(String currency, String amount) {
     return '$currency $amount';
   }

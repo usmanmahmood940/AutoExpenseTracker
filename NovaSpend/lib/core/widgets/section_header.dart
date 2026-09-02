@@ -55,7 +55,7 @@ class SectionHeader extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.primaryStrong,
+                    color: AppColors.primaryInk(theme.brightness),
                   ),
                 ),
                 if (showActionChevron) ...[
@@ -63,7 +63,7 @@ class SectionHeader extends StatelessWidget {
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 17,
-                    color: AppColors.primaryStrong,
+                    color: AppColors.primaryInk(theme.brightness),
                   ),
                 ],
               ],

@@ -124,7 +124,7 @@ class _SegmentButton extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accent : Colors.transparent,
+          color: selected ? AppColors.primaryStrong : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.pill),
           boxShadow: selected
               ? [
@@ -145,7 +145,7 @@ class _SegmentButton extends StatelessWidget {
             fontSize: 12,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             color: selected
-                ? Colors.white
+                ? AppColors.onPrimary
                 : theme.colorScheme.onSurfaceVariant,
           ),
         ),

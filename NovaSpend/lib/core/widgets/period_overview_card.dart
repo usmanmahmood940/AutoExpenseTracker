@@ -161,7 +161,7 @@ class _PeriodOverviewCardState extends State<PeriodOverviewCard> {
                             _OverviewRow(
                               label: widget.receivedLabel,
                               amount: widget.receivedAmount,
-                              amountColor: AppColors.primaryStrong,
+                              amountColor: AppColors.positiveAmount(brightness),
                               amountIsZero: widget.receivedIsZero,
                               changePercent: widget.receivedChangePercent,
                               trendSuffix: widget.trendSuffix,
@@ -173,8 +173,8 @@ class _PeriodOverviewCardState extends State<PeriodOverviewCard> {
                               label: widget.netLabel,
                               amount: widget.netAmount,
                               amountColor: widget.netIsNegative
-                                  ? AppColors.spend
-                                  : AppColors.primaryStrong,
+                                  ? AppColors.spendForeground(brightness)
+                                  : AppColors.positiveAmount(brightness),
                               amountIsZero: widget.netIsZero,
                               changePercent: widget.netChangePercent,
                               trendSuffix: widget.trendSuffix,
@@ -288,7 +288,9 @@ class _TrendBadge extends StatelessWidget {
     final theme = Theme.of(context);
     final isUp = percent >= 0;
     final isGood = positiveIsGood ? isUp : !isUp;
-    final trendColor = isGood ? AppColors.primaryStrong : AppColors.spend;
+    final trendColor = isGood
+        ? AppColors.primaryInk(theme.brightness)
+        : AppColors.spendForeground(theme.brightness);
     final suffixColor = theme.colorScheme.onSurfaceVariant.withValues(
       alpha: 0.7,
     );

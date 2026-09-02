@@ -107,7 +107,7 @@ class DayGroupHeader extends StatelessWidget {
     return (
       prefix: netPrefix,
       amount: '+${formatMoney(net)}',
-      amountColor: AppColors.primaryStrong,
+      amountColor: AppColors.accent,
     );
   }
 

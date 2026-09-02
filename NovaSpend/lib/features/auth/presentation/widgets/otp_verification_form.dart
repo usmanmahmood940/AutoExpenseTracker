@@ -71,7 +71,9 @@ class OtpVerificationForm extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               infoText!,
-              style: const TextStyle(color: AppColors.accent),
+              style: TextStyle(
+                color: AppColors.primaryInk(theme.brightness),
+              ),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),

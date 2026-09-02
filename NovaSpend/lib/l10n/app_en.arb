@@ -611,6 +611,9 @@
   "commonAll": "All",
   "commonLoading": "Loading…",
   "splashTagline": "Track spending, simply",
+  "splashTapToContinue": "Tap to continue",
+  "splashSkipSemantics": "Continue",
+  "splashLogoSemantics": "NovaSpend logo. Tap to replay the animation.",
   "amountFormat": "{currency} {amount}",
   "@amountFormat": {
     "placeholders": {

@@ -208,7 +208,7 @@ class _SortByOption extends StatelessWidget {
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
     final l10n = context.l10n;
 
     return Padding(

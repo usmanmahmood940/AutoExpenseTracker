@@ -35,7 +35,9 @@ class TransactionListTile extends StatelessWidget {
     final money = AppCurrencyScope.of(context);
     final isCredit = transaction.type == 'credit';
     final amountColor =
-        isCredit ? AppColors.accent : theme.colorScheme.onSurface;
+        isCredit
+            ? AppColors.positiveAmount(theme.brightness)
+            : theme.colorScheme.onSurface;
     final sign = isCredit ? '+' : '−';
     final merchantLabel = transaction.displayMerchant.isEmpty
         ? context.l10n.transactionMerchant

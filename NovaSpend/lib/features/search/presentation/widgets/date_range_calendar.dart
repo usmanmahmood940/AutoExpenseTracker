@@ -189,7 +189,7 @@ class _MonthYearButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
     final foreground = expanded ? accent : theme.colorScheme.onSurface;
 
     return Tooltip(
@@ -488,7 +488,8 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = AppColors.primaryStrong;
+    final fill = AppColors.primaryStrong;
+    final inkAccent = AppColors.primaryInk(brightness);
     final selected = isStart || isEnd;
     final banded = spansDays && (inRange || selected);
 
@@ -498,7 +499,7 @@ class _DayCell extends StatelessWidget {
     } else if (!enabled) {
       labelColor = theme.colorScheme.onSurface.withValues(alpha: 0.28);
     } else if (inRange || isToday) {
-      labelColor = accent;
+      labelColor = inkAccent;
     } else {
       labelColor = theme.colorScheme.onSurface;
     }
@@ -528,10 +529,10 @@ class _DayCell extends StatelessWidget {
               padding: const EdgeInsets.all(AppSpacing.xs),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: selected ? accent : Colors.transparent,
+                  color: selected ? fill : Colors.transparent,
                   shape: BoxShape.circle,
                   border: isToday && !selected
-                      ? Border.all(color: accent.withValues(alpha: 0.5))
+                      ? Border.all(color: fill.withValues(alpha: 0.5))
                       : null,
                 ),
                 child: Material(

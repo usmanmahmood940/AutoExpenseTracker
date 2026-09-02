@@ -37,7 +37,7 @@ class ReviewBanner extends StatelessWidget {
           children: [
             Icon(
               Icons.fact_check_outlined,
-              color: AppColors.accent,
+              color: AppColors.primaryInk(Theme.of(context).brightness),
               size: 20,
             ),
             const SizedBox(width: AppSpacing.sm),

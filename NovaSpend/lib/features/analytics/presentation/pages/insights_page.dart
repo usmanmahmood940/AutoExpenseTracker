@@ -9,6 +9,8 @@ import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
+import 'package:nova_spend/core/widgets/glass_header_bar.dart';
+import 'package:nova_spend/core/widgets/hero_wash.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
@@ -34,8 +36,7 @@ class InsightsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final uid = context.watch<AuthProvider>().uid;
     if (uid == null) {
-      return AdaptiveScaffold(
-        title: context.l10n.insightsTitle,
+      return _InsightsChrome(
         body: AppPageLoader(label: context.l10n.authLoading),
       );
     }
@@ -58,12 +59,9 @@ class _InsightsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final provider = context.read<InsightsProvider>();
 
-    return AdaptiveScaffold(
-      title: l10n.insightsTitle,
-      appBar: AppBar(title: Text(l10n.insightsTitle)),
+    return _InsightsChrome(
       body: Column(
         children: [
           const _PeriodControls(),
@@ -71,6 +69,7 @@ class _InsightsView extends StatelessWidget {
             child: RefreshIndicator(
               onRefresh: provider.refresh,
               child: CustomScrollView(
+                clipBehavior: Clip.none,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: const [
                   SliverToBoxAdapter(child: _InsightsKpiSection()),
@@ -81,6 +80,36 @@ class _InsightsView extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared Insights chrome: hero wash + glass brand header over [body].
+class _InsightsChrome extends StatelessWidget {
+  const _InsightsChrome({required this.body});
+
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AdaptiveScaffold(
+      applySafeArea: false,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          const Positioned(top: 0, left: 0, right: 0, child: HeroWash()),
+          Positioned.fill(child: body),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: GlassHeaderBar.totalHeight(context),
+            child: const GlassHeaderBar.brand(),
           ),
         ],
       ),
@@ -110,7 +139,8 @@ class _InsightsKpiSection extends StatelessWidget {
     final l10n = context.l10n;
     final money = AppCurrencyScope.of(context);
     final provider = context.read<InsightsProvider>();
-    final trendSuffix = provider.preset == InsightsPeriodPreset.thisYear &&
+    final trendSuffix =
+        provider.preset == InsightsPeriodPreset.thisYear &&
             !provider.chevronOverride
         ? l10n.insightsVsLastYear
         : l10n.insightsVsLastMonth;
@@ -133,7 +163,9 @@ class _InsightsKpiSection extends StatelessWidget {
         trendSuffix: trendSuffix,
         netAmountColor: summary.net.abs() < 0.0001
             ? null
-            : (summary.net > 0 ? AppColors.primaryStrong : AppColors.spend),
+            : (summary.net > 0
+                  ? AppColors.positiveAmount(Theme.of(context).brightness)
+                  : AppColors.spendForeground(Theme.of(context).brightness)),
       ),
     );
   }
@@ -153,10 +185,7 @@ class _InsightsBody extends StatelessWidget {
     final provider = context.watch<InsightsProvider>();
 
     if (provider.error != null && provider.summary == null) {
-      return ErrorStateView(
-        error: provider.error,
-        onRetry: provider.retry,
-      );
+      return ErrorStateView(error: provider.error, onRetry: provider.retry);
     }
 
     return const _InsightsSections();
@@ -189,12 +218,8 @@ class _TrendSection extends StatelessWidget {
     final l10n = context.l10n;
     final money = AppCurrencyScope.of(context);
     final snapshot = context.select(
-      (InsightsProvider p) => (
-        p.isLoading,
-        p.isLoadingExtras,
-        p.trend,
-        p.previousTrendValues,
-      ),
+      (InsightsProvider p) =>
+          (p.isLoading, p.isLoadingExtras, p.trend, p.previousTrendValues),
     );
     final (isLoading, isLoadingExtras, trend, previousTrendValues) = snapshot;
     final hasTrend = hasTrendChartContent(trend);
@@ -247,7 +272,8 @@ class _NarrativeSection extends StatelessWidget {
     ) = snapshot;
     final hasAi = aiNarrative?.trim().isNotEmpty ?? false;
     final hasContent = templateFacts.hasContent || hasAi;
-    final waitingForNarrative = !hasContent && (isLoading || isLoadingNarrative);
+    final waitingForNarrative =
+        !hasContent && (isLoading || isLoadingNarrative);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -277,8 +303,8 @@ class _CategoriesSection extends StatelessWidget {
 
   void _openActivityForRange(BuildContext context, InsightsProvider provider) {
     context.read<SearchProvider>().applyActivityFilters(
-          range: provider.activityDateRange,
-        );
+      range: provider.activityDateRange,
+    );
     MainShellScope.selectTransactionsTab(context);
   }
 
@@ -291,8 +317,8 @@ class _CategoriesSection extends StatelessWidget {
     );
     final (isLoading, summary) = snapshot;
     final waitingForSummary = isLoading && summary == null;
-    final hasCategories = summary != null &&
-        topEntries(summary.byCategory).isNotEmpty;
+    final hasCategories =
+        summary != null && topEntries(summary.byCategory).isNotEmpty;
     final showCategoriesEmpty =
         !waitingForSummary && !isLoading && !hasCategories;
 
@@ -305,9 +331,9 @@ class _CategoriesSection extends StatelessWidget {
           actionLabel: hasCategories ? l10n.homeViewAllInsights : null,
           onActionTap: hasCategories
               ? () => _openActivityForRange(
-                    context,
-                    context.read<InsightsProvider>(),
-                  )
+                  context,
+                  context.read<InsightsProvider>(),
+                )
               : null,
         ),
         if (waitingForSummary)
@@ -324,9 +350,9 @@ class _CategoriesSection extends StatelessWidget {
               otherLabel: l10n.insightsOtherCategory,
               onCategoryTap: (key, displayName) {
                 context.read<SearchProvider>().applyActivityFilters(
-                      range: context.read<InsightsProvider>().activityDateRange,
-                      categories: [displayName],
-                    );
+                  range: context.read<InsightsProvider>().activityDateRange,
+                  categories: [displayName],
+                );
                 MainShellScope.selectTransactionsTab(context);
               },
               onOtherTap: () => _openActivityForRange(
@@ -450,9 +476,9 @@ class _PeriodControls extends StatelessWidget {
     final showChevrons = provider.preset != InsightsPeriodPreset.thisYear;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.md,
+        GlassHeaderBar.contentTopPadding(context),
         AppSpacing.md,
         0,
       ),
@@ -493,15 +519,16 @@ class _PeriodControls extends StatelessWidget {
                       DateFormat.yMMMM().format(provider.month),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   _MonthChevron(
                     tooltip: l10n.insightsNextMonth,
                     icon: Icons.chevron_right_rounded,
-                    onPressed:
-                        provider.canGoNextMonth ? provider.nextMonth : null,
+                    onPressed: provider.canGoNextMonth
+                        ? provider.nextMonth
+                        : null,
                   ),
                 ],
               ),
@@ -546,9 +573,9 @@ class _MonthChevron extends StatelessWidget {
             child: Icon(
               icon,
               size: 20,
-              color: Theme.of(context).colorScheme.onSurface.withValues(
-                    alpha: enabled ? 0.85 : 0.35,
-                  ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: enabled ? 0.85 : 0.35),
             ),
           ),
         ),

@@ -2416,6 +2416,24 @@ abstract class AppLocalizations {
   /// **'Track spending, simply'**
   String get splashTagline;
 
+  /// No description provided for @splashTapToContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to continue'**
+  String get splashTapToContinue;
+
+  /// No description provided for @splashSkipSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get splashSkipSemantics;
+
+  /// No description provided for @splashLogoSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'NovaSpend logo. Tap to replay the animation.'**
+  String get splashLogoSemantics;
+
   /// No description provided for @amountFormat.
   ///
   /// In en, this message translates to:

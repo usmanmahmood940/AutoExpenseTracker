@@ -120,39 +120,16 @@ class _CategoryBarRow extends StatelessWidget {
             CategoryAvatar(category: categoryKey, size: 36),
             const SizedBox(width: AppSpacing.smPlus2),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _AnimatedSharePercent(
-                        share: share,
-                        animationIndex: animationIndex,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.55),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  _AnimatedShareBar(
-                    share: share,
-                    animationIndex: animationIndex,
-                    color: color,
-                    backgroundColor:
-                        theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                  ),
-                ],
+              child: _AnimatedCategoryShare(
+                share: share,
+                animationIndex: animationIndex,
+                percentStyle: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
+                barColor: color,
+                barBackgroundColor:
+                    theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                displayName: displayName,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -178,12 +155,14 @@ class _OtherCategoryRow extends StatelessWidget {
     required this.label,
     required this.amountLabel,
     required this.share,
+    required this.animationIndex,
     required this.onTap,
   });
 
   final String label;
   final String amountLabel;
   final double share;
+  final int animationIndex;
   final VoidCallback? onTap;
 
   @override
@@ -207,35 +186,16 @@ class _OtherCategoryRow extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.smPlus2),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(color: muted),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text('$percent%', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: share.clamp(0.0, 1.0),
-                      minHeight: 8,
-                      backgroundColor:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                      color: muted,
-                    ),
-                  ),
-                ],
+              child: _AnimatedCategoryShare(
+                share: share,
+                animationIndex: animationIndex,
+                percentStyle: theme.textTheme.bodySmall?.copyWith(color: muted),
+                barColor: muted,
+                barBackgroundColor:
+                    theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                displayName: label,
+                displayNameStyle:
+                    theme.textTheme.bodyMedium?.copyWith(color: muted),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -252,6 +212,133 @@ class _OtherCategoryRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AnimatedCategoryShare extends StatefulWidget {
+  const _AnimatedCategoryShare({
+    required this.share,
+    required this.animationIndex,
+    required this.percentStyle,
+    required this.barColor,
+    required this.barBackgroundColor,
+    required this.displayName,
+    this.displayNameStyle,
+  });
+
+  final double share;
+  final int animationIndex;
+  final TextStyle? percentStyle;
+  final Color barColor;
+  final Color barBackgroundColor;
+  final String displayName;
+  final TextStyle? displayNameStyle;
+
+  @override
+  State<_AnimatedCategoryShare> createState() => _AnimatedCategoryShareState();
+}
+
+class _AnimatedCategoryShareState extends State<_AnimatedCategoryShare>
+    with SingleTickerProviderStateMixin {
+  static const _staggerStep = Duration(milliseconds: 60);
+
+  late final AnimationController _controller;
+  late Animation<double> _animation;
+  bool _scheduledInitial = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppMotion.normal,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: AppMotion.standard,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scheduledInitial) return;
+    _scheduledInitial = true;
+    _scheduleAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedCategoryShare oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.share != widget.share ||
+        oldWidget.animationIndex != widget.animationIndex) {
+      _controller.reset();
+      _scheduleAnimation();
+    }
+  }
+
+  void _scheduleAnimation() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _controller.value = 1;
+        return;
+      }
+      final delay = _staggerStep * widget.animationIndex;
+      Future<void>.delayed(delay, () {
+        if (mounted) _controller.forward();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final clampedShare = widget.share.clamp(0.0, 1.0);
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, _) {
+        final progress = clampedShare * _animation.value;
+        final percent = (clampedShare * 100 * _animation.value).round();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: widget.displayNameStyle ?? theme.textTheme.bodyMedium,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text('$percent%', style: widget.percentStyle),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                minHeight: 8,
+                backgroundColor: widget.barBackgroundColor,
+                color: widget.barColor,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

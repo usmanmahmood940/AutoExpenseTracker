@@ -140,7 +140,9 @@ class _SearchViewState extends State<_SearchView> {
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.primaryStrong,
+                                color: AppColors.primaryInk(
+                                  Theme.of(context).brightness,
+                                ),
                               ),
                             ),
                           ),
@@ -167,7 +169,9 @@ class _SearchViewState extends State<_SearchView> {
                           height: 22,
                           colorFilter: ColorFilter.mode(
                             !provider.query.sort.isDefault
-                                ? AppColors.primaryStrong
+                                ? AppColors.primaryInk(
+                                    Theme.of(context).brightness,
+                                  )
                                 : theme.colorScheme.onSurface,
                             BlendMode.srcIn,
                           ),
@@ -251,7 +255,9 @@ class _SearchViewState extends State<_SearchView> {
                           Icons.filter_alt_outlined,
                           size: 22,
                           color: provider.query.hasSheetFilters
-                              ? AppColors.primaryStrong
+                              ? AppColors.primaryInk(
+                                  Theme.of(context).brightness,
+                                )
                               : theme.colorScheme.onSurface,
                         ),
                       ),
@@ -277,7 +283,9 @@ class _SearchViewState extends State<_SearchView> {
                               height: 16,
                               colorFilter: ColorFilter.mode(
                                 provider.query.hasDateRange
-                                    ? AppColors.primaryStrong
+                                    ? AppColors.primaryInk(
+                                        Theme.of(context).brightness,
+                                      )
                                     : theme.colorScheme.onSurface,
                                 BlendMode.srcIn,
                               ),
@@ -295,7 +303,9 @@ class _SearchViewState extends State<_SearchView> {
                               Icons.category_outlined,
                               size: 16,
                               color: provider.query.hasCategories
-                                  ? AppColors.primaryStrong
+                                  ? AppColors.primaryInk(
+                                      Theme.of(context).brightness,
+                                    )
                                   : theme.colorScheme.onSurface,
                             ),
                           ),
@@ -331,8 +341,8 @@ class _SearchViewState extends State<_SearchView> {
                                   spacing: AppSpacing.sm,
                                   runSpacing: AppSpacing.sm,
                                   children: [
-                                    for (final term in provider.recentSearches
-                                        .take(5))
+                                    for (final term
+                                        in provider.recentSearches.take(5))
                                       _RecentSearchChip(
                                         label: term,
                                         onTap: () {
@@ -437,17 +447,7 @@ class _SearchViewState extends State<_SearchView> {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: GlassHeaderBar(
-              title: Text(
-                l10n.homeBrandName,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.025 * 24,
-                  color: AppColors.primaryStrong,
-                ),
-              ),
-            ),
+            child: const GlassHeaderBar.brand(),
           ),
         ],
       ),
@@ -769,7 +769,7 @@ class _ActivityToolbarIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(Theme.of(context).brightness);
 
     return SizedBox(
       width: (size * 85) / 100,
@@ -834,7 +834,7 @@ class _ActivityFilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
               color: emphasized
-                  ? AppColors.primaryStrong
+                  ? AppColors.primaryInk(Theme.of(context).brightness)
                   : AppColors.cardBorder(brightness),
             ),
           ),
@@ -858,7 +858,9 @@ class _ActivityFilterChip extends StatelessWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: emphasized ? AppColors.primaryStrong : ink,
+                        color: emphasized
+                            ? AppColors.primaryInk(Theme.of(context).brightness)
+                            : ink,
                       ),
                     ),
                   ),
@@ -867,7 +869,9 @@ class _ActivityFilterChip extends StatelessWidget {
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 18,
-                  color: emphasized ? AppColors.primaryStrong : ink,
+                  color: emphasized
+                      ? AppColors.primaryInk(Theme.of(context).brightness)
+                      : ink,
                 ),
               ],
             ),

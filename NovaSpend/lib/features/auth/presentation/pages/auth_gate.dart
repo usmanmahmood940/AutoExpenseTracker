@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:nova_spend/core/bootstrap/app_bootstrap.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/di/injection.dart';
@@ -114,7 +113,6 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _ensureProfile() async {
     try {
-      await AppBootstrap.instance.ready;
       final profile = await _authService.fetchProfile();
       if (profile == null) {
         await _authService.ensureUserProfile();

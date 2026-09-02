@@ -238,7 +238,7 @@ class _AllCategoriesOption extends StatelessWidget {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
     final border = AppColors.border(brightness);
 
     return Column(
@@ -264,7 +264,7 @@ class _AllCategoriesOption extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? accent : Colors.transparent,
+                      color: selected ? AppColors.primaryStrong : Colors.transparent,
                       border: selected
                           ? null
                           : Border.all(color: border.withValues(alpha: 0.85)),
@@ -333,7 +333,7 @@ class _CategoryOption extends StatelessWidget {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
     final ink = theme.colorScheme.onSurface;
-    final accent = AppColors.primaryStrong;
+    final accent = AppColors.primaryInk(brightness);
     final border = AppColors.border(brightness);
 
     return Padding(
@@ -371,7 +371,7 @@ class _CategoryOption extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: selected ? accent : Colors.transparent,
+                    color: selected ? AppColors.primaryStrong : Colors.transparent,
                     border: selected
                         ? null
                         : Border.all(color: border.withValues(alpha: 0.85)),

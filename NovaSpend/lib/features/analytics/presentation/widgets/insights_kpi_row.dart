@@ -255,7 +255,9 @@ class _InsightsChangeCaption extends StatelessWidget {
     final isGood = countChangeNeutral ? true : (positiveIsGood ? isUp : !isUp);
     final trendColor = countChangeNeutral
         ? muted
-        : (isGood ? AppColors.primaryStrong : AppColors.spend);
+        : (isGood
+            ? AppColors.primaryInk(theme.brightness)
+            : AppColors.spendForeground(theme.brightness));
     final display = value != null
         ? '${value.abs().round()}%'
         : '${count!.abs()}';
