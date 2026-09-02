@@ -7,7 +7,6 @@ import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
-import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
@@ -15,6 +14,7 @@ import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/period_overview_card.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/core/widgets/stat_highlight_card.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
@@ -51,16 +51,128 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final uid = context.watch<AuthProvider>().uid;
     if (uid == null) {
-      return AdaptiveScaffold(
-        title: context.l10n.homeTitle,
-        body: AppPageLoader(label: context.l10n.authLoading),
-      );
+      return const _HomeSkeletonShell();
     }
 
     return _HomeView(
       reviewBannerDismissed: _reviewBannerDismissed,
       onDismissReviewBanner: () =>
           setState(() => _reviewBannerDismissed = true),
+    );
+  }
+}
+
+/// Home chrome with skeleton placeholders while the auth session is settling.
+class _HomeSkeletonShell extends StatelessWidget {
+  const _HomeSkeletonShell();
+
+  static const _sectionGap = AppSpacing.md - AppSpacing.sm;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final topPad = GlassHeaderBar.contentTopPadding(context);
+
+    return AdaptiveScaffold(
+      applySafeArea: false,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomScrollView(
+              clipBehavior: Clip.none,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    topPad,
+                    AppSpacing.md,
+                    0,
+                  ),
+                  sliver: const SliverToBoxAdapter(child: _PeriodToggleSkeleton()),
+                ),
+                const SliverPadding(
+                  padding: EdgeInsets.only(top: _sectionGap),
+                  sliver: SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: PeriodOverviewSkeleton(),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    _sectionGap,
+                    AppSpacing.md,
+                    AppSpacing.xxl + PrimaryFab.size,
+                  ),
+                  sliver: const SliverToBoxAdapter(child: HomeFeedSkeleton()),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: GlassHeaderBar.totalHeight(context),
+            child: GlassHeaderBar(
+              title: Text(
+                l10n.homeBrandName,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.025 * 24,
+                  color: AppColors.primaryStrong,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: AppSpacing.md,
+            bottom: AppSpacing.lg,
+            child: PrimaryFab(
+              tooltip: l10n.homeAddTransaction,
+              onPressed: () {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PeriodToggleSkeleton extends StatelessWidget {
+  const _PeriodToggleSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SkeletonPulse(
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.neutralFill(Theme.of(context).brightness),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: List.generate(
+            3,
+            (index) => Expanded(
+              child: Container(
+                margin: EdgeInsets.only(left: index == 0 ? 0 : 4),
+                decoration: BoxDecoration(
+                  color: AppColors.card(Theme.of(context).brightness),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

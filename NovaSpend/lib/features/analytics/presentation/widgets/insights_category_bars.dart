@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/theme/app_motion.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/category_visuals.dart';
@@ -48,6 +49,7 @@ class InsightsCategoryBars extends StatelessWidget {
               amountLabel: formatMoney(top[i].value),
               amount: top[i].value,
               totalSpent: totalSpent,
+              animationIndex: i,
               onTap: onCategoryTap,
             ),
           ],
@@ -57,6 +59,7 @@ class InsightsCategoryBars extends StatelessWidget {
               label: otherLabel,
               amountLabel: formatMoney(other.amount),
               share: other.share,
+              animationIndex: top.length,
               onTap: onOtherTap,
             ),
           ],
@@ -83,6 +86,7 @@ class _CategoryBarRow extends StatelessWidget {
     required this.amountLabel,
     required this.amount,
     required this.totalSpent,
+    required this.animationIndex,
     required this.onTap,
   });
 
@@ -91,6 +95,7 @@ class _CategoryBarRow extends StatelessWidget {
   final String amountLabel;
   final double amount;
   final double totalSpent;
+  final int animationIndex;
   final void Function(String categoryKey, String displayName)? onTap;
 
   @override
@@ -129,8 +134,9 @@ class _CategoryBarRow extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '$percent%',
+                      _AnimatedSharePercent(
+                        share: share,
+                        animationIndex: animationIndex,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface
                               .withValues(alpha: 0.55),
@@ -139,15 +145,12 @@ class _CategoryBarRow extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: share.clamp(0.0, 1.0),
-                      minHeight: 8,
-                      backgroundColor:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                      color: color,
-                    ),
+                  _AnimatedShareBar(
+                    share: share,
+                    animationIndex: animationIndex,
+                    color: color,
+                    backgroundColor:
+                        theme.colorScheme.onSurface.withValues(alpha: 0.08),
                   ),
                 ],
               ),

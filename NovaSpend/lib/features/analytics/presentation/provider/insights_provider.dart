@@ -166,6 +166,7 @@ class InsightsProvider extends ChangeNotifier {
     } else if (next == InsightsPeriodPreset.lastMonth) {
       _month = DateTime(now.year, now.month - 1);
     }
+    _beginTrendReload();
     unawaitedLoad();
     notifyListeners();
   }
@@ -176,6 +177,7 @@ class InsightsProvider extends ChangeNotifier {
     }
     _month = DateTime(_month.year, _month.month - 1);
     _chevronOverride = true;
+    _beginTrendReload();
     unawaitedLoad();
     notifyListeners();
   }
@@ -199,8 +201,19 @@ class InsightsProvider extends ChangeNotifier {
     } else {
       _chevronOverride = true;
     }
+    _beginTrendReload();
     unawaitedLoad();
     notifyListeners();
+  }
+
+  /// Clears stale trend data so the chart skeleton shows while extras reload.
+  void _beginTrendReload() {
+    trend = const [];
+    previousTrend = const [];
+    recurring = const [];
+    if (summary != null) {
+      isLoadingExtras = true;
+    }
   }
 
   Future<void> refresh() async {

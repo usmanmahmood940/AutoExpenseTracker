@@ -68,7 +68,59 @@ class InsightsTrendSkeleton extends StatelessWidget {
     return SkeletonPulse(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        child: SkeletonCard(child: SizedBox(height: 180)),
+        child: SkeletonCard(
+          child: SizedBox(
+            height: 180,
+            child: Padding(
+              padding: const EdgeInsets.only(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        SkeletonBox(width: 24, height: 10),
+                        SkeletonBox(width: 20, height: 10),
+                        SkeletonBox(width: 16, height: 10),
+                        SkeletonBox(width: 12, height: 10),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: SkeletonBox(
+                            width: double.infinity,
+                            radius: AppRadius.sm,
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.sm),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SkeletonBox(width: 36, height: 10),
+                            SkeletonBox(width: 36, height: 10),
+                            SkeletonBox(width: 36, height: 10),
+                            SkeletonBox(width: 36, height: 10),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -77,6 +77,7 @@ flutter_launcher_icons:
   image_path: assets/branding/app_icon.png
   adaptive_icon_background: "#0D4A32"
   adaptive_icon_foreground: assets/branding/app_icon.png
+  adaptive_icon_foreground_inset: 0
   remove_alpha_ios: true
   background_color_ios: "#0D4A32"
   macos:
@@ -86,10 +87,10 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#0D4A32"
-  image: assets/branding/app_icon_splash.png
   android_12:
     color: "#0D4A32"
-    image: assets/branding/app_icon_splash.png
+    # Icon hidden via res/drawable/transparent_splash_icon.xml in values-v31/styles.xml
+    icon_background_color: "#0D4A32"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -101,7 +102,6 @@ flutter:
 
   assets:
     - assets/branding/app_icon.png
-    - assets/branding/app_icon_splash.png
     - assets/icons/google_g.png
     - assets/icons/icon_edit.svg
     - assets/icons/icon_bank.svg

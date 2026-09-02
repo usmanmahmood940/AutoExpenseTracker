@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/services/biometric_service.dart';
-import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
-import 'package:nova_spend/features/settings/domain/repositories/settings_repository.dart';
 import 'package:nova_spend/features/settings/presentation/pages/main_shell_page.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Gates the main shell behind biometric unlock when enabled.
 class LockGate extends StatefulWidget {
@@ -19,35 +19,21 @@ class LockGate extends StatefulWidget {
 }
 
 class _LockGateState extends State<LockGate> {
-  bool _checking = true;
+  late final bool _biometricRequired;
   bool _unlocked = false;
-  bool _biometricRequired = false;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_bootstrap());
-  }
-
-  Future<void> _bootstrap() async {
-    final settings = sl<SettingsRepository>();
-    final required = await settings.isBiometricEnabled();
-    if (!mounted) return;
-
-    if (!required) {
-      setState(() {
-        _biometricRequired = false;
-        _unlocked = true;
-        _checking = false;
-      });
-      return;
+    _biometricRequired = sl<SharedPreferences>().getBool(
+          AppConstants.prefBiometricLock,
+        ) ??
+        false;
+    if (!_biometricRequired) {
+      _unlocked = true;
+    } else {
+      unawaited(_tryUnlock());
     }
-
-    setState(() {
-      _biometricRequired = true;
-      _checking = false;
-    });
-    await _tryUnlock();
   }
 
   Future<void> _tryUnlock() async {
@@ -62,17 +48,9 @@ class _LockGateState extends State<LockGate> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    if (auth.isLoading || _checking) {
-      return Scaffold(
-        body: AppPageLoader(label: context.l10n.commonLoading),
-      );
-    }
-
     if (!auth.isSignedIn) {
-      // AuthGate should have already switched; keep a brief spinner.
-      return Scaffold(
-        body: AppPageLoader(label: context.l10n.commonLoading),
-      );
+      // AuthGate should have already switched.
+      return const SizedBox.shrink();
     }
 
     if (_biometricRequired && !_unlocked) {
