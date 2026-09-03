@@ -13,7 +13,6 @@ import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_card.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
-import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/settings/presentation/pages/about_page.dart';
 import 'package:nova_spend/features/settings/presentation/pages/currency_selection_page.dart';
@@ -61,288 +60,236 @@ class _SettingsView extends StatelessWidget {
     final email = FirebaseAuth.instance.currentUser?.email;
 
     return _SettingsChrome(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              GlassHeaderBar.contentTopPadding(context),
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Text(
-              l10n.settingsTitle,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.02 * 24,
-                color: Theme.of(context).colorScheme.onSurface,
+          SettingsSection(
+            title: l10n.settingsSectionAccount,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SettingsSectionCard(
+                children: [
+                  if (email != null && email.isNotEmpty)
+                    SettingsNavRow(
+                      title: email,
+                      leading: const Icon(Icons.email_outlined),
+                      trailing: const SizedBox.shrink(),
+                      onTap: null,
+                    ),
+                  SettingsNavRow(
+                    title: l10n.settingsSignOut,
+                    leading: const Icon(Icons.logout),
+                    trailing: const SizedBox.shrink(),
+                    isLoading: provider.isBusyWith(SettingsBusyAction.signOut),
+                    onTap: provider.isBusy ? null : provider.signOut,
+                  ),
+                  SettingsNavRow(
+                    title: l10n.authSendPasswordResetLink,
+                    leading: const Icon(Icons.lock_reset_outlined),
+                    trailing: const SizedBox.shrink(),
+                    isLoading: provider.isBusyWith(
+                      SettingsBusyAction.passwordReset,
+                    ),
+                    onTap: provider.isBusy
+                        ? null
+                        : () => _sendPasswordReset(context),
+                  ),
+                  SettingsNavRow(
+                    title: l10n.authDeleteAccount,
+                    leading: Icon(
+                      Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    trailing: const SizedBox.shrink(),
+                    isLoading: provider.isBusyWith(
+                      SettingsBusyAction.deleteAccount,
+                    ),
+                    onTap: provider.isBusy
+                        ? null
+                        : () => _deleteAccount(context, provider),
+                  ),
+                ],
               ),
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                0,
-                AppSpacing.md,
-                AppSpacing.md,
+          const SizedBox(height: AppSpacing.lg),
+          SettingsSection(
+            title: l10n.settingsSectionPrivacy,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.settingsBiometric),
+                value: provider.biometricEnabled,
+                onChanged: provider.setBiometricEnabled,
               ),
-              children: [
-                SettingsSection(
-                  title: l10n.settingsSectionAccount,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SettingsSectionCard(
-                      children: [
-                        if (email != null && email.isNotEmpty)
-                          SettingsNavRow(
-                            title: email,
-                            leading: const Icon(Icons.email_outlined),
-                            trailing: const SizedBox.shrink(),
-                            onTap: null,
-                          ),
-                        SettingsNavRow(
-                          title: l10n.settingsSignOut,
-                          leading: const Icon(Icons.logout),
-                          trailing: const SizedBox.shrink(),
-                          isLoading: provider.isBusyWith(
-                            SettingsBusyAction.signOut,
-                          ),
-                          onTap: provider.isBusy ? null : provider.signOut,
-                        ),
-                        SettingsNavRow(
-                          title: l10n.authSendPasswordResetLink,
-                          leading: const Icon(Icons.lock_reset_outlined),
-                          trailing: const SizedBox.shrink(),
-                          isLoading: provider.isBusyWith(
-                            SettingsBusyAction.passwordReset,
-                          ),
-                          onTap: provider.isBusy
-                              ? null
-                              : () => _sendPasswordReset(context),
-                        ),
-                        SettingsNavRow(
-                          title: l10n.authDeleteAccount,
-                          leading: Icon(
-                            Icons.delete_outline,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          trailing: const SizedBox.shrink(),
-                          isLoading: provider.isBusyWith(
-                            SettingsBusyAction.deleteAccount,
-                          ),
-                          onTap: provider.isBusy
-                              ? null
-                              : () => _deleteAccount(context, provider),
-                        ),
-                      ],
-                    ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SettingsSection(
+            title: l10n.settingsSectionSetup,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SettingsSectionCard(
+                children: [
+                  SettingsNavRow(
+                    title: l10n.settingsShortcutSetup,
+                    subtitle: l10n.settingsShortcutSetupSubtitle,
+                    leading: const Icon(Icons.phone_iphone_outlined),
+                    onTap: () => _openShortcutSetup(context),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SettingsSection(
-                  title: l10n.settingsSectionPrivacy,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.settingsBiometric),
-                      value: provider.biometricEnabled,
-                      onChanged: provider.setBiometricEnabled,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SettingsSection(
-                  title: l10n.settingsSectionSetup,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SettingsSectionCard(
-                      children: [
-                        SettingsNavRow(
-                          title: l10n.settingsShortcutSetup,
-                          subtitle: l10n.settingsShortcutSetupSubtitle,
-                          leading: const Icon(Icons.phone_iphone_outlined),
-                          onTap: () => _openShortcutSetup(context),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SettingsSection(
+            title: l10n.settingsSectionPreferences,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SettingsSectionCard(
+                children: [
+                  SettingsNavRow(
+                    title: l10n.settingsLanguage,
+                    leading: const Icon(Icons.language_outlined),
+                    onTap: () async {
+                      final code = await Navigator.of(context).push<String>(
+                        MaterialPageRoute(
+                          builder: (_) => const LanguageSelectionPage(),
                         ),
-                      ],
-                    ),
+                      );
+                      if (code != null && context.mounted) {
+                        await AppLocaleScope.of(
+                          context,
+                        ).setLocale(Locale(code));
+                      }
+                    },
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SettingsSection(
-                  title: l10n.settingsSectionPreferences,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SettingsSectionCard(
-                      children: [
-                        SettingsNavRow(
-                          title: l10n.settingsLanguage,
-                          leading: const Icon(Icons.language_outlined),
-                          onTap: () async {
+                  SettingsNavRow(
+                    title: l10n.settingsCurrency,
+                    subtitle: currencyDisplayLabel(currencyController.currency),
+                    leading: const Icon(Icons.payments_outlined),
+                    isLoading: currencyController.isSaving,
+                    onTap: currencyController.isSaving
+                        ? null
+                        : () async {
                             final code = await Navigator.of(context)
                                 .push<String>(
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        const LanguageSelectionPage(),
+                                    builder: (_) => CurrencySelectionPage(
+                                      selected: currencyController.currency,
+                                    ),
                                   ),
                                 );
                             if (code != null && context.mounted) {
-                              await AppLocaleScope.of(
-                                context,
-                              ).setLocale(Locale(code));
+                              await currencyController.setCurrency(code);
                             }
                           },
-                        ),
-                        SettingsNavRow(
-                          title: l10n.settingsCurrency,
-                          subtitle: currencyDisplayLabel(
-                            currencyController.currency,
-                          ),
-                          leading: const Icon(Icons.payments_outlined),
-                          isLoading: currencyController.isSaving,
-                          onTap: currencyController.isSaving
-                              ? null
-                              : () async {
-                                  final code = await Navigator.of(context)
-                                      .push<String>(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              CurrencySelectionPage(
-                                            selected:
-                                                currencyController.currency,
-                                          ),
-                                        ),
-                                      );
-                                  if (code != null && context.mounted) {
-                                    await currencyController.setCurrency(code);
-                                  }
-                                },
-                        ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(l10n.settingsShowDecimals),
-                          subtitle: Text(l10n.settingsShowDecimalsHint),
-                          value: currencyController.showDecimals,
-                          onChanged: currencyController.setShowDecimals,
-                        ),
-                      ],
-                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SettingsSection(
-                  title: l10n.settingsSectionAdvanced,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SettingsSectionCard(
-                      children: [
-                        SettingsNavRow(
-                          title: l10n.settingsFixParsing,
-                          leading: const Icon(Icons.rule_folder_outlined),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const ReviewPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        SettingsNavRow(
-                          title: l10n.settingsExport,
-                          leading: const Icon(Icons.download_outlined),
-                          isLoading: provider.isBusyWith(
-                            SettingsBusyAction.export,
-                          ),
-                          onTap: provider.isBusy
-                              ? null
-                              : () => _exportCsv(context, provider),
-                        ),
-                      ],
-                    ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.settingsShowDecimals),
+                    subtitle: Text(l10n.settingsShowDecimalsHint),
+                    value: currencyController.showDecimals,
+                    onChanged: currencyController.setShowDecimals,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SettingsSection(
-                  title: l10n.settingsSectionSupport,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SettingsSectionCard(
-                      children: [
-                        SettingsNavRow(
-                          title: l10n.settingsFeedback,
-                          leading: const Icon(Icons.feedback_outlined),
-                          onTap: () => _openExternalLink(
-                            context,
-                            AppConstants.feedbackMailto,
-                          ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SettingsSection(
+            title: l10n.settingsSectionAdvanced,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SettingsSectionCard(
+                children: [
+                  SettingsNavRow(
+                    title: l10n.settingsFixParsing,
+                    leading: const Icon(Icons.rule_folder_outlined),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ReviewPage(),
                         ),
-                        SettingsNavRow(
-                          title: l10n.settingsAbout,
-                          leading: const Icon(Icons.info_outline),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const AboutPage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                SettingsSection(
-                  title: l10n.settingsSectionLegal,
-                  child: AppCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    child: SettingsSectionCard(
-                      children: [
-                        SettingsNavRow(
-                          title: l10n.settingsPrivacyPolicy,
-                          leading: const Icon(Icons.privacy_tip_outlined),
-                          onTap: () => _openExternalLink(
-                            context,
-                            AppConstants.privacyUrl,
-                          ),
-                        ),
-                        SettingsNavRow(
-                          title: l10n.settingsTermsAndConditions,
-                          leading: const Icon(Icons.description_outlined),
-                          onTap: () =>
-                              _openExternalLink(context, AppConstants.termsUrl),
-                        ),
-                      ],
-                    ),
+                  SettingsNavRow(
+                    title: l10n.settingsExport,
+                    leading: const Icon(Icons.download_outlined),
+                    isLoading: provider.isBusyWith(SettingsBusyAction.export),
+                    onTap: provider.isBusy
+                        ? null
+                        : () => _exportCsv(context, provider),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Center(
-                  child: Text(
-                    l10n.settingsVersion(AppConstants.appVersion),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SettingsSection(
+            title: l10n.settingsSectionSupport,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SettingsSectionCard(
+                children: [
+                  SettingsNavRow(
+                    title: l10n.settingsFeedback,
+                    leading: const Icon(Icons.feedback_outlined),
+                    onTap: () =>
+                        _openExternalLink(context, AppConstants.feedbackMailto),
                   ),
-                ),
-              ],
+                  SettingsNavRow(
+                    title: l10n.settingsAbout,
+                    leading: const Icon(Icons.info_outline),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AboutPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SettingsSection(
+            title: l10n.settingsSectionLegal,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SettingsSectionCard(
+                children: [
+                  SettingsNavRow(
+                    title: l10n.settingsPrivacyPolicy,
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    onTap: () =>
+                        _openExternalLink(context, AppConstants.privacyUrl),
+                  ),
+                  SettingsNavRow(
+                    title: l10n.settingsTermsAndConditions,
+                    leading: const Icon(Icons.description_outlined),
+                    onTap: () =>
+                        _openExternalLink(context, AppConstants.termsUrl),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: Text(
+              l10n.settingsVersion(AppConstants.appVersion),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -462,7 +409,7 @@ class _SettingsView extends StatelessWidget {
   }
 }
 
-/// Shared Settings chrome: glass brand header over [body].
+/// Shared Settings chrome: platform back + title over [body].
 class _SettingsChrome extends StatelessWidget {
   const _SettingsChrome({required this.body});
 
@@ -470,23 +417,10 @@ class _SettingsChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AdaptiveScaffold(
-      applySafeArea: false,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          Positioned.fill(child: body),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: GlassHeaderBar.totalHeight(context),
-            child: const GlassHeaderBar.brand(),
-          ),
-        ],
-      ),
+      title: context.l10n.settingsTitle,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: body,
     );
   }
 }

@@ -3,10 +3,10 @@ import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/widgets/app_bottom_nav.dart';
 import 'package:nova_spend/features/analytics/presentation/pages/insights_page.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/chat/presentation/pages/ask_page.dart';
 import 'package:nova_spend/features/search/presentation/pages/search_page.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
-import 'package:nova_spend/features/settings/presentation/pages/settings_page.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/home_page.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -22,12 +22,7 @@ class MainShellPage extends StatefulWidget {
 class _MainShellPageState extends State<MainShellPage> {
   int _index = 0;
 
-  static const _pages = [
-    HomePage(),
-    SearchPage(),
-    InsightsPage(),
-    SettingsPage(),
-  ];
+  static const _pages = [HomePage(), SearchPage(), InsightsPage(), AskPage()];
 
   void _onSelectTab(BuildContext context, int index) {
     if (index < 0 || index >= _pages.length || index == _index) return;
@@ -64,10 +59,7 @@ class _MainShellPageState extends State<MainShellPage> {
           return MainShellScope(
             selectTab: (index) => _onSelectTab(context, index),
             child: Scaffold(
-              body: IndexedStack(
-                index: _index,
-                children: _pages,
-              ),
+              body: IndexedStack(index: _index, children: _pages),
               bottomNavigationBar: AppBottomNav(
                 selectedIndex: _index,
                 onDestinationSelected: (index) => _onSelectTab(context, index),
@@ -85,8 +77,8 @@ class _MainShellPageState extends State<MainShellPage> {
                     label: l10n.navInsights,
                   ),
                   AppBottomNavItem(
-                    iconAsset: 'assets/icons/icon_nav_settings.svg',
-                    label: l10n.navSettings,
+                    iconAsset: 'assets/icons/icon_nav_ask.svg',
+                    label: l10n.navAsk,
                   ),
                 ],
               ),

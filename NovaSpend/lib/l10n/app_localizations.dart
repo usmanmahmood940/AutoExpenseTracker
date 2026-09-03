@@ -148,6 +148,24 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get navSettings;
 
+  /// No description provided for @navAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get navAsk;
+
+  /// No description provided for @askPlaceholderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about your spending'**
+  String get askPlaceholderTitle;
+
+  /// No description provided for @askPlaceholderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll be able to ask questions about your transactions and get answers grounded in your data.'**
+  String get askPlaceholderBody;
+
   /// No description provided for @searchPlaceholder.
   ///
   /// In en, this message translates to:

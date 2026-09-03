@@ -11,6 +11,7 @@ import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
+import 'package:nova_spend/features/settings/presentation/widgets/shell_glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/section_header.dart';
 import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/core/widgets/transaction_group_card.dart';
@@ -447,7 +448,7 @@ class _SearchViewState extends State<_SearchView> {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: const GlassHeaderBar.brand(),
+            child: const ShellGlassHeaderBar(),
           ),
         ],
       ),

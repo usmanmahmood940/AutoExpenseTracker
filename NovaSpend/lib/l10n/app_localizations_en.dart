@@ -36,6 +36,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSettings => 'Settings';
 
   @override
+  String get navAsk => 'Ask';
+
+  @override
+  String get askPlaceholderTitle => 'Ask about your spending';
+
+  @override
+  String get askPlaceholderBody =>
+      'You\'ll be able to ask questions about your transactions and get answers grounded in your data.';
+
+  @override
   String get searchPlaceholder =>
       'Search is coming soon. You\'ll be able to find transactions by merchant, category, and more.';
 

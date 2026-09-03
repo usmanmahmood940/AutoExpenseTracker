@@ -121,6 +121,7 @@ flutter:
     - assets/icons/icon_nav_transactions.svg
     - assets/icons/icon_nav_insights.svg
     - assets/icons/icon_nav_settings.svg
+    - assets/icons/icon_nav_ask.svg
     - assets/icons/categories/
 
   # An image asset can refer to one or more resolution-specific "variants", see

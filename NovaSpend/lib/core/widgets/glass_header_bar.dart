@@ -102,7 +102,7 @@ class GlassHeaderBar extends StatelessWidget {
   }
 }
 
-/// NovaSpend wordmark for [GlassHeaderBar] on Home, Activity, Insights, Settings.
+/// NovaSpend wordmark for [GlassHeaderBar] on primary tabs.
 class BrandHeaderTitle extends StatelessWidget {
   const BrandHeaderTitle({super.key});
 

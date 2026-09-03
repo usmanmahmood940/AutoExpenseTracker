@@ -12,6 +12,7 @@ import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
 import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
+import 'package:nova_spend/features/settings/presentation/widgets/shell_glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/hero_wash.dart';
 import 'package:nova_spend/core/widgets/period_overview_card.dart';
 import 'package:nova_spend/core/widgets/primary_fab.dart';
@@ -126,7 +127,7 @@ class _HomeSkeletonShell extends StatelessWidget {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: const GlassHeaderBar.brand(),
+            child: const ShellGlassHeaderBar(),
           ),
           Positioned(
             right: AppSpacing.md,
@@ -244,7 +245,7 @@ class _HomeView extends StatelessWidget {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: const GlassHeaderBar.brand(),
+            child: const ShellGlassHeaderBar(),
           ),
           Positioned(
             right: AppSpacing.md,
