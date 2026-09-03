@@ -15,16 +15,6 @@ class TransactionRepositoryImpl implements TransactionRepository {
   final BackendTransactionDatasource _backend;
 
   @override
-  Stream<List<TransactionEntity>> watchTransactions(
-    String uid, {
-    int limit = 50,
-  }) {
-    return Stream.fromFuture(
-      _backend.getTransactionsPage(limit: limit).then((page) => page.items),
-    );
-  }
-
-  @override
   Future<TransactionsPage> getTransactionsPage(
     String uid, {
     int limit = 50,
@@ -81,11 +71,6 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
-  Stream<List<TransactionEntity>> watchNeedsReview(String uid) {
-    return Stream.fromFuture(_backend.getNeedsReview());
-  }
-
-  @override
   Future<List<TransactionEntity>> getNeedsReview(
     String uid, {
     int limit = 50,
@@ -95,14 +80,6 @@ class TransactionRepositoryImpl implements TransactionRepository {
     } catch (e) {
       throwAsFailure(e);
     }
-  }
-
-  @override
-  Stream<List<RawIngestionEntity>> watchIngestionsByStatus(
-    String uid,
-    String status,
-  ) {
-    return Stream.fromFuture(_backend.getIngestionsByStatus(status));
   }
 
   @override

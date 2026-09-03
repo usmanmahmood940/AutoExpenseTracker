@@ -66,18 +66,19 @@ class _InsightsView extends StatelessWidget {
         children: [
           const _PeriodControls(),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: provider.refresh,
-              child: CustomScrollView(
-                clipBehavior: Clip.none,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: const [
-                  SliverToBoxAdapter(child: _InsightsKpiSection()),
-                  SliverPadding(
-                    padding: EdgeInsets.only(bottom: AppSpacing.xxl),
-                    sliver: SliverToBoxAdapter(child: _InsightsBody()),
-                  ),
-                ],
+            child: ClipRect(
+              child: RefreshIndicator(
+                onRefresh: provider.refresh,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: const [
+                    SliverToBoxAdapter(child: _InsightsKpiSection()),
+                    SliverPadding(
+                      padding: EdgeInsets.only(bottom: AppSpacing.xxl),
+                      sliver: SliverToBoxAdapter(child: _InsightsBody()),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

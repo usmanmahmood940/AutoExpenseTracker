@@ -16,9 +16,11 @@ class AppCurrencyController extends ChangeNotifier {
 
   String _currency = kDefaultCurrency;
   bool _showDecimals = false;
+  bool _isSaving = false;
 
   String get currency => _currency;
   bool get showDecimals => _showDecimals;
+  bool get isSaving => _isSaving;
 
   Future<void> load() async {
     final code = _prefs.getString(AppConstants.currencyPreferenceKey);
@@ -42,10 +44,15 @@ class AppCurrencyController extends ChangeNotifier {
     notifyListeners();
     final sync = remoteSync;
     if (sync == null) return;
+    _isSaving = true;
+    notifyListeners();
     try {
       await sync(_currency);
     } catch (e, st) {
       debugPrint('PATCH /me default_currency failed: $e\n$st');
+    } finally {
+      _isSaving = false;
+      notifyListeners();
     }
   }
 

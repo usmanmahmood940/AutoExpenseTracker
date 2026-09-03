@@ -92,7 +92,16 @@ class ApiClient {
     }
 
     if (requireAuth) {
-      final idToken = await _idTokenFetcher();
+      String? idToken;
+      try {
+        idToken = await _idTokenFetcher();
+      } on FirebaseAuthException catch (_) {
+        throw ApiException(
+          statusCode: 401,
+          message: 'Authentication required.',
+          code: 'unauthenticated',
+        );
+      }
       if (idToken == null || idToken.isEmpty) {
         throw ApiException(
           statusCode: 401,
@@ -205,8 +214,46 @@ class ApiClient {
     }
   }
 
+  static const _deadSessionCodes = {
+    'user-token-expired',
+    'invalid-user-token',
+    'user-disabled',
+    'user-not-found',
+  };
+
+  static Future<void>? _signingOut;
+
   static Future<String?> _defaultIdToken() async {
-    return FirebaseAuth.instance.currentUser?.getIdToken();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    try {
+      return await user.getIdToken();
+    } on FirebaseAuthException catch (e) {
+      if (_deadSessionCodes.contains(e.code)) {
+        await _signOutDeadSession();
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  static Future<void> _signOutDeadSession() {
+    final inFlight = _signingOut;
+    if (inFlight != null) return inFlight;
+
+    final future = () async {
+      try {
+        await FirebaseAuth.instance.signOut();
+      } catch (_) {
+        // Best-effort: AuthGate still needs a null user if sign-out fails.
+      }
+    }();
+    _signingOut = future;
+    return future.whenComplete(() {
+      if (identical(_signingOut, future)) {
+        _signingOut = null;
+      }
+    });
   }
 }
 

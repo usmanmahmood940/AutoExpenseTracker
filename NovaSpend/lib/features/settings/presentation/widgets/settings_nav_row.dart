@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 
 class SettingsNavRow extends StatelessWidget {
   const SettingsNavRow({
@@ -8,6 +9,7 @@ class SettingsNavRow extends StatelessWidget {
     this.leading,
     this.trailing,
     this.onTap,
+    this.isLoading = false,
     super.key,
   });
 
@@ -16,6 +18,7 @@ class SettingsNavRow extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +27,10 @@ class SettingsNavRow extends StatelessWidget {
       leading: leading,
       title: Text(title),
       subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing: trailing ?? const Icon(Icons.chevron_right),
-      onTap: onTap,
+      trailing: isLoading
+          ? const AppLoader(size: AppLoaderSize.small)
+          : trailing ?? const Icon(Icons.chevron_right),
+      onTap: isLoading ? null : onTap,
     );
   }
 }

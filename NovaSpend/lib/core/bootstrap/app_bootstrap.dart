@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/locale/app_locale_controller.dart';
-import 'package:nova_spend/core/services/notification_service.dart';
 import 'package:nova_spend/core/services/push_notification_service.dart';
 import 'package:nova_spend/features/auth/data/datasource/backend_auth_datasource.dart';
 import 'package:nova_spend/firebase_options.dart';
@@ -66,7 +65,6 @@ class AppBootstrap {
           appleProvider:
               kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
         ),
-        sl<NotificationService>().init(),
         sl<PushNotificationService>().init(),
       ]);
 

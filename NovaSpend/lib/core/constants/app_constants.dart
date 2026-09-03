@@ -8,18 +8,7 @@ class AppConstants {
   static const String apiBaseUrl =
       'https://novaspend-api-h7asbihbya-el.a.run.app';
 
-  /// Product screens and auth OTP/login/reset use FastAPI.
-  /// Kept as a compile-time switch for staged builds; default on.
-  static const bool kUseBackendV1 = bool.fromEnvironment(
-    'USE_BACKEND_V1',
-    defaultValue: true,
-  );
-
   static const String ingestForUserUrl = '$apiBaseUrl/ingest';
-
-  /// Used by Identity Toolkit `createAuthUri` email existence checks.
-  static const String productionSiteUrl =
-      'https://auto-expense-tracker-2026.firebaseapp.com';
 
   /// Web OAuth client ID from Firebase (required as serverClientId for Google Sign-In on Android/iOS).
   static const String googleServerClientId =

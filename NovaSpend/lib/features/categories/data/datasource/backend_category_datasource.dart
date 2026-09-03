@@ -27,16 +27,6 @@ class BackendCategoryDatasource {
     }
   }
 
-  Stream<List<CategoryEntity>> watchDefaults() async* {
-    final items = await listCategories();
-    yield items.where((c) => c.isDefault).toList();
-  }
-
-  Stream<List<CategoryEntity>> watchUserCategories() async* {
-    final items = await listCategories();
-    yield items.where((c) => !c.isDefault).toList();
-  }
-
   Stream<List<CategoryEntity>> watchAll() async* {
     yield await listCategories();
   }

@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
@@ -19,7 +19,7 @@ class _InsightsExtras {
   final List<RecurringMerchantEntity> recurring;
 }
 
-class InsightsProvider extends ChangeNotifier {
+class InsightsProvider extends SafeChangeNotifier {
   InsightsProvider({required AnalyticsRepository repository})
       : _repository = repository;
 

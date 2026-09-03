@@ -38,23 +38,18 @@ class TransactionGroupCard extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
         borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.cardBorder(brightness)),
         boxShadow: AppShadows.card(brightness),
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.cardBorder(brightness)),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: sections != null
-                ? _sectionRows(sections!, dividerColor)
-                : _tileRows(children!, dividerColor),
-          ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: sections != null
+              ? _sectionRows(sections!, dividerColor)
+              : _tileRows(children!, dividerColor),
         ),
       ),
     );

@@ -4,7 +4,6 @@ import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/services/biometric_service.dart';
 import 'package:nova_spend/core/services/export_service.dart';
 import 'package:nova_spend/core/services/firebase_user_account_service.dart';
-import 'package:nova_spend/core/services/notification_service.dart';
 import 'package:nova_spend/core/services/push_notification_service.dart';
 import 'package:nova_spend/features/analytics/data/datasource/backend_analytics_datasource.dart';
 import 'package:nova_spend/features/analytics/data/repository_impl.dart';
@@ -78,7 +77,6 @@ Future<void> configureDependencies({
     () => BackendAnalyticsDatasource(api: sl()),
   );
 
-  sl.registerLazySingleton(() => NotificationService());
   sl.registerLazySingleton(() => BiometricService());
   sl.registerLazySingleton(() => ExportService());
   sl.registerLazySingleton(

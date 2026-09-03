@@ -109,13 +109,21 @@ class _SettingsView extends StatelessWidget {
                           title: l10n.settingsSignOut,
                           leading: const Icon(Icons.logout),
                           trailing: const SizedBox.shrink(),
-                          onTap: provider.signOut,
+                          isLoading: provider.isBusyWith(
+                            SettingsBusyAction.signOut,
+                          ),
+                          onTap: provider.isBusy ? null : provider.signOut,
                         ),
                         SettingsNavRow(
                           title: l10n.authSendPasswordResetLink,
                           leading: const Icon(Icons.lock_reset_outlined),
                           trailing: const SizedBox.shrink(),
-                          onTap: () => _sendPasswordReset(context),
+                          isLoading: provider.isBusyWith(
+                            SettingsBusyAction.passwordReset,
+                          ),
+                          onTap: provider.isBusy
+                              ? null
+                              : () => _sendPasswordReset(context),
                         ),
                         SettingsNavRow(
                           title: l10n.authDeleteAccount,
@@ -124,7 +132,12 @@ class _SettingsView extends StatelessWidget {
                             color: Theme.of(context).colorScheme.error,
                           ),
                           trailing: const SizedBox.shrink(),
-                          onTap: () => _deleteAccount(context, provider),
+                          isLoading: provider.isBusyWith(
+                            SettingsBusyAction.deleteAccount,
+                          ),
+                          onTap: provider.isBusy
+                              ? null
+                              : () => _deleteAccount(context, provider),
                         ),
                       ],
                     ),
@@ -197,19 +210,24 @@ class _SettingsView extends StatelessWidget {
                             currencyController.currency,
                           ),
                           leading: const Icon(Icons.payments_outlined),
-                          onTap: () async {
-                            final code = await Navigator.of(context)
-                                .push<String>(
-                                  MaterialPageRoute(
-                                    builder: (_) => CurrencySelectionPage(
-                                      selected: currencyController.currency,
-                                    ),
-                                  ),
-                                );
-                            if (code != null && context.mounted) {
-                              await currencyController.setCurrency(code);
-                            }
-                          },
+                          isLoading: currencyController.isSaving,
+                          onTap: currencyController.isSaving
+                              ? null
+                              : () async {
+                                  final code = await Navigator.of(context)
+                                      .push<String>(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              CurrencySelectionPage(
+                                            selected:
+                                                currencyController.currency,
+                                          ),
+                                        ),
+                                      );
+                                  if (code != null && context.mounted) {
+                                    await currencyController.setCurrency(code);
+                                  }
+                                },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
@@ -245,10 +263,10 @@ class _SettingsView extends StatelessWidget {
                         SettingsNavRow(
                           title: l10n.settingsExport,
                           leading: const Icon(Icons.download_outlined),
-                          trailing: provider.isExporting
-                              ? const AppLoader(size: AppLoaderSize.small)
-                              : const Icon(Icons.chevron_right),
-                          onTap: provider.isExporting
+                          isLoading: provider.isBusyWith(
+                            SettingsBusyAction.export,
+                          ),
+                          onTap: provider.isBusy
                               ? null
                               : () => _exportCsv(context, provider),
                         ),

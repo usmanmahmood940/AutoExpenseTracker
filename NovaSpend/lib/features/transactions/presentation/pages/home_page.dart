@@ -395,15 +395,35 @@ class _HomeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final home = context.watch<HomeProvider>();
+    final home = context.read<HomeProvider>();
+    final view = context.select(
+      (HomeProvider p) => (
+        p.isLoading,
+        p.error,
+        p.items,
+        p.periodItems,
+        p.hasMore,
+        p.periodHasMore,
+        p.period,
+      ),
+    );
+    final (
+      isLoading,
+      error,
+      items,
+      periodItems,
+      hasMore,
+      periodHasMore,
+      period,
+    ) = view;
 
-    if (home.isLoading && home.items.isEmpty) {
+    if (isLoading && items.isEmpty) {
       return const HomeFeedSkeleton();
     }
-    if (home.error != null && home.items.isEmpty) {
-      return ErrorStateView(error: home.error, onRetry: home.refresh);
+    if (error != null && items.isEmpty) {
+      return ErrorStateView(error: error, onRetry: home.refresh);
     }
-    if (home.items.isEmpty) {
+    if (items.isEmpty) {
       final uid = context.read<AuthProvider>().uid;
       return EmptyStateView(
         title: l10n.homeEmpty,
@@ -414,15 +434,15 @@ class _HomeBody extends StatelessWidget {
             : () => openShortcutSetupGuide(context, uid: uid),
       );
     }
-    if (home.periodItems.isEmpty) {
+    if (periodItems.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (home.error != null) ...[
-            LoadErrorBanner(error: home.error, onRetry: home.refresh),
+          if (error != null) ...[
+            LoadErrorBanner(error: error, onRetry: home.refresh),
             const SizedBox(height: _sectionGap),
           ],
-          _Highlights(home: home),
+          const _Highlights(),
           const SizedBox(height: _sectionGap),
           SectionHeader(title: l10n.homeRecentTransactions),
           EmptyStateView(
@@ -437,25 +457,25 @@ class _HomeBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (home.error != null) ...[
-          LoadErrorBanner(error: home.error, onRetry: home.refresh),
+        if (error != null) ...[
+          LoadErrorBanner(error: error, onRetry: home.refresh),
           const SizedBox(height: _sectionGap),
         ],
-        _Highlights(home: home),
+        const _Highlights(),
         const SizedBox(height: _sectionGap),
         SectionHeader(
           title: l10n.homeRecentTransactions,
-          actionLabel: home.hasMore ? l10n.homeViewAll : null,
-          onActionTap: home.hasMore
-              ? () => _openActivityForPeriod(context, home.period)
+          actionLabel: hasMore ? l10n.homeViewAll : null,
+          onActionTap: hasMore
+              ? () => _openActivityForPeriod(context, period)
               : null,
         ),
         const SizedBox(height: _Highlights._headerGap),
         _dayGroups(context, l10n, home),
-        if (home.periodHasMore) ...[
+        if (periodHasMore) ...[
           const SizedBox(height: AppSpacing.lg),
           _ShowMoreButton(
-            onPressed: () => _openActivityForPeriod(context, home.period),
+            onPressed: () => _openActivityForPeriod(context, period),
           ),
         ],
       ],
@@ -464,9 +484,7 @@ class _HomeBody extends StatelessWidget {
 }
 
 class _Highlights extends StatelessWidget {
-  const _Highlights({required this.home});
-
-  final HomeProvider home;
+  const _Highlights();
 
   static const _headerGap = AppSpacing.sm;
 
@@ -478,6 +496,8 @@ class _Highlights extends StatelessWidget {
       (HomeProvider p) =>
           p.isPeriodStatsLoading && p.currentPeriodStats == null,
     );
+    final highestSpend = context.select((HomeProvider p) => p.highestSpend);
+    final highestReceive = context.select((HomeProvider p) => p.highestReceive);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -500,7 +520,7 @@ class _Highlights extends StatelessWidget {
                   child: _highlightCard(
                     context,
                     l10n,
-                    highlight: home.highestSpend,
+                    highlight: highestSpend,
                     label: l10n.homeHighestSpend,
                     iconAsset: 'assets/icons/icon_highest_spend.svg',
                     amountColor: Theme.of(context).colorScheme.onSurface,
@@ -511,7 +531,7 @@ class _Highlights extends StatelessWidget {
                   child: _highlightCard(
                     context,
                     l10n,
-                    highlight: home.highestReceive,
+                    highlight: highestReceive,
                     label: l10n.homeHighestReceived,
                     iconAsset: 'assets/icons/icon_highest_received.svg',
                     amountColor: AppColors.positiveAmount(

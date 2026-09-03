@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -122,6 +123,34 @@ void main() {
       expect(e.isNetwork, isTrue);
       expect(e.code, 'network_error');
       expect(e.toDataException(), isA<NetworkException>());
+    }
+    client.dispose();
+  });
+
+  test('maps expired Firebase ID token to unauthenticated ApiException', () async {
+    var sent = false;
+    final client = ApiClient(
+      client: MockClient((request) async {
+        sent = true;
+        return http.Response('{}', 200);
+      }),
+      baseUrl: 'https://api.example.com',
+      idTokenFetcher: () async {
+        throw FirebaseAuthException(
+          code: 'user-token-expired',
+          message: "The user's credential is no longer valid.",
+        );
+      },
+    );
+
+    try {
+      await client.get('/categories', requireAuth: true);
+      fail('expected ApiException');
+    } on ApiException catch (e) {
+      expect(e.statusCode, 401);
+      expect(e.code, 'unauthenticated');
+      expect(e.toDataException(), isA<AuthException>());
+      expect(sent, isFalse);
     }
     client.dispose();
   });

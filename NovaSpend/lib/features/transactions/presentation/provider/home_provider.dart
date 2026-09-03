@@ -1,10 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
-import 'package:nova_spend/features/transactions/domain/entities/transaction_filter.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_period_stats.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_transactions_page.dart';
@@ -43,7 +42,7 @@ class PeriodComparison {
 /// Max transactions fetched for the home preview feed.
 const int homePageSize = 20;
 
-class HomeProvider extends ChangeNotifier {
+class HomeProvider extends SafeChangeNotifier {
   HomeProvider({
     required GetTransactionsPage getTransactionsPage,
     required GetPeriodStats getPeriodStats,
@@ -57,12 +56,9 @@ class HomeProvider extends ChangeNotifier {
   final TransactionRepository _transactionRepository;
 
   List<TransactionEntity> _items = [];
-  TransactionFilter _filter = TransactionFilter.empty;
   HomePeriod _period = HomePeriod.thisWeek;
   final Map<HomePeriod, PeriodStatsEntity> _periodStats = {};
   int _pendingReviewCount = 0;
-  int _totalCount = 0;
-  double _totalAmount = 0;
   bool _isLoading = false;
   bool _isPeriodStatsLoading = false;
   bool _hasMore = true;
@@ -71,8 +67,9 @@ class HomeProvider extends ChangeNotifier {
   final Map<HomePeriod, Future<void>> _periodStatsInFlight = {};
 
   List<TransactionEntity>? _periodItemsCache;
+  Map<String, List<TransactionEntity>>? _groupedByDayCache;
 
-  List<TransactionEntity> get items => _filtered(_items);
+  List<TransactionEntity> get items => _items;
 
   /// Transactions visible for the selected period (Today / This Week / This Month).
   List<TransactionEntity> get periodItems {
@@ -90,13 +87,11 @@ class HomeProvider extends ChangeNotifier {
 
   void _invalidatePeriodCache() {
     _periodItemsCache = null;
+    _groupedByDayCache = null;
   }
 
-  TransactionFilter get filter => _filter;
   HomePeriod get period => _period;
   int get pendingReviewCount => _pendingReviewCount;
-  int get totalCount => _totalCount;
-  double get totalAmount => _totalAmount;
   bool get isLoading => _isLoading;
   bool get isPeriodStatsLoading => _isPeriodStatsLoading;
   bool get hasMore => _hasMore;
@@ -108,15 +103,6 @@ class HomeProvider extends ChangeNotifier {
   String? get error => _error;
 
   PeriodStatsEntity? get currentPeriodStats => _periodStats[_period];
-
-  List<String> get availableAccounts {
-    final set = <String>{};
-    for (final t in _items) {
-      if (t.accountIdMasked.isNotEmpty) set.add(t.accountIdMasked);
-    }
-    final list = set.toList()..sort();
-    return list;
-  }
 
   PeriodTotals get periodTotals {
     final stats = currentPeriodStats;
@@ -167,13 +153,17 @@ class HomeProvider extends ChangeNotifier {
         _ensurePeriodStats(_period),
         _loadPendingReviewCount(uid),
       ]);
+      if (isDisposed) return;
       _error = null;
     } catch (e) {
+      if (isDisposed) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      _isPeriodStatsLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        _isPeriodStatsLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -191,7 +181,7 @@ class HomeProvider extends ChangeNotifier {
     final requested = period;
     unawaited(() async {
       await _ensurePeriodStats(requested);
-      if (_period != requested) return;
+      if (isDisposed || _period != requested) return;
       _isPeriodStatsLoading = false;
       notifyListeners();
     }());
@@ -212,13 +202,17 @@ class HomeProvider extends ChangeNotifier {
         _ensurePeriodStats(_period, force: true),
         _loadPendingReviewCount(uid),
       ]);
+      if (isDisposed) return;
       _error = null;
     } catch (e) {
+      if (isDisposed) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      _isPeriodStatsLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        _isPeriodStatsLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -226,12 +220,9 @@ class HomeProvider extends ChangeNotifier {
     final page = await _getTransactionsPage(
       uid,
       limit: homePageSize,
-      filter: _filter.hasActiveFilters ? _filter : null,
     );
     _items = List<TransactionEntity>.from(page.items)
       ..sort(TransactionEntity.compareNewestFirst);
-    _totalCount = page.totalCount;
-    _totalAmount = page.totalAmount;
     _invalidatePeriodCache();
     _hasMore = page.hasMore;
   }
@@ -292,27 +283,10 @@ class HomeProvider extends ChangeNotifier {
     return (from: fmt.format(from), to: fmt.format(to));
   }
 
-  void setFilter(TransactionFilter filter) {
-    _filter = filter;
-    _invalidatePeriodCache();
-    notifyListeners();
-  }
-
-  void clearFilter() {
-    _filter = TransactionFilter.empty;
-    _invalidatePeriodCache();
-    notifyListeners();
-  }
-
-  void setAccountFilter(String? accountIdMasked) {
-    _filter = accountIdMasked == null || accountIdMasked.isEmpty
-        ? _filter.copyWith(clearAccountIdMasked: true)
-        : _filter.copyWith(accountIdMasked: accountIdMasked);
-    _invalidatePeriodCache();
-    notifyListeners();
-  }
-
   Map<String, List<TransactionEntity>> groupByDay() {
+    final cached = _groupedByDayCache;
+    if (cached != null) return cached;
+
     final map = <String, List<TransactionEntity>>{};
     for (final t in periodItems) {
       map.putIfAbsent(t.transactionDate, () => []).add(t);
@@ -327,7 +301,9 @@ class HomeProvider extends ChangeNotifier {
         if (da == null || db == null) return b.compareTo(a);
         return db.compareTo(da);
       });
-    return {for (final k in keys) k: map[k]!};
+    final result = {for (final k in keys) k: map[k]!};
+    _groupedByDayCache = result;
+    return result;
   }
 
   Future<void> _loadPendingReviewCount(String uid) async {
@@ -335,7 +311,6 @@ class HomeProvider extends ChangeNotifier {
       _pendingReviewCount = await _transactionRepository.getPendingReviewCount(
         uid,
       );
-      notifyListeners();
     } catch (_) {
       // Non-fatal — banner simply stays hidden on failure.
     }
@@ -377,45 +352,5 @@ class HomeProvider extends ChangeNotifier {
     }
 
     return null;
-  }
-
-  List<TransactionEntity> _filtered(List<TransactionEntity> source) {
-    if (!_filter.hasActiveFilters) return source;
-    return source.where(_matches).toList();
-  }
-
-  bool _matches(TransactionEntity t) {
-    final f = _filter;
-    if (f.category != null &&
-        f.category!.isNotEmpty &&
-        t.category != f.category) {
-      return false;
-    }
-    if (f.bank != null && f.bank!.isNotEmpty && t.bank != f.bank) {
-      return false;
-    }
-    if (f.type != null && f.type!.isNotEmpty && t.type != f.type) {
-      return false;
-    }
-    if (f.accountIdMasked != null &&
-        f.accountIdMasked!.isNotEmpty &&
-        t.accountIdMasked != f.accountIdMasked) {
-      return false;
-    }
-    if (f.merchantQuery != null && f.merchantQuery!.trim().isNotEmpty) {
-      final q = f.merchantQuery!.trim().toLowerCase();
-      if (!t.merchant.toLowerCase().contains(q)) return false;
-    }
-    if (f.amountMin != null && t.amount < f.amountMin!) return false;
-    if (f.amountMax != null && t.amount > f.amountMax!) return false;
-    if (f.dateFrom != null) {
-      final d = _parseDate(t);
-      if (d == null || d.isBefore(f.dateFrom!)) return false;
-    }
-    if (f.dateTo != null) {
-      final d = _parseDate(t);
-      if (d == null || d.isAfter(f.dateTo!)) return false;
-    }
-    return true;
   }
 }

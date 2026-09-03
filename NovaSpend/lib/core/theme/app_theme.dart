@@ -9,9 +9,12 @@ import 'app_spacing.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light => _build(Brightness.light);
+  static ThemeData? _light;
+  static ThemeData? _dark;
 
-  static ThemeData get dark => _build(Brightness.dark);
+  static ThemeData get light => _light ??= _build(Brightness.light);
+
+  static ThemeData get dark => _dark ??= _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;

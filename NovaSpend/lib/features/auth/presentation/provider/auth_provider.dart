@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/features/auth/domain/entities/app_user.dart';
 import 'package:nova_spend/features/auth/domain/repositories/auth_repository.dart';
 
 /// Watches Firebase auth session for shell / settings (no anonymous sign-in).
-class AuthProvider extends ChangeNotifier {
+class AuthProvider extends SafeChangeNotifier {
   AuthProvider({required AuthRepository authRepository})
       : _authRepository = authRepository {
     _user = _authRepository.currentUser;

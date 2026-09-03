@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../utils/category_visuals.dart';
 import 'category_color_scope.dart';

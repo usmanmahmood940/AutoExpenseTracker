@@ -1,7 +1,6 @@
 /// Comparison, ranking, and copy facts for Insights. Pure Dart — no Flutter.
 library;
 
-import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 

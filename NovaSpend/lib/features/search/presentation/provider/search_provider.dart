@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
+import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/features/search/domain/entities/date_range_preset.dart';
 import 'package:nova_spend/features/search/domain/entities/search_query.dart';
 import 'package:nova_spend/features/search/domain/entities/transaction_sort.dart';
@@ -9,7 +10,7 @@ import 'package:nova_spend/features/search/domain/repositories/search_repository
 import 'package:nova_spend/features/search/domain/usecases/search_transactions.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 
-class SearchProvider extends ChangeNotifier {
+class SearchProvider extends SafeChangeNotifier {
   SearchProvider({
     required SearchTransactions searchTransactions,
     required SearchRepository searchRepository,

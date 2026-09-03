@@ -38,78 +38,62 @@ class StatHighlightCard extends StatelessWidget {
 
     final content = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.cardBorder(brightness)),
         boxShadow: AppShadows.card(brightness),
       ),
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(AppSpacing.smPlus3),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.cardBorder(brightness)),
-        ),
         child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(
-                            alpha: 0.95,
-                          ),
-                          height: 1.3,
-                        ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.95,
+                      ),
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xsMini),
+                  Text(
+                    amount,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.01 * 18,
+                      color: amountColor ?? theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.xsMini),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.85,
                       ),
                     ),
-                    // const SizedBox(width: AppSpacing.xs),
-                    // SvgPicture.asset(
-                    //   iconAsset,
-                    //   width: _iconSize,
-                    //   height: _iconSize,
-                    // ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xsMini),
-                Text(
-                  amount,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.01 * 18,
-                    color: amountColor ?? theme.colorScheme.onSurface,
+                    maxLines: 1,
+                    overflow: TextOverflow.visible,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.xsMini),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.85,
-                    ),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.visible,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          SvgPicture.asset(iconAsset, width: _iconSize, height: _iconSize),
-        ],
-      ),
+            SvgPicture.asset(iconAsset, width: _iconSize, height: _iconSize),
+          ],
+        ),
       ),
     );
 

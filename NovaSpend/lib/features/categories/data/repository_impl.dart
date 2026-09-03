@@ -11,16 +11,6 @@ class CategoryRepositoryImpl implements CategoryRepository {
   final BackendCategoryDatasource _backend;
 
   @override
-  Stream<List<CategoryEntity>> watchDefaults() {
-    return _backend.watchDefaults();
-  }
-
-  @override
-  Stream<List<CategoryEntity>> watchUserCategories(String uid) {
-    return _backend.watchUserCategories();
-  }
-
-  @override
   Stream<List<CategoryEntity>> watchAll(String uid) {
     return _backend.watchAll();
   }

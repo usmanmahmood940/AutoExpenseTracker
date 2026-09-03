@@ -39,7 +39,14 @@ class AppCard extends StatelessWidget {
                 ),
               ],
       ),
-      child: Padding(padding: padding, child: child),
+      // ListTile/SwitchListTile paint ink on the nearest Material. Without
+      // this, the opaque DecoratedBox hides ripples (Flutter debug assert).
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(padding: padding, child: child),
+      ),
     );
 
     if (onTap == null) {

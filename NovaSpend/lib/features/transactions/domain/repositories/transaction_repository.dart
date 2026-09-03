@@ -5,11 +5,6 @@ import 'package:nova_spend/features/transactions/domain/entities/transaction_fil
 import 'package:nova_spend/features/transactions/domain/entities/transactions_page.dart';
 
 abstract class TransactionRepository {
-  Stream<List<TransactionEntity>> watchTransactions(
-    String uid, {
-    int limit = 50,
-  });
-
   Future<TransactionsPage> getTransactionsPage(
     String uid, {
     int limit = 50,
@@ -34,15 +29,8 @@ abstract class TransactionRepository {
     Map<String, dynamic> fields,
   );
 
-  Stream<List<TransactionEntity>> watchNeedsReview(String uid);
-
   /// One-shot review queue page (no long-lived listener).
   Future<List<TransactionEntity>> getNeedsReview(String uid, {int limit = 50});
-
-  Stream<List<RawIngestionEntity>> watchIngestionsByStatus(
-    String uid,
-    String status,
-  );
 
   /// One-shot ingestion queue page (no long-lived listener).
   Future<List<RawIngestionEntity>> getIngestionsByStatus(

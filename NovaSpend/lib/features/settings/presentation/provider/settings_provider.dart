@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/core/services/export_service.dart';
 import 'package:nova_spend/features/auth/domain/repositories/auth_repository.dart';
 import 'package:nova_spend/features/auth/domain/services/user_account_service.dart';
@@ -9,7 +9,9 @@ import 'package:nova_spend/features/settings/domain/repositories/settings_reposi
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 
-class SettingsProvider extends ChangeNotifier {
+enum SettingsBusyAction { signOut, passwordReset, deleteAccount, export }
+
+class SettingsProvider extends SafeChangeNotifier {
   SettingsProvider({
     required SettingsRepository settingsRepository,
     required AuthRepository authRepository,
@@ -33,8 +35,14 @@ class SettingsProvider extends ChangeNotifier {
   SyncMetaEntity? syncMeta;
   bool biometricEnabled = false;
   bool isLoading = true;
-  bool isExporting = false;
+  SettingsBusyAction? _busyAction;
   String? error;
+
+  SettingsBusyAction? get busyAction => _busyAction;
+  bool get isBusy => _busyAction != null;
+  bool get isExporting => isBusyWith(SettingsBusyAction.export);
+
+  bool isBusyWith(SettingsBusyAction action) => _busyAction == action;
 
   Future<void> start(String uid) async {
     _syncSub?.cancel();
@@ -65,44 +73,67 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> exportCsv(String uid) async {
-    isExporting = true;
+  Future<bool> exportCsv(String uid) {
     error = null;
-    notifyListeners();
-    try {
-      final txs = <TransactionEntity>[];
-      TransactionEntity? cursor;
-      var hasMore = true;
-      while (hasMore) {
-        final page = await _transactionRepository.getTransactionsPage(
-          uid,
-          limit: 100,
-          startAfter: cursor,
-        );
-        txs.addAll(page.items);
-        hasMore = page.hasMore && page.items.isNotEmpty;
-        cursor = page.items.isEmpty ? null : page.items.last;
-        if (txs.length >= 5000) break;
+    return _runBusy(SettingsBusyAction.export, () async {
+      try {
+        final txs = <TransactionEntity>[];
+        TransactionEntity? cursor;
+        var hasMore = true;
+        while (hasMore) {
+          final page = await _transactionRepository.getTransactionsPage(
+            uid,
+            limit: 100,
+            startAfter: cursor,
+          );
+          txs.addAll(page.items);
+          hasMore = page.hasMore && page.items.isNotEmpty;
+          cursor = page.items.isEmpty ? null : page.items.last;
+          if (txs.length >= 5000) break;
+        }
+        await _exportService.exportTransactionsCsv(txs);
+        return true;
+      } catch (e) {
+        error = e.toString();
+        return false;
       }
-      await _exportService.exportTransactionsCsv(txs);
-      return true;
-    } catch (e) {
-      error = e.toString();
-      return false;
-    } finally {
-      isExporting = false;
-      notifyListeners();
-    }
+    });
   }
 
-  Future<void> signOut() => _authRepository.signOut();
+  Future<void> signOut() {
+    return _runBusy(
+      SettingsBusyAction.signOut,
+      () => _authRepository.signOut(),
+    );
+  }
 
   Future<void> sendPasswordResetEmail(String email) {
-    return _userAccountService.sendPasswordResetEmail(email);
+    return _runBusy(
+      SettingsBusyAction.passwordReset,
+      () => _userAccountService.sendPasswordResetEmail(email),
+    );
   }
 
   Future<void> deleteAccount({String? password}) {
-    return _userAccountService.deleteAccount(password: password);
+    return _runBusy(
+      SettingsBusyAction.deleteAccount,
+      () => _userAccountService.deleteAccount(password: password),
+    );
+  }
+
+  Future<T> _runBusy<T>(
+    SettingsBusyAction action,
+    Future<T> Function() fn,
+  ) async {
+    if (_busyAction != null) return fn();
+    _busyAction = action;
+    notifyListeners();
+    try {
+      return await fn();
+    } finally {
+      _busyAction = null;
+      notifyListeners();
+    }
   }
 
   @override

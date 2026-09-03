@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,5 +41,24 @@ void main() {
     await controller.setCurrency('EUR');
     expect(controller.currency, 'EUR');
     expect(synced, 'EUR');
+    expect(controller.isSaving, isFalse);
+  });
+
+  test('setCurrency isSaving while remoteSync is in flight', () async {
+    final inFlight = Completer<void>();
+    final prefs = await SharedPreferences.getInstance();
+    final controller = AppCurrencyController(
+      prefs,
+      remoteSync: (_) => inFlight.future,
+    );
+    await controller.load();
+
+    final pending = controller.setCurrency('EUR');
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.isSaving, isTrue);
+
+    inFlight.complete();
+    await pending;
+    expect(controller.isSaving, isFalse);
   });
 }
