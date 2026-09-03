@@ -36,7 +36,9 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: surface,
       textTheme: textTheme,
-      fontFamily: GoogleFonts.inter().fontFamily,
+      // Do not set [ThemeData.fontFamily] — it can steal glyphs from icon
+      // fonts (AppBar back, Cupertino chevrons) and render them as "?".
+      // Inter is already applied via [textTheme] above.
       cardTheme: CardThemeData(
         color: card,
         elevation: 0,
