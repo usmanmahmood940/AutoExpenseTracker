@@ -268,7 +268,7 @@ class SearchProvider extends SafeChangeNotifier {
         includeAggregates: true,
       );
       _pageCursor = page.items.isEmpty ? null : page.items.last;
-      results = page.items;
+      results = sortTransactions(page.items, query.sort);
       hasMore = page.hasMore;
       matchCount = page.totalCount ?? page.items.length;
       final fallback = _spendTotals(page.items);
@@ -319,10 +319,10 @@ class SearchProvider extends SafeChangeNotifier {
       } else {
         _pageCursor = more.items.last;
         final existing = results.map((e) => e.id).toSet();
-        results = [
+        results = sortTransactions([
           ...results,
           ...more.items.where((t) => !existing.contains(t.id)),
-        ];
+        ], query.sort);
         hasMore = more.hasMore;
         error = null;
       }

@@ -30,9 +30,9 @@ enum TransactionSort {
   int compare(TransactionEntity a, TransactionEntity b) {
     switch (this) {
       case TransactionSort.dateNewest:
-        return _dateOf(b).compareTo(_dateOf(a));
+        return TransactionEntity.compareNewestFirst(a, b);
       case TransactionSort.dateOldest:
-        return _dateOf(a).compareTo(_dateOf(b));
+        return TransactionEntity.compareNewestFirst(b, a);
       case TransactionSort.amountHighest:
         return b.amount.compareTo(a.amount);
       case TransactionSort.amountLowest:
@@ -43,11 +43,6 @@ enum TransactionSort {
         return b.merchant.toLowerCase().compareTo(a.merchant.toLowerCase());
     }
   }
-}
-
-DateTime _dateOf(TransactionEntity tx) {
-  return DateTime.tryParse(tx.transactionDate) ??
-      DateTime.fromMillisecondsSinceEpoch(0);
 }
 
 List<TransactionEntity> sortTransactions(
