@@ -116,7 +116,7 @@ def _merchant_stats_by_norm(
 def _visit_totals_by_norm(
     rows: list[tuple[str | None, str | None, int]],
 ) -> dict[str, dict]:
-    """Count every transaction (debit + credit) per merchant, merged by normalized key."""
+    """Count every transaction (debit + credit) per merchant, merged by key."""
     merged: dict[str, dict] = {}
     for normalized, merchant, visits in rows:
         display = merchant or "Unknown"
@@ -199,86 +199,60 @@ def _by_merchant_map(stats_by_norm: dict[str, dict]) -> dict[str, float]:
     return {data["display_name"]: data["amount"] for data in stats_by_norm.values()}
 
 
-async def _summary_for_range(
-    session: AsyncSession,
+_BREAKDOWN_COLS = (
+    Transaction.type,
+    Transaction.category,
+    Transaction.merchant,
+    Transaction.merchant_normalized,
+    func.sum(Transaction.amount),
+    func.count(Transaction.id),
+    func.max(Transaction.updated_at),
+)
+_BREAKDOWN_GROUP = (
+    Transaction.type,
+    Transaction.category,
+    Transaction.merchant,
+    Transaction.merchant_normalized,
+)
+
+
+def _summary_from_breakdown(
+    rows: list,
     *,
     user: User,
     start: date,
     end: date,
     year_month: str = "",
 ) -> dict:
-    base = _base_filters(user.id, start, end)
-    totals = (
-        await session.execute(
-            select(
-                func.coalesce(
-                    func.sum(Transaction.amount).filter(
-                        Transaction.type == TransactionType.debit
-                    ),
-                    0,
-                ),
-                func.coalesce(
-                    func.sum(Transaction.amount).filter(
-                        Transaction.type == TransactionType.credit
-                    ),
-                    0,
-                ),
-                func.count(Transaction.id),
-            ).where(*base)
-        )
-    ).one()
-    total_debit = as_money(totals[0])
-    total_credit = as_money(totals[1])
-    count = int(totals[2])
-    source_updated_at = (
-        await session.execute(select(func.max(Transaction.updated_at)).where(*base))
-    ).scalar_one()
+    """Assemble a summary payload from type/category/merchant grouped rows."""
+    total_debit = Decimal("0")
+    total_credit = Decimal("0")
+    count = 0
+    source_updated_at: datetime | None = None
+    category_acc: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    debit_merchant_rows: list[tuple[str | None, str | None, Decimal, int]] = []
+    credit_merchant_rows: list[tuple[str | None, str | None, Decimal, int]] = []
+    visit_rows: list[tuple[str | None, str | None, int]] = []
 
-    by_category_rows = (
-        await session.execute(
-            select(Transaction.category, func.sum(Transaction.amount))
-            .where(*base, Transaction.type == TransactionType.debit)
-            .group_by(Transaction.category)
-        )
-    ).all()
-    by_merchant_rows = (
-        await session.execute(
-            select(
-                Transaction.merchant,
-                Transaction.merchant_normalized,
-                func.sum(Transaction.amount),
-                func.count(Transaction.id),
-            )
-            .where(*base, Transaction.type == TransactionType.debit)
-            .group_by(Transaction.merchant, Transaction.merchant_normalized)
-        )
-    ).all()
-    by_merchant_received_rows = (
-        await session.execute(
-            select(
-                Transaction.merchant,
-                Transaction.merchant_normalized,
-                func.sum(Transaction.amount),
-                func.count(Transaction.id),
-            )
-            .where(*base, Transaction.type == TransactionType.credit)
-            .group_by(Transaction.merchant, Transaction.merchant_normalized)
-        )
-    ).all()
+    for tx_type, category, merchant, normalized, amount_raw, visits, updated_at in rows:
+        amount = as_money(amount_raw)
+        visit_count = int(visits)
+        count += visit_count
+        if updated_at is not None and (
+            source_updated_at is None or updated_at > source_updated_at
+        ):
+            source_updated_at = updated_at
+        visit_rows.append((normalized, merchant, visit_count))
+        if tx_type == TransactionType.debit:
+            total_debit += amount
+            category_acc[category or "Unknown"] += amount
+            debit_merchant_rows.append((merchant, normalized, amount, visit_count))
+        elif tx_type == TransactionType.credit:
+            total_credit += amount
+            credit_merchant_rows.append((merchant, normalized, amount, visit_count))
 
-    spent_stats = _merchant_stats_by_norm(by_merchant_rows)
-    received_stats = _merchant_stats_by_norm(by_merchant_received_rows)
-    visit_rows = (
-        await session.execute(
-            select(
-                Transaction.merchant_normalized,
-                func.min(Transaction.merchant),
-                func.count(Transaction.id),
-            )
-            .where(*base)
-            .group_by(Transaction.merchant_normalized)
-        )
-    ).all()
+    spent_stats = _merchant_stats_by_norm(debit_merchant_rows)
+    received_stats = _merchant_stats_by_norm(credit_merchant_rows)
     visit_totals = _visit_totals_by_norm(visit_rows)
 
     return {
@@ -291,7 +265,7 @@ async def _summary_for_range(
         "net": money_float(total_credit - total_debit),
         "transaction_count": count,
         "source_updated_at": _iso_datetime(source_updated_at),
-        "by_category": _amount_map(by_category_rows),
+        "by_category": _amount_map(list(category_acc.items())),
         "top_merchants_spent": _top_merchants_from_stats(spent_stats),
         "top_merchants_received": _top_merchants_from_stats(received_stats),
         "top_merchants_by_visits": _top_merchants_by_visits(
@@ -303,16 +277,34 @@ async def _summary_for_range(
     }
 
 
+async def _summary_for_range(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    year_month: str = "",
+) -> dict:
+    rows = list(
+        (
+            await session.execute(
+                select(*_BREAKDOWN_COLS)
+                .where(*_base_filters(user.id, start, end))
+                .group_by(*_BREAKDOWN_GROUP)
+            )
+        ).all()
+    )
+    return _summary_from_breakdown(
+        rows, user=user, start=start, end=end, year_month=year_month
+    )
+
+
 async def get_summary(session: AsyncSession, *, user: User, year_month: str) -> dict:
     parsed = parse_year_month(year_month)
     start, end = _month_bounds(parsed)
     return await _summary_for_range(
         session, user=user, start=start, end=end, year_month=parsed
     )
-
-
-# Used by the monthly_summaries worker.
-_summary_for = get_summary
 
 
 async def get_range_summary(
@@ -457,7 +449,7 @@ async def list_recent_summaries(
 ) -> list[dict]:
     """Months that actually have transactions, newest first — Insights' recent list."""
     month_col = func.to_char(Transaction.transaction_date, "YYYY-MM")
-    rows = (
+    month_rows = (
         await session.execute(
             select(month_col)
             .where(
@@ -469,7 +461,37 @@ async def list_recent_summaries(
             .limit(limit)
         )
     ).all()
+    year_months = [row[0] for row in month_rows]
+    if not year_months:
+        return []
+
+    start, _ = _month_bounds(year_months[-1])
+    _, end = _month_bounds(year_months[0])
+    grouped = (
+        await session.execute(
+            select(month_col, *_BREAKDOWN_COLS)
+            .where(
+                *_base_filters(user.id, start, end),
+                month_col.in_(year_months),
+            )
+            .group_by(month_col, *_BREAKDOWN_GROUP)
+        )
+    ).all()
+
+    by_month: dict[str, list] = defaultdict(list)
+    for row in grouped:
+        by_month[row[0]].append(row[1:])
+
     summaries = []
-    for (year_month,) in rows:
-        summaries.append(await get_summary(session, user=user, year_month=year_month))
+    for year_month in year_months:
+        month_start, month_end = _month_bounds(year_month)
+        summaries.append(
+            _summary_from_breakdown(
+                by_month.get(year_month, []),
+                user=user,
+                start=month_start,
+                end=month_end,
+                year_month=year_month,
+            )
+        )
     return summaries

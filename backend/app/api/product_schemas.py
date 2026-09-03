@@ -135,12 +135,6 @@ class PeriodStatsOut(BaseModel):
     comparison: PeriodComparisonOut | None
 
 
-class MerchantSpendStatOut(BaseModel):
-    amount: float
-    visit_count: int
-    merchant_normalized: str
-
-
 class TopMerchantOut(BaseModel):
     display_name: str
     merchant_normalized: str

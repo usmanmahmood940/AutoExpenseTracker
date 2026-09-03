@@ -31,53 +31,32 @@ async def get_merchant_summary(
 ) -> dict:
     key = normalize_merchant_key(merchant_key)
     this_month = date.today().strftime("%Y-%m")
+    month_start = date.fromisoformat(f"{this_month}-01")
     merchant_filter = _merchant_filter(user.id, key)
-    debit_filter = (
-        *merchant_filter,
-        Transaction.type == TransactionType.debit,
-    )
-
-    visit_count = int(
-        (
-            await session.execute(
-                select(func.count(Transaction.id)).where(*merchant_filter)
-            )
-        ).scalar_one()
-    )
+    is_debit = Transaction.type == TransactionType.debit
+    this_month_filter = Transaction.transaction_date >= month_start
 
     totals = (
         await session.execute(
             select(
-                func.coalesce(func.sum(Transaction.amount), 0),
-                func.min(Transaction.merchant),
-                func.min(Transaction.currency),
-            ).where(*debit_filter)
-        )
-    ).one()
-    total_spent = as_money(totals[0])
-    display_name = totals[1] or merchant_key
-    currency = totals[2] or user.default_currency
-
-    month_start = date.fromisoformat(f"{this_month}-01")
-    month_totals = (
-        await session.execute(
-            select(
-                func.coalesce(func.sum(Transaction.amount), 0),
                 func.count(Transaction.id),
-            ).where(*debit_filter, Transaction.transaction_date >= month_start)
+                func.coalesce(func.sum(Transaction.amount).filter(is_debit), 0),
+                func.min(Transaction.merchant).filter(is_debit),
+                func.min(Transaction.currency).filter(is_debit),
+                func.coalesce(
+                    func.sum(Transaction.amount).filter(is_debit & this_month_filter),
+                    0,
+                ),
+                func.count(Transaction.id).filter(this_month_filter),
+            ).where(*merchant_filter)
         )
     ).one()
-    this_month_spent = as_money(month_totals[0])
-    this_month_visits = int(
-        (
-            await session.execute(
-                select(func.count(Transaction.id)).where(
-                    *merchant_filter,
-                    Transaction.transaction_date >= month_start,
-                )
-            )
-        ).scalar_one()
-    )
+    visit_count = int(totals[0])
+    total_spent = as_money(totals[1])
+    display_name = totals[2] or merchant_key
+    currency = totals[3] or user.default_currency
+    this_month_spent = as_money(totals[4])
+    this_month_visits = int(totals[5])
     average = money_float(total_spent / visit_count) if visit_count else 0.0
 
     return {

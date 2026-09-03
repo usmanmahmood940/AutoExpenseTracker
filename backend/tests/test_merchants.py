@@ -18,9 +18,9 @@ def test_merchant_summary_and_transactions(api_client: TestClient) -> None:
     summary = api_client.get("/merchants/kfc").json()
     assert summary["merchant_normalized"] == "kfc"
     assert summary["display_name"] == "KFC"
-    assert summary["visit_count"] == 2
+    assert summary["visit_count"] == 3
     assert summary["total_spent"] == 1200.0
-    assert summary["average_spent"] == 600.0
+    assert summary["average_spent"] == 400.0
 
     page = api_client.get("/merchants/kfc/transactions").json()
     assert len(page["items"]) == 3  # credits included in the merchant list

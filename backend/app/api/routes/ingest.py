@@ -15,6 +15,7 @@ from app.core.firebase import FirebaseIdentity
 from app.core.logging import uid_var
 from app.db.models.transaction import Transaction
 from app.services import firebase_users
+from app.services.firebase_users import FirebaseUser
 from app.services.ingest import (
     ingest_for_identity,
     is_valid_uid,
@@ -37,7 +38,7 @@ async def _resolve_uid(
     *,
     x_user_id: str | None,
     uid_query: str | None,
-) -> tuple[str | None, JSONResponse | None]:
+) -> tuple[FirebaseUser | None, JSONResponse | None]:
     uid = (x_user_id or "").strip() or (uid_query or "").strip()
     if not uid:
         return None, _error(
@@ -69,7 +70,7 @@ async def _resolve_uid(
             status.HTTP_404_NOT_FOUND,
             "uid does not exist in Firebase Auth",
         )
-    return uid, None
+    return record, None
 
 
 @router.post(
@@ -97,10 +98,10 @@ async def ingest(
         ):
             return _error(status.HTTP_401_UNAUTHORIZED, "Invalid ingest secret")
 
-        firebase_uid, err = await _resolve_uid(x_user_id=x_user_id, uid_query=uid)
-        if err is not None or firebase_uid is None:
+        record, err = await _resolve_uid(x_user_id=x_user_id, uid_query=uid)
+        if err is not None or record is None:
             return err or _error(status.HTTP_400_BAD_REQUEST, "uid is required")
-        uid_var.set(firebase_uid)
+        uid_var.set(record.uid)
 
         try:
             body: Any = await request.json()
@@ -113,11 +114,6 @@ async def ingest(
         if error or webhook is None:
             return _error(status.HTTP_400_BAD_REQUEST, error or "Invalid body")
 
-        record = await firebase_users.get_by_uid(firebase_uid)
-        if record is None:
-            return _error(
-                status.HTTP_404_NOT_FOUND, "uid does not exist in Firebase Auth"
-            )
         identity = FirebaseIdentity(
             uid=record.uid,
             email=record.email,

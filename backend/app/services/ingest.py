@@ -6,7 +6,6 @@ eventually flip from the Cloud Function do not need a body rewrite.
 
 from __future__ import annotations
 
-import logging
 import re
 from dataclasses import dataclass, replace
 from datetime import date, datetime
@@ -37,9 +36,6 @@ from app.services.gemini import ParsedTransaction, ParseFail, parse_transaction
 from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money
 from app.services.user_profile import ensure_profile
-from app.workers.summaries import recompute_for_date
-
-logger = logging.getLogger(__name__)
 
 INGESTION_SOURCES = {item.value for item in IngestionSource}
 UID_RE = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
@@ -98,7 +94,13 @@ def validate_webhook_body(
     if not isinstance(source, str) or source not in INGESTION_SOURCES:
         return None, "source must be one of: ios_shortcut, gmail, manual"
 
-    if not isinstance(received_at, str) or parse_received_at(received_at) is None:
+    if not isinstance(received_at, str):
+        return None, (
+            "receivedAt is required and must be ISO 8601 or dd/mm/yyyy with time "
+            "(e.g. 10/07/2026, 6:02:00 PM GMT +5)"
+        )
+    parsed_received = parse_received_at(received_at)
+    if parsed_received is None:
         return None, (
             "receivedAt is required and must be ISO 8601 or dd/mm/yyyy with time "
             "(e.g. 10/07/2026, 6:02:00 PM GMT +5)"
@@ -116,12 +118,6 @@ def validate_webhook_body(
     if bank is not None and not isinstance(bank, str):
         return None, "bank must be a string when provided"
 
-    parsed_received = parse_received_at(received_at)
-    if parsed_received is None:
-        return None, (
-            "receivedAt is required and must be ISO 8601 or dd/mm/yyyy with time "
-            "(e.g. 10/07/2026, 6:02:00 PM GMT +5)"
-        )
     return (
         WebhookRequest(
             raw=raw.strip(),
@@ -411,13 +407,7 @@ async def process_ingest(
             transaction_id=str(duplicate.id),
         )
 
-    try:
-        await recompute_for_date(session, user=user, tx_date=tx_date)
-    except Exception:
-        logger.exception(
-            "summary_recompute_failed", extra={"yearMonth": tx_date.strftime("%Y-%m")}
-        )
-
+    # Insights read live SQL; monthly_summaries is a later cache, not on this path.
     return WebhookResponse(
         success=True,
         ingestion_id=str(ingestion.id),

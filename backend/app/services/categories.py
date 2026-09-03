@@ -15,10 +15,14 @@ from app.db.seeds.categories import DEFAULT_CATEGORIES
 
 _SLUG_STRIP = re.compile(r"[^a-z0-9]+")
 CUSTOM_SORT_ORDER = 1000
+_defaults_ready = False
 
 
 async def seed_default_categories(session: AsyncSession) -> None:
     """Idempotent insert of the global default set (user_id IS NULL)."""
+    global _defaults_ready
+    if _defaults_ready:
+        return
     existing = {
         row.slug
         for row in (
@@ -46,6 +50,7 @@ async def seed_default_categories(session: AsyncSession) -> None:
         added = True
     if added:
         await session.commit()
+    _defaults_ready = True
 
 
 async def list_categories(

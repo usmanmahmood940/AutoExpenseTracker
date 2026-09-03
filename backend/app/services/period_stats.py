@@ -10,7 +10,7 @@ import uuid
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError
@@ -60,31 +60,20 @@ def _countable(user_id: uuid.UUID, from_date: date, to_date: date):
     )
 
 
-async def _range_totals(
+def _in_range(start: date, end: date):
+    return and_(
+        Transaction.transaction_date >= start,
+        Transaction.transaction_date <= end,
+    )
+
+
+async def _highlights(
     session: AsyncSession,
     *,
     user: User,
     from_date: date,
     to_date: date,
-) -> dict:
-    totals_stmt = select(
-        func.coalesce(
-            func.sum(Transaction.amount).filter(
-                Transaction.type == TransactionType.debit
-            ),
-            0,
-        ),
-        func.coalesce(
-            func.sum(Transaction.amount).filter(
-                Transaction.type == TransactionType.credit
-            ),
-            0,
-        ),
-    ).where(*_countable(user.id, from_date, to_date))
-    spent_raw, received_raw = (await session.execute(totals_stmt)).one()
-    spent = as_money(spent_raw)
-    received = as_money(received_raw)
-
+) -> tuple[dict | None, dict | None]:
     highlight_cols = (
         Transaction.id,
         Transaction.amount,
@@ -95,27 +84,29 @@ async def _range_totals(
         Transaction.type,
         Transaction.currency,
     )
-
-    async def _highlight(tx_type: TransactionType) -> dict | None:
-        stmt = (
+    rows = (
+        await session.execute(
             select(*highlight_cols)
             .where(
                 *_countable(user.id, from_date, to_date),
-                Transaction.type == tx_type,
+                Transaction.type.in_((TransactionType.debit, TransactionType.credit)),
             )
+            .distinct(Transaction.type)
             .order_by(
+                Transaction.type,
                 Transaction.amount.desc(),
                 Transaction.transaction_date.desc(),
                 Transaction.id.desc(),
             )
-            .limit(1)
         )
-        row = (await session.execute(stmt)).one_or_none()
-        if row is None:
-            return None
+    ).all()
+
+    highest_spend = None
+    highest_receive = None
+    for row in rows:
         merchant = row.merchant or ""
         stored = row.merchant_normalized or ""
-        return {
+        payload = {
             "id": row.id,
             "amount": money_float(row.amount),
             "merchant": merchant,
@@ -125,14 +116,11 @@ async def _range_totals(
             "type": row.type.value,
             "currency": row.currency,
         }
-
-    return {
-        "spent": spent,
-        "received": received,
-        "currency": user.default_currency,
-        "highest_spend": await _highlight(TransactionType.debit),
-        "highest_receive": await _highlight(TransactionType.credit),
-    }
+        if row.type == TransactionType.debit:
+            highest_spend = payload
+        elif row.type == TransactionType.credit:
+            highest_receive = payload
+    return highest_spend, highest_receive
 
 
 async def get_period_stats(
@@ -149,35 +137,66 @@ async def get_period_stats(
             code="invalid_date_range",
         )
 
-    current = await _range_totals(
+    debit = Transaction.type == TransactionType.debit
+    credit = Transaction.type == TransactionType.credit
+    prev = previous_range(period, from_date, to_date)
+    current_range = _in_range(from_date, to_date)
+
+    if prev is None:
+        totals_stmt = select(
+            func.coalesce(func.sum(Transaction.amount).filter(debit), 0),
+            func.coalesce(func.sum(Transaction.amount).filter(credit), 0),
+        ).where(*_countable(user.id, from_date, to_date))
+        spent_raw, received_raw = (await session.execute(totals_stmt)).one()
+        prev_spent = prev_received = None
+    else:
+        prev_range = _in_range(prev[0], prev[1])
+        totals_stmt = select(
+            func.coalesce(
+                func.sum(Transaction.amount).filter(debit & current_range), 0
+            ),
+            func.coalesce(
+                func.sum(Transaction.amount).filter(credit & current_range), 0
+            ),
+            func.coalesce(func.sum(Transaction.amount).filter(debit & prev_range), 0),
+            func.coalesce(func.sum(Transaction.amount).filter(credit & prev_range), 0),
+        ).where(
+            Transaction.user_id == user.id,
+            Transaction.status != TransactionStatus.deleted,
+            or_(current_range, prev_range),
+        )
+        spent_raw, received_raw, prev_spent, prev_received = (
+            await session.execute(totals_stmt)
+        ).one()
+
+    spent = as_money(spent_raw)
+    received = as_money(received_raw)
+    highest_spend, highest_receive = await _highlights(
         session, user=user, from_date=from_date, to_date=to_date
     )
+
     comparison = None
-    prev = previous_range(period, from_date, to_date)
-    if prev is not None:
-        previous = await _range_totals(
-            session, user=user, from_date=prev[0], to_date=prev[1]
-        )
-        current_net = current["received"] - current["spent"]
-        previous_net = previous["received"] - previous["spent"]
+    if prev is not None and prev_spent is not None and prev_received is not None:
+        previous_spent = as_money(prev_spent)
+        previous_received = as_money(prev_received)
+        current_net = received - spent
+        previous_net = previous_received - previous_spent
         comparison = {
-            "spent_change_percent": percent_change(previous["spent"], current["spent"]),
-            "received_change_percent": percent_change(
-                previous["received"], current["received"]
-            ),
+            "spent_change_percent": percent_change(previous_spent, spent),
+            "received_change_percent": percent_change(previous_received, received),
             "net_change_percent": percent_change(previous_net, current_net),
         }
 
-    net = current["received"] - current["spent"]
+    net = received - spent
     return {
         "period": period.value,
         "from": from_date.isoformat(),
         "to": to_date.isoformat(),
-        "currency": current["currency"],
-        "spent": money_float(current["spent"]),
-        "received": money_float(current["received"]),
+        "currency": user.default_currency,
+        "spent": money_float(spent),
+        "received": money_float(received),
         "net": money_float(net),
-        "highest_spend": current["highest_spend"],
-        "highest_receive": current["highest_receive"],
+        "highest_spend": highest_spend,
+        "highest_receive": highest_receive,
         "comparison": comparison,
     }

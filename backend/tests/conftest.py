@@ -17,6 +17,9 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "postgresql+asyncpg://novaspend:novaspend@localhost:5432/novaspend_test",
 )
 os.environ["LOG_LEVEL"] = "WARNING"
+# Local `.env` must not change test behavior (Resend send, cron auth).
+os.environ["RESEND_API_KEY"] = ""
+os.environ["CRON_SECRET"] = ""
 
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from uuid import uuid4
