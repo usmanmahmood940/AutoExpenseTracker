@@ -928,6 +928,144 @@ abstract class AppLocalizations {
   /// **'Add transaction'**
   String get homeAddTransaction;
 
+  /// No description provided for @manualLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add transaction'**
+  String get manualLogTitle;
+
+  /// No description provided for @manualLogPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get manualLogPaste;
+
+  /// No description provided for @manualLogForm.
+  ///
+  /// In en, this message translates to:
+  /// **'Form'**
+  String get manualLogForm;
+
+  /// No description provided for @manualLogReadMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Read message'**
+  String get manualLogReadMessage;
+
+  /// No description provided for @manualLogReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading message…'**
+  String get manualLogReading;
+
+  /// No description provided for @manualLogClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste from clipboard'**
+  String get manualLogClipboard;
+
+  /// No description provided for @manualLogClipboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to paste'**
+  String get manualLogClipboardEmpty;
+
+  /// No description provided for @manualLogPasteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste an SMS, or type Spent 200 at KFC'**
+  String get manualLogPasteHint;
+
+  /// No description provided for @manualLogPasteExample.
+  ///
+  /// In en, this message translates to:
+  /// **'Example: Spent 450 at Cheezious'**
+  String get manualLogPasteExample;
+
+  /// No description provided for @manualLogLogged.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction added'**
+  String get manualLogLogged;
+
+  /// No description provided for @manualLogSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get manualLogSave;
+
+  /// No description provided for @manualLogParseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read that — fill the form instead.'**
+  String get manualLogParseFailed;
+
+  /// No description provided for @manualLogDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'This looks like a transaction you already have.'**
+  String get manualLogDuplicate;
+
+  /// No description provided for @manualLogViewExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'View existing'**
+  String get manualLogViewExisting;
+
+  /// No description provided for @manualLogNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get manualLogNote;
+
+  /// No description provided for @labelOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} (optional)'**
+  String labelOptional(String label);
+
+  /// No description provided for @manualLogAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter amount'**
+  String get manualLogAmountHint;
+
+  /// No description provided for @manualLogAmountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount'**
+  String get manualLogAmountRequired;
+
+  /// No description provided for @manualLogMerchantRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a merchant'**
+  String get manualLogMerchantRequired;
+
+  /// No description provided for @manualLogCategoryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a category'**
+  String get manualLogCategoryRequired;
+
+  /// No description provided for @manualLogPasteRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste or type a message first'**
+  String get manualLogPasteRequired;
+
+  /// No description provided for @manualLogConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% confidence'**
+  String manualLogConfidence(String percent);
+
+  /// No description provided for @manualLogLowConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Double-check these details'**
+  String get manualLogLowConfidence;
+
   /// No description provided for @homePeriodEmpty.
   ///
   /// In en, this message translates to:

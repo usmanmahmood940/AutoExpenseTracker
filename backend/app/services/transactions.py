@@ -424,6 +424,7 @@ async def create_transaction(
     branch: str | None,
     category_source: str,
     ingestion_id: uuid.UUID | None,
+    note: str | None = None,
 ) -> Transaction:
     merchant = resolve_merchant(
         merchant.strip(),
@@ -434,6 +435,11 @@ async def create_transaction(
         raise BadRequestError("merchant is required.", code="merchant_required")
 
     tx_id = uuid.uuid4()
+    sms_source = _empty_sms_source()
+    if note and note.strip():
+        sms_source["raw"] = note.strip()
+        sms_source["source"] = "manual"
+
     tx = Transaction(
         id=tx_id,
         user_id=user_id,
@@ -455,7 +461,7 @@ async def create_transaction(
         day=weekday_name(transaction_date),
         external_id_type=ExternalIdType.unknown,
         dedup_key=f"manual_{tx_id}",
-        sms_source=_empty_sms_source(),
+        sms_source=sms_source,
         parse_confidence=Decimal("1"),
         is_auto_detected=False,
         is_edited=True,

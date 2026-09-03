@@ -52,6 +52,12 @@ class SearchProvider extends SafeChangeNotifier {
     unawaited(ensurePaymentMethods());
   }
 
+  /// Reloads the current query if Activity has already been fetched.
+  void reloadIfLoaded() {
+    if (_uid == null || !hasSearched) return;
+    unawaited(runSearch(saveRecent: false));
+  }
+
   /// Loads the Activity list once if it has never been fetched.
   /// Does not clear filters — tab switches keep the last query.
   void ensureLoaded() {

@@ -5,6 +5,7 @@ import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
+import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -174,10 +175,8 @@ MonthlySummaryEntity monthlySummaryFromApi(Map<String, dynamic> json) {
   Map<String, double> numMap(dynamic raw) {
     if (raw is! Map) return {};
     return raw.map(
-      (key, value) => MapEntry(
-        key.toString(),
-        (value as num?)?.toDouble() ?? 0,
-      ),
+      (key, value) =>
+          MapEntry(key.toString(), (value as num?)?.toDouble() ?? 0),
     );
   }
 
@@ -299,9 +298,35 @@ Map<String, dynamic> transactionCreateFromClient({
     if (fields['branch'] != null) 'branch': fields['branch'],
     'category_source': fields['categorySource'] ?? 'user',
     if (ingestionId != null) 'ingestion_id': ingestionId,
+    if (fields['note'] != null) 'note': fields['note'],
   };
   body.removeWhere((_, value) => value == null);
   return body;
+}
+
+ParsedTransactionDraft parsedTransactionDraftFromApi(
+  Map<String, dynamic> json,
+) {
+  return ParsedTransactionDraft(
+    ok: json['ok'] == true,
+    duplicate: json['duplicate'] == true,
+    transactionId: json['transaction_id']?.toString(),
+    error: json['error'] as String?,
+    parseConfidence: (json['parse_confidence'] as num?)?.toDouble(),
+    model: json['model'] as String?,
+    amount: (json['amount'] as num?)?.toDouble(),
+    currency: json['currency'] as String?,
+    type: json['type'] as String?,
+    merchant: json['merchant'] as String?,
+    merchantDetails: json['merchant_details'] as String?,
+    category: json['category'] as String?,
+    paymentMethod: json['payment_method'] as String?,
+    bank: json['bank'] as String?,
+    accountId: json['account_id'] as String?,
+    branch: json['branch'] as String?,
+    transactionTime: json['transaction_time'] as String?,
+    transactionDate: json['transaction_date'] as String?,
+  );
 }
 
 bool _isJsonValue(dynamic value) {

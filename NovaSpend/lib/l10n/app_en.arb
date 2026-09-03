@@ -185,6 +185,39 @@
     }
   },
   "homeAddTransaction": "Add transaction",
+  "manualLogTitle": "Add transaction",
+  "manualLogPaste": "Paste",
+  "manualLogForm": "Form",
+  "manualLogReadMessage": "Read message",
+  "manualLogReading": "Reading message…",
+  "manualLogClipboard": "Paste from clipboard",
+  "manualLogClipboardEmpty": "Nothing to paste",
+  "manualLogPasteHint": "Paste an SMS, or type Spent 200 at KFC",
+  "manualLogPasteExample": "Example: Spent 450 at Cheezious",
+  "manualLogLogged": "Transaction added",
+  "manualLogSave": "Save",
+  "manualLogParseFailed": "Couldn't read that — fill the form instead.",
+  "manualLogDuplicate": "This looks like a transaction you already have.",
+  "manualLogViewExisting": "View existing",
+  "manualLogNote": "Note",
+  "labelOptional": "{label} (optional)",
+  "@labelOptional": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "manualLogAmountHint": "Enter amount",
+  "manualLogAmountRequired": "Enter an amount",
+  "manualLogMerchantRequired": "Enter a merchant",
+  "manualLogCategoryRequired": "Select a category",
+  "manualLogPasteRequired": "Paste or type a message first",
+  "manualLogConfidence": "{percent}% confidence",
+  "@manualLogConfidence": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "manualLogLowConfidence": "Double-check these details",
   "homePeriodEmpty": "No transactions in this period",
   "homePeriodEmptyHint": "Try a different day, week, or month.",
   "homeDayGroupSpent": "Spent ",

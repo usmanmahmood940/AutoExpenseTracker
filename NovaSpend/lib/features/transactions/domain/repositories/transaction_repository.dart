@@ -1,3 +1,4 @@
+import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -47,6 +48,18 @@ abstract class TransactionRepository {
     required String ingestionId,
     required Map<String, dynamic> transactionFields,
   });
+
+  Future<String> createTransaction({
+    required String uid,
+    required Map<String, dynamic> fields,
+  });
+
+  Future<ParsedTransactionDraft> parseText({
+    required String uid,
+    required String raw,
+  });
+
+  Future<TransactionEntity> getTransaction(String uid, String transactionId);
 
   Future<void> markReviewed(String uid, String transactionId);
 

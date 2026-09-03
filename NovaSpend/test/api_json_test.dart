@@ -70,24 +70,70 @@ void main() {
     expect(stats.comparison?.spentChangePercent, 10);
   });
 
-  test('transactionPatchFromClient remaps camelCase and drops FieldValue-like values', () {
-    final patch = transactionPatchFromClient({
-      'merchant': 'PSO',
-      'merchantDetails': 'Lahore',
-      'accountIdMasked': 'xxxx',
-      'paymentMethod': 'card',
-      'transactionDate': '2026-08-21',
-      'isEdited': true,
-      'updatedAt': Object(),
+  test(
+    'transactionPatchFromClient remaps camelCase and drops FieldValue-like values',
+    () {
+      final patch = transactionPatchFromClient({
+        'merchant': 'PSO',
+        'merchantDetails': 'Lahore',
+        'accountIdMasked': 'xxxx',
+        'paymentMethod': 'card',
+        'transactionDate': '2026-08-21',
+        'isEdited': true,
+        'updatedAt': Object(),
+      });
+
+      expect(patch['merchant'], 'PSO');
+      expect(patch['merchant_details'], 'Lahore');
+      expect(patch['account_id_masked'], 'xxxx');
+      expect(patch['payment_method'], 'card');
+      expect(patch['transaction_date'], '2026-08-21');
+      expect(patch.containsKey('isEdited'), isFalse);
+      expect(patch.containsKey('updatedAt'), isFalse);
+    },
+  );
+
+  test('transactionCreateFromClient omits ingestion_id when not provided', () {
+    final body = transactionCreateFromClient(
+      fields: {
+        'amount': 200,
+        'merchant': 'KFC',
+        'transactionDate': '2026-09-03',
+        'type': 'debit',
+        'category': 'Food & Dining',
+        'note': 'spent 200 at KFC',
+      },
+    );
+
+    expect(body['amount'], 200);
+    expect(body['merchant'], 'KFC');
+    expect(body['transaction_date'], '2026-09-03');
+    expect(body['note'], 'spent 200 at KFC');
+    expect(body.containsKey('ingestion_id'), isFalse);
+    expect(body['category_source'], 'user');
+  });
+
+  test('parsedTransactionDraftFromApi maps snake_case parse payload', () {
+    final draft = parsedTransactionDraftFromApi({
+      'ok': true,
+      'duplicate': false,
+      'transaction_id': null,
+      'parse_confidence': 0.92,
+      'model': 'gemini-test',
+      'amount': 450.0,
+      'currency': 'PKR',
+      'type': 'debit',
+      'merchant': 'Cheezious',
+      'category': 'Food & Dining',
+      'payment_method': 'cash',
+      'transaction_date': '2026-09-03',
     });
 
-    expect(patch['merchant'], 'PSO');
-    expect(patch['merchant_details'], 'Lahore');
-    expect(patch['account_id_masked'], 'xxxx');
-    expect(patch['payment_method'], 'card');
-    expect(patch['transaction_date'], '2026-08-21');
-    expect(patch.containsKey('isEdited'), isFalse);
-    expect(patch.containsKey('updatedAt'), isFalse);
+    expect(draft.ok, isTrue);
+    expect(draft.merchant, 'Cheezious');
+    expect(draft.amount, 450);
+    expect(draft.parseConfidence, 0.92);
+    expect(draft.paymentMethod, 'cash');
   });
 
   test('monthlySummaryFromApi maps top merchants and range bounds', () {

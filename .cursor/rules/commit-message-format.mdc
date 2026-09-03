@@ -1,0 +1,38 @@
+---
+description: Required commit message format for all git commits
+alwaysApply: true
+---
+
+# Commit message format
+
+When creating a git commit, the message MUST use this structure:
+
+```
+[Area] : [Type] : [actual message]
+```
+
+## Parts
+
+1. **Area** — where the change lives, e.g. `Flutter`, `Backend`, `Docs`, `Shared`, `CI`
+2. **Type** — kind of change, e.g. `Feature`, `Bug`, `Fix`, `Update`, `Refactor`, `Test`, `Chore`
+3. **Message** — short, clear description of what changed (imperative preferred)
+
+Use spaces around the colons, matching the examples below.
+
+## Examples
+
+```
+Backend : Update : remove parameter from some api
+Flutter : Feature : add branded splash screen
+Backend : Fix : handle expired Firebase tokens on API calls
+Flutter : Refactor : defer App Check init after first frame
+Docs : Update : document design token roles
+```
+
+## Rules
+
+- Always follow this three-part format when the user asks to commit.
+- Choose **Area** from the files in the commit (prefer the primary area if mixed).
+- Choose **Type** from the nature of the change (Feature / Bug / Fix / Update / Refactor / Test / Chore).
+- Keep the message concise; put extra detail in the commit body only when needed.
+- Do not use Conventional Commits (`feat:`, `fix:`) unless the user explicitly asks.

@@ -8,9 +8,9 @@ from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import AppSettings, CurrentUser, DbSession
 from app.api.product_schemas import (
     SearchListOut,
     TransactionListOut,
@@ -23,6 +23,7 @@ from app.db.models.enums import (
     TransactionStatus,
     TransactionType,
 )
+from app.services import ingest as ingest_service
 from app.services import transactions as tx_service
 from app.services.payment_methods import PAYMENT_METHODS
 
@@ -80,6 +81,41 @@ class TransactionCreateRequest(BaseModel):
     branch: str | None = None
     category_source: str = "user"
     ingestion_id: uuid.UUID | None = None
+    note: str | None = Field(default=None, max_length=8000)
+
+
+class TransactionParseRequest(BaseModel):
+    raw: str = Field(min_length=1, max_length=8000)
+    source: str = "manual"
+
+    @field_validator("raw")
+    @classmethod
+    def _strip_raw(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("raw is required")
+        return stripped
+
+
+class TransactionParseOut(BaseModel):
+    ok: bool
+    duplicate: bool = False
+    transaction_id: uuid.UUID | None = None
+    error: str | None = None
+    parse_confidence: float | None = None
+    model: str | None = None
+    amount: float | None = None
+    currency: str | None = None
+    type: str | None = None
+    merchant: str | None = None
+    merchant_details: str | None = None
+    category: str | None = None
+    payment_method: str | None = None
+    bank: str | None = None
+    account_id: str | None = None
+    branch: str | None = None
+    transaction_time: str | None = None
+    transaction_date: str | None = None
 
 
 class TransactionUpdateRequest(BaseModel):
@@ -232,8 +268,48 @@ async def create_transaction(
         branch=body.branch,
         category_source=body.category_source,
         ingestion_id=body.ingestion_id,
+        note=body.note,
     )
     return TransactionOut.model_validate(tx)
+
+
+@router.post("/transactions/parse", response_model=TransactionParseOut)
+async def parse_transaction_text(
+    body: TransactionParseRequest,
+    user: CurrentUser,
+    session: DbSession,
+    settings: AppSettings,
+) -> TransactionParseOut:
+    result = await ingest_service.parse_manual_text(
+        session,
+        user_id=user.id,
+        raw=body.raw,
+        settings=settings,
+    )
+    parsed = result.parsed
+    transaction_id = None
+    if result.transaction_id:
+        transaction_id = uuid.UUID(result.transaction_id)
+    return TransactionParseOut(
+        ok=result.ok,
+        duplicate=result.duplicate,
+        transaction_id=transaction_id,
+        error=result.error,
+        parse_confidence=result.parse_confidence,
+        model=result.model,
+        amount=None if parsed is None else parsed.amount,
+        currency=None if parsed is None else parsed.currency,
+        type=None if parsed is None else parsed.type,
+        merchant=None if parsed is None else parsed.merchant,
+        merchant_details=None if parsed is None else parsed.merchant_details,
+        category=None if parsed is None else parsed.category,
+        payment_method=None if parsed is None else parsed.payment_method,
+        bank=None if parsed is None else parsed.bank,
+        account_id=None if parsed is None else parsed.account_id,
+        branch=None if parsed is None else parsed.branch,
+        transaction_time=None if parsed is None else parsed.transaction_time,
+        transaction_date=None if parsed is None else parsed.transaction_date,
+    )
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionOut)

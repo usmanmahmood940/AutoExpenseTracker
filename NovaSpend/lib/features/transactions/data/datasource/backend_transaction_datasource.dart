@@ -2,6 +2,7 @@ import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/search/domain/entities/search_page.dart';
+import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -134,6 +135,45 @@ class BackendTransactionDatasource {
         requireAuth: true,
       );
       return created['id']?.toString() ?? '';
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<String> createTransaction(Map<String, dynamic> fields) async {
+    try {
+      final created = await _api.post(
+        '/transactions',
+        body: transactionCreateFromClient(fields: fields),
+        requireAuth: true,
+      );
+      return created['id']?.toString() ?? '';
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<ParsedTransactionDraft> parseText(String raw) async {
+    try {
+      final response = await _api.post(
+        '/transactions/parse',
+        body: {'raw': raw, 'source': 'manual'},
+        requireAuth: true,
+        timeout: ApiClient.parseTimeout,
+      );
+      return parsedTransactionDraftFromApi(response);
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<TransactionEntity> getTransaction(String transactionId) async {
+    try {
+      final response = await _api.get(
+        '/transactions/$transactionId',
+        requireAuth: true,
+      );
+      return transactionFromApi(response);
     } on ApiException catch (e) {
       throw e.toDataException();
     }

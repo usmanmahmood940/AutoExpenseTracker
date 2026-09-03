@@ -16,11 +16,14 @@ class ApiClient {
     http.Client? client,
     this.baseUrl = AppConstants.apiBaseUrl,
     IdTokenFetcher? idTokenFetcher,
-  })  : _client = client ?? http.Client(),
-        _ownsClient = client == null,
-        _idTokenFetcher = idTokenFetcher ?? _defaultIdToken;
+  }) : _client = client ?? http.Client(),
+       _ownsClient = client == null,
+       _idTokenFetcher = idTokenFetcher ?? _defaultIdToken;
 
   static const Duration _timeout = Duration(seconds: 30);
+
+  /// Gemini parse can take longer than a typical CRUD call.
+  static const Duration parseTimeout = Duration(seconds: 45);
 
   final http.Client _client;
   final bool _ownsClient;
@@ -44,8 +47,15 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     bool requireAuth = false,
+    Duration? timeout,
   }) {
-    return _send('POST', path, body: body, requireAuth: requireAuth);
+    return _send(
+      'POST',
+      path,
+      body: body,
+      requireAuth: requireAuth,
+      timeout: timeout,
+    );
   }
 
   Future<Map<String, dynamic>> patch(
@@ -64,16 +74,8 @@ class ApiClient {
     return _send('PUT', path, body: body, requireAuth: requireAuth);
   }
 
-  Future<void> delete(
-    String path, {
-    bool requireAuth = false,
-  }) async {
-    await _send(
-      'DELETE',
-      path,
-      requireAuth: requireAuth,
-      expectEmpty: true,
-    );
+  Future<void> delete(String path, {bool requireAuth = false}) async {
+    await _send('DELETE', path, requireAuth: requireAuth, expectEmpty: true);
   }
 
   Future<Map<String, dynamic>> _send(
@@ -83,10 +85,9 @@ class ApiClient {
     Map<String, String>? query,
     bool requireAuth = false,
     bool expectEmpty = false,
+    Duration? timeout,
   }) async {
-    final headers = <String, String>{
-      'Accept': 'application/json',
-    };
+    final headers = <String, String>{'Accept': 'application/json'};
     if (body != null) {
       headers['Content-Type'] = 'application/json';
     }
@@ -117,26 +118,26 @@ class ApiClient {
     _logRequest(method, uri, headers, encoded);
 
     final stopwatch = Stopwatch()..start();
+    final wait = timeout ?? _timeout;
     late http.Response response;
     try {
       switch (method) {
         case 'GET':
-          response = await _client.get(uri, headers: headers).timeout(_timeout);
+          response = await _client.get(uri, headers: headers).timeout(wait);
         case 'POST':
           response = await _client
               .post(uri, headers: headers, body: encoded)
-              .timeout(_timeout);
+              .timeout(wait);
         case 'PATCH':
           response = await _client
               .patch(uri, headers: headers, body: encoded)
-              .timeout(_timeout);
+              .timeout(wait);
         case 'PUT':
           response = await _client
               .put(uri, headers: headers, body: encoded)
-              .timeout(_timeout);
+              .timeout(wait);
         case 'DELETE':
-          response =
-              await _client.delete(uri, headers: headers).timeout(_timeout);
+          response = await _client.delete(uri, headers: headers).timeout(wait);
         default:
           throw ArgumentError('Unsupported method: $method');
       }
@@ -152,9 +153,7 @@ class ApiClient {
     _logResponse(method, path, response, stopwatch.elapsedMilliseconds);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (expectEmpty ||
-          response.statusCode == 204 ||
-          response.body.isEmpty) {
+      if (expectEmpty || response.statusCode == 204 || response.body.isEmpty) {
         return <String, dynamic>{};
       }
       return _tryDecode(response.body);
@@ -163,7 +162,8 @@ class ApiClient {
     final decoded = _tryDecode(response.body);
     throw ApiException(
       statusCode: response.statusCode,
-      message: decoded['detail']?.toString() ??
+      message:
+          decoded['detail']?.toString() ??
           'Request failed (${response.statusCode})',
       code: decoded['code']?.toString(),
       rawBody: response.body,

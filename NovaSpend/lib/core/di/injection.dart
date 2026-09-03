@@ -37,19 +37,20 @@ import 'package:nova_spend/features/settings/presentation/provider/settings_prov
 import 'package:nova_spend/features/transactions/data/datasource/backend_transaction_datasource.dart';
 import 'package:nova_spend/features/transactions/data/repository_impl.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:nova_spend/features/transactions/domain/usecases/create_transaction.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_period_stats.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/get_transactions_page.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/mark_transaction_reviewed.dart';
+import 'package:nova_spend/features/transactions/domain/usecases/parse_transaction_text.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
+import 'package:nova_spend/features/transactions/presentation/provider/manual_log_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final GetIt sl = GetIt.instance;
 
 /// Registers dependency injection bindings.
-Future<void> configureDependencies({
-  SharedPreferences? prefs,
-}) async {
+Future<void> configureDependencies({SharedPreferences? prefs}) async {
   final sharedPrefs = prefs ?? await SharedPreferences.getInstance();
 
   // Allow re-entry during hot restart without duplicate registration errors.
@@ -61,43 +62,24 @@ Future<void> configureDependencies({
   sl.registerLazySingleton(() => FirebaseAuth.instance);
 
   sl.registerLazySingleton(() => ApiClient());
-  sl.registerLazySingleton(
-    () => BackendAuthDatasource(api: sl()),
-  );
-  sl.registerLazySingleton(
-    () => BackendTransactionDatasource(api: sl()),
-  );
-  sl.registerLazySingleton(
-    () => BackendMerchantDatasource(api: sl()),
-  );
-  sl.registerLazySingleton(
-    () => BackendCategoryDatasource(api: sl()),
-  );
-  sl.registerLazySingleton(
-    () => BackendAnalyticsDatasource(api: sl()),
-  );
+  sl.registerLazySingleton(() => BackendAuthDatasource(api: sl()));
+  sl.registerLazySingleton(() => BackendTransactionDatasource(api: sl()));
+  sl.registerLazySingleton(() => BackendMerchantDatasource(api: sl()));
+  sl.registerLazySingleton(() => BackendCategoryDatasource(api: sl()));
+  sl.registerLazySingleton(() => BackendAnalyticsDatasource(api: sl()));
 
   sl.registerLazySingleton(() => BiometricService());
   sl.registerLazySingleton(() => ExportService());
-  sl.registerLazySingleton(
-    () => PushNotificationService(backendAuth: sl()),
-  );
+  sl.registerLazySingleton(() => PushNotificationService(backendAuth: sl()));
 
-  sl.registerLazySingleton(
-    () => FirebaseAuthDatasource(auth: sl()),
-  );
+  sl.registerLazySingleton(() => FirebaseAuthDatasource(auth: sl()));
   sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
-      datasource: sl(),
-      backendAuth: sl(),
-    ),
+    () => AuthRepositoryImpl(datasource: sl(), backendAuth: sl()),
   );
   sl.registerLazySingleton<UserAccountService>(
     () => FirebaseUserAccountService(auth: sl()),
   );
-  sl.registerFactory(
-    () => AuthProvider(authRepository: sl()),
-  );
+  sl.registerFactory(() => AuthProvider(authRepository: sl()));
 
   sl.registerLazySingleton<TransactionRepository>(
     () => TransactionRepositoryImpl(backend: sl()),
@@ -106,12 +88,18 @@ Future<void> configureDependencies({
   sl.registerLazySingleton(() => GetPeriodStats(sl()));
   sl.registerLazySingleton(() => UpdateTransaction(sl()));
   sl.registerLazySingleton(() => MarkTransactionReviewed(sl()));
+  sl.registerLazySingleton(() => ParseTransactionText(sl()));
+  sl.registerLazySingleton(() => CreateTransaction(sl()));
   sl.registerFactory(
     () => HomeProvider(
       getTransactionsPage: sl(),
       getPeriodStats: sl(),
       transactionRepository: sl(),
     ),
+  );
+  sl.registerFactory(
+    () =>
+        ManualLogProvider(parseTransactionText: sl(), createTransaction: sl()),
   );
 
   sl.registerLazySingleton<CategoryRepository>(
@@ -138,26 +126,16 @@ Future<void> configureDependencies({
 
   sl.registerLazySingleton(() => RecentSearchesDatasource(sl()));
   sl.registerLazySingleton<SearchRepository>(
-    () => SearchRepositoryImpl(
-      recentSearchesDatasource: sl(),
-      backend: sl(),
-    ),
+    () => SearchRepositoryImpl(recentSearchesDatasource: sl(), backend: sl()),
   );
   sl.registerLazySingleton(() => SearchTransactions(sl()));
   sl.registerFactory(
-    () => SearchProvider(
-      searchTransactions: sl(),
-      searchRepository: sl(),
-    ),
+    () => SearchProvider(searchTransactions: sl(), searchRepository: sl()),
   );
 
-  sl.registerLazySingleton(
-    () => SettingsLocalDatasource(sl()),
-  );
+  sl.registerLazySingleton(() => SettingsLocalDatasource(sl()));
   sl.registerLazySingleton<SettingsRepository>(
-    () => SettingsRepositoryImpl(
-      localDatasource: sl(),
-    ),
+    () => SettingsRepositoryImpl(localDatasource: sl()),
   );
   sl.registerFactory(
     () => SettingsProvider(
@@ -169,9 +147,6 @@ Future<void> configureDependencies({
     ),
   );
   sl.registerFactory(
-    () => ReviewProvider(
-      repository: sl(),
-      markReviewed: sl(),
-    ),
+    () => ReviewProvider(repository: sl(), markReviewed: sl()),
   );
 }

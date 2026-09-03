@@ -1,5 +1,6 @@
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/transactions/data/datasource/backend_transaction_datasource.dart';
+import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -8,9 +9,8 @@ import 'package:nova_spend/features/transactions/domain/entities/transactions_pa
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
-  TransactionRepositoryImpl({
-    required BackendTransactionDatasource backend,
-  }) : _backend = backend;
+  TransactionRepositoryImpl({required BackendTransactionDatasource backend})
+    : _backend = backend;
 
   final BackendTransactionDatasource _backend;
 
@@ -47,11 +47,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     required String to,
   }) async {
     try {
-      return await _backend.getPeriodStats(
-        period: period,
-        from: from,
-        to: to,
-      );
+      return await _backend.getPeriodStats(period: period, from: from, to: to);
     } catch (e) {
       throwAsFailure(e);
     }
@@ -111,6 +107,42 @@ class TransactionRepositoryImpl implements TransactionRepository {
         ingestionId: ingestionId,
         transactionFields: transactionFields,
       );
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
+  Future<String> createTransaction({
+    required String uid,
+    required Map<String, dynamic> fields,
+  }) async {
+    try {
+      return await _backend.createTransaction(fields);
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
+  Future<ParsedTransactionDraft> parseText({
+    required String uid,
+    required String raw,
+  }) async {
+    try {
+      return await _backend.parseText(raw);
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
+  Future<TransactionEntity> getTransaction(
+    String uid,
+    String transactionId,
+  ) async {
+    try {
+      return await _backend.getTransaction(transactionId);
     } catch (e) {
       throwAsFailure(e);
     }

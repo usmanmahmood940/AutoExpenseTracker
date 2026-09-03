@@ -427,3 +427,80 @@ async def ingest_for_identity(
         session, user=user, request=request, settings=settings
     )
     return result, user
+
+
+@dataclass(frozen=True)
+class ParseManualResult:
+    """Parse-only result for in-app manual log. Never writes a transaction."""
+
+    ok: bool
+    duplicate: bool = False
+    transaction_id: str | None = None
+    error: str | None = None
+    parse_confidence: float | None = None
+    model: str | None = None
+    parsed: ParsedTransaction | None = None
+
+
+async def parse_manual_text(
+    session: AsyncSession,
+    *,
+    user_id: Any,
+    raw: str,
+    settings: Settings,
+) -> ParseManualResult:
+    """Run Gemini on pasted text without creating ingestions or transactions."""
+    text = raw.strip()
+    if not text:
+        return ParseManualResult(ok=False, error="raw is required")
+
+    allowed = await allowed_category_names(session, user_id=user_id)
+    parse_result = await parse_transaction(
+        settings.gemini_api_key or "",
+        text,
+        allowed,
+    )
+    if isinstance(parse_result, ParseFail):
+        return ParseManualResult(ok=False, error=parse_result.error)
+
+    parsed = replace(
+        parse_result.parsed,
+        merchant=resolve_merchant(
+            parse_result.parsed.merchant,
+            category=parse_result.parsed.category,
+            payment_method=parse_result.parsed.payment_method,
+        ),
+    )
+    field_error = validate_parsed(parsed, allowed)
+    if field_error:
+        return ParseManualResult(ok=False, error=field_error)
+
+    dedup_key = compute_dedup_key(
+        DedupFields(
+            amount=parsed.amount,
+            currency=parsed.currency,
+            account_id=parsed.account_id,
+            external_id=parsed.external_id,
+            transaction_date=parsed.transaction_date,
+            merchant=parsed.merchant,
+            merchant_details=parsed.merchant_details,
+            transaction_time=parsed.transaction_time,
+        )
+    )
+    duplicate = await _find_duplicate(session, user_id=user_id, dedup_key=dedup_key)
+    if duplicate is not None:
+        return ParseManualResult(
+            ok=True,
+            duplicate=True,
+            transaction_id=str(duplicate.id),
+            parse_confidence=parsed.parse_confidence,
+            model=parse_result.model,
+            parsed=parsed,
+        )
+
+    return ParseManualResult(
+        ok=True,
+        parse_confidence=parsed.parse_confidence,
+        model=parse_result.model,
+        parsed=parsed,
+    )

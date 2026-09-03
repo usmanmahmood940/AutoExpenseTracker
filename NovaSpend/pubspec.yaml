@@ -104,6 +104,7 @@ flutter:
     - assets/branding/app_icon.png
     - assets/icons/google_g.png
     - assets/icons/icon_edit.svg
+    - assets/icons/icon_clipboard.svg
     - assets/icons/icon_bank.svg
     - assets/icons/icon_account.svg
     - assets/icons/icon_payment_method.svg

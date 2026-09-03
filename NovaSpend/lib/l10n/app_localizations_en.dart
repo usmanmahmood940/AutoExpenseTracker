@@ -450,6 +450,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAddTransaction => 'Add transaction';
 
   @override
+  String get manualLogTitle => 'Add transaction';
+
+  @override
+  String get manualLogPaste => 'Paste';
+
+  @override
+  String get manualLogForm => 'Form';
+
+  @override
+  String get manualLogReadMessage => 'Read message';
+
+  @override
+  String get manualLogReading => 'Reading message…';
+
+  @override
+  String get manualLogClipboard => 'Paste from clipboard';
+
+  @override
+  String get manualLogClipboardEmpty => 'Nothing to paste';
+
+  @override
+  String get manualLogPasteHint => 'Paste an SMS, or type Spent 200 at KFC';
+
+  @override
+  String get manualLogPasteExample => 'Example: Spent 450 at Cheezious';
+
+  @override
+  String get manualLogLogged => 'Transaction added';
+
+  @override
+  String get manualLogSave => 'Save';
+
+  @override
+  String get manualLogParseFailed =>
+      'Couldn\'t read that — fill the form instead.';
+
+  @override
+  String get manualLogDuplicate =>
+      'This looks like a transaction you already have.';
+
+  @override
+  String get manualLogViewExisting => 'View existing';
+
+  @override
+  String get manualLogNote => 'Note';
+
+  @override
+  String labelOptional(String label) {
+    return '$label (optional)';
+  }
+
+  @override
+  String get manualLogAmountHint => 'Enter amount';
+
+  @override
+  String get manualLogAmountRequired => 'Enter an amount';
+
+  @override
+  String get manualLogMerchantRequired => 'Enter a merchant';
+
+  @override
+  String get manualLogCategoryRequired => 'Select a category';
+
+  @override
+  String get manualLogPasteRequired => 'Paste or type a message first';
+
+  @override
+  String manualLogConfidence(String percent) {
+    return '$percent% confidence';
+  }
+
+  @override
+  String get manualLogLowConfidence => 'Double-check these details';
+
+  @override
   String get homePeriodEmpty => 'No transactions in this period';
 
   @override

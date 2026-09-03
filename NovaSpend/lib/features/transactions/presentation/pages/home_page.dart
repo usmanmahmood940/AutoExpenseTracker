@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
+import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
@@ -27,11 +28,13 @@ import 'package:nova_spend/features/settings/presentation/pages/settings_page.da
 import 'package:nova_spend/features/settings/presentation/pages/review_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
+import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:nova_spend/features/transactions/presentation/home_period.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/home_provider.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/day_group_header.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/home_skeleton.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/manual_log_sheet.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/review_banner.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
@@ -130,7 +133,7 @@ class _HomeSkeletonShell extends StatelessWidget {
             bottom: AppSpacing.lg,
             child: PrimaryFab(
               tooltip: l10n.homeAddTransaction,
-              onPressed: () {},
+              onPressed: () => _openManualLog(context),
             ),
           ),
         ],
@@ -248,7 +251,7 @@ class _HomeView extends StatelessWidget {
             bottom: AppSpacing.lg,
             child: PrimaryFab(
               tooltip: l10n.homeAddTransaction,
-              onPressed: () {},
+              onPressed: () => _openManualLog(context),
             ),
           ),
         ],
@@ -732,6 +735,37 @@ void _openDetail(BuildContext context, TransactionEntity tx) {
       builder: (_) => TransactionDetailPage(transaction: tx),
     ),
   );
+}
+
+Future<void> _openManualLog(BuildContext context) async {
+  final result = await ManualLogSheet.show(context);
+  if (!context.mounted || result == null) return;
+  final l10n = context.l10n;
+
+  if (result.created) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.manualLogLogged)));
+    await context.read<HomeProvider>().refresh();
+    if (!context.mounted) return;
+    context.read<SearchProvider>().reloadIfLoaded();
+    return;
+  }
+
+  final id = result.viewTransactionId;
+  if (id == null || id.isEmpty) return;
+  final uid = context.read<AuthProvider>().uid;
+  if (uid == null) return;
+  try {
+    final tx = await sl<TransactionRepository>().getTransaction(uid, id);
+    if (!context.mounted) return;
+    _openDetail(context, tx);
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.errorLoadFailed)));
+  }
 }
 
 void _openMerchant(BuildContext context, TransactionEntity tx) {
