@@ -1,5 +1,5 @@
 ---
-description: Required commit message format for all git commits
+description: Required commit message format and split-commit policy
 alwaysApply: true
 ---
 
@@ -13,7 +13,7 @@ When creating a git commit, the message MUST use this structure:
 
 ## Parts
 
-1. **Area** — where the change lives, e.g. `Flutter`, `Backend`, `Docs`, `Shared`, `CI`
+1. **Area** — where the change lives, e.g. `Flutter`, `Backend`, `Docs`, `CI`
 2. **Type** — kind of change, e.g. `Feature`, `Bug`, `Fix`, `Update`, `Refactor`, `Test`, `Chore`
 3. **Message** — short, clear description of what changed (imperative preferred)
 
@@ -29,10 +29,39 @@ Flutter : Refactor : defer App Check init after first frame
 Docs : Update : document design token roles
 ```
 
-## Rules
+## Split commits (required)
 
-- Always follow this three-part format when the user asks to commit.
-- Choose **Area** from the files in the commit (prefer the primary area if mixed).
-- Choose **Type** from the nature of the change (Feature / Bug / Fix / Update / Refactor / Test / Chore).
+Do **not** put unrelated or multi-area work into one commit.
+
+When the working tree has multiple distinct changes, create **separate commits** — one per area / concern — instead of a single `Shared` mega-commit.
+
+### How to split
+
+1. Group files by area: `Backend`, `Flutter`, `Docs`, `CI`, etc.
+2. Within an area, split further if there are unrelated concerns (e.g. a bug fix vs a new feature).
+3. Commit in dependency order when needed (e.g. Backend API first, then Flutter client).
+4. Each commit must use its own `[Area] : [Type] : message`.
+
+### Bad vs good
+
+```
+# ❌ BAD — one dump for everything
+Shared : Feature : add manual transaction log with text parse
+
+# ✅ GOOD — split by area
+Backend : Feature : add transactions parse endpoint for manual log
+Flutter : Feature : add manual log sheet using parse API
+Docs : Chore : add commit message format rule
+```
+
+### When `Shared` is allowed
+
+Use `Shared` only if a **single atomic change** truly cannot be split (e.g. one line in a shared schema that both sides must ship together). Prefer splitting whenever Flutter and Backend (or Docs/CI) can stand alone.
+
+## Other rules
+
+- Always follow the three-part format when the user asks to commit.
+- Choose **Type** from: Feature / Bug / Fix / Update / Refactor / Test / Chore.
 - Keep the message concise; put extra detail in the commit body only when needed.
 - Do not use Conventional Commits (`feat:`, `fix:`) unless the user explicitly asks.
+- If the user says "commit the code" and there are multiple groups, split automatically — do not ask unless the split is ambiguous.
