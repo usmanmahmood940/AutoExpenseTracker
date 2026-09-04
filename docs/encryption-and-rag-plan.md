@@ -1,6 +1,6 @@
 # NovaSpend Backend — Encryption & RAG Plan
 
-**Status:** Draft (2026-09-01) — not started  
+**Status:** E1 done (2026-09-04) — Option A SMS encryption deployed + backfilled  
 **Stack:** FastAPI (Cloud Run) + PostgreSQL (Supabase) + pgvector + Gemini  
 **App:** NovaSpend (Flutter) — app UI is out of scope for this doc  
 **Prerequisite:** Phase F backend migration complete ([backend-migration-plan.md](./backend-migration-plan.md))
