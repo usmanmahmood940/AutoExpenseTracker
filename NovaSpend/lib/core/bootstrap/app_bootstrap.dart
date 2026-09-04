@@ -36,13 +36,21 @@ class AppBootstrap {
     return _future ??= _run();
   }
 
+  /// Clears a failed attempt so [initialize] can be retried.
+  void reset() {
+    _future = null;
+    _result = null;
+  }
+
   AppStartupResult? get result => _result;
 
   Future<AppStartupResult> _run() async {
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
 
       final prefs = await SharedPreferences.getInstance();
       final localeController = AppLocaleController(prefs);
@@ -57,14 +65,10 @@ class AppBootstrap {
       );
       await currencyController.load();
 
+      // App Check must not block cold start — Play Integrity often fails on
+      // sideloaded / debug-signed release builds (e.g. flutter run --release).
       await Future.wait([
-        FirebaseAppCheck.instance.activate(
-          androidProvider: kDebugMode
-              ? AndroidProvider.debug
-              : AndroidProvider.playIntegrity,
-          appleProvider:
-              kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-        ),
+        _activateAppCheck(),
         sl<PushNotificationService>().init(),
       ]);
 
@@ -75,7 +79,22 @@ class AppBootstrap {
       return _result!;
     } catch (e, st) {
       debugPrint('AppBootstrap failed: $e\n$st');
+      _future = null;
       rethrow;
+    }
+  }
+
+  Future<void> _activateAppCheck() async {
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        appleProvider:
+            kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+      );
+    } catch (e, st) {
+      debugPrint('App Check activate failed (continuing): $e\n$st');
     }
   }
 }

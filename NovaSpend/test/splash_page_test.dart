@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nova_spend/features/splash/presentation/pages/splash_page.dart';
@@ -16,6 +18,31 @@ void main() {
         ),
       ),
     );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(
+      tester.getTopLeft(find.byType(Scaffold)) + const Offset(24, 48),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(finished, isTrue);
+  });
+
+  testWidgets('splash dismisses after failed startup', (tester) async {
+    var finished = false;
+    final completer = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SplashPage(
+          startupFuture: completer.future,
+          onFinished: () => finished = true,
+        ),
+      ),
+    );
+    await tester.pump();
+    completer.completeError(StateError('bootstrap failed'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     await tester.tapAt(

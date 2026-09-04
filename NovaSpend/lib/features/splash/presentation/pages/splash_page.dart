@@ -57,19 +57,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    unawaited(
-      widget.startupFuture
-          .then((_) {
-            _startupComplete = true;
-            _maybeDismiss();
-            if (mounted && _entryController.isCompleted) {
-              unawaited(_hintController.forward());
-            }
-          })
-          .catchError((Object e, StackTrace st) {
-            debugPrint('Splash startup failed: $e\n$st');
-          }),
-    );
+    unawaited(() async {
+      try {
+        await widget.startupFuture;
+      } catch (e, st) {
+        // Never leave the splash hung — parent handles the error UI.
+        debugPrint('Splash startup failed: $e\n$st');
+      } finally {
+        _onStartupSettled();
+      }
+    }());
 
     _reduceMotion = SchedulerBinding
         .instance
@@ -151,6 +148,14 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     }
 
     _scheduleDismiss();
+  }
+
+  void _onStartupSettled() {
+    _startupComplete = true;
+    _maybeDismiss();
+    if (mounted && _entryController.isCompleted) {
+      unawaited(_hintController.forward());
+    }
   }
 
   void _scheduleDismiss() {
