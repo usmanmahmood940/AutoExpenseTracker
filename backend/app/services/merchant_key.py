@@ -35,9 +35,8 @@ def resolve_merchant(
 ) -> str:
     """Stored/display name. Cash withdrawals with no merchant become ATM."""
     trimmed = merchant.strip()
-    if (
-        trimmed.lower() in _MISSING_MERCHANTS
-        and _is_cash_withdrawal(category=category, payment_method=payment_method)
+    if trimmed.lower() in _MISSING_MERCHANTS and _is_cash_withdrawal(
+        category=category, payment_method=payment_method
     ):
         return ATM_MERCHANT
     return trimmed or DEFAULT_MERCHANT

@@ -5,7 +5,7 @@ DB_TEST := novaspend_test
 # Apple Silicon Homebrew uses /opt/homebrew; Intel uses /usr/local.
 PG_BIN := $(shell test -d /opt/homebrew/opt/postgresql@16/bin && echo /opt/homebrew/opt/postgresql@16/bin || echo /usr/local/opt/postgresql@16/bin)
 
-.PHONY: help venv install run test lint fmt check migrate revision downgrade db-up db-shell reset deploy migrate-firestore scheduler
+.PHONY: help venv install run test lint fmt check migrate migrate-supabase revision downgrade db-up db-shell reset deploy migrate-firestore backfill-encrypt scheduler
 
 help: ## Show available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -34,8 +34,11 @@ fmt: ## Format and autofix
 check: lint test ## Lint, test, and fail on model/migration drift
 	$(PY)/alembic check
 
-migrate: ## Apply migrations
+migrate: ## Apply migrations (local DATABASE_URL)
 	$(PY)/alembic upgrade head
+
+migrate-supabase: ## Apply migrations to Supabase (Cloud Run DB)
+	$(PY)/python scripts/alembic_supabase.py upgrade head
 
 downgrade: ## Roll back one migration
 	$(PY)/alembic downgrade -1
@@ -59,6 +62,13 @@ migrate-firestore: ## Copy Firestore → Postgres. DRY_RUN=1 SUPABASE=1 UID=...
 		$(if $(filter 1 true yes,$(DRY_RUN)),--dry-run) \
 		$(if $(filter 1 true yes,$(SUPABASE)),--supabase) \
 		$(if $(UID),--uid $(UID))
+
+backfill-encrypt: ## Encrypt leftover plaintext SMS. DRY_RUN=1 SUPABASE=1 USER_ID= LIMIT=
+	$(PY)/python scripts/backfill_encrypt_raw.py \
+		$(if $(filter 1 true yes,$(DRY_RUN)),--dry-run) \
+		$(if $(filter 1 true yes,$(SUPABASE)),--supabase) \
+		$(if $(LIMIT),--limit $(LIMIT)) \
+		$(if $(USER_ID),--user-id $(USER_ID))
 
 scheduler: ## Create Cloud Scheduler jobs for cleanup + summary recompute
 	bash scripts/setup-cloud-scheduler.sh

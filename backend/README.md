@@ -22,7 +22,7 @@ Next up: [`../docs/encryption-and-rag-plan.md`](../docs/encryption-and-rag-plan.
 | D | Ingest + workers | **done (deployed)** |
 | E | Flutter ApiClient (dev) | **done** (needs step 5 data before Home looks real) |
 | F | Prod migrate + freeze + cutover | **dual-run** (step 11) |
-| E1 | SMS payload encryption (`field_crypto`) | planned — see encryption-and-rag plan §8.1 |
+| E1 | SMS payload encryption (`field_crypto`) | **done** (deployed + backfilled 2026-09-04) |
 | R1–R4 | pgvector RAG, smart cards, chat API | planned — see encryption-and-rag plan §8.2–8.5 |
 
 ## Requirements
@@ -219,10 +219,16 @@ DATABASE_URL='postgresql+asyncpg://postgres.<ref>:<password>@aws-0-ap-southeast-
 ### Deploy
 
 Reads `SUPABASE_DATABASE_URL` from `backend/.env` and sets it on Cloud Run as a
-normal environment variable (no Secret Manager).
+normal environment variable (no Secret Manager). Also requires
+`FIELD_ENCRYPTION_KEY` (AES-256-GCM for SMS payloads). Generate once with
+`openssl rand -base64 32` and keep it in `.env` — losing it makes stored SMS
+unreadable.
 
 ```bash
+make migrate-supabase    # Alembic on the Cloud Run database
 make deploy
+make backfill-encrypt SUPABASE=1 DRY_RUN=1
+make backfill-encrypt SUPABASE=1
 ```
 
 Live service (Phases A–D):

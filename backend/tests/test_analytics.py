@@ -78,9 +78,7 @@ def test_merchant_stats_merge_name_variants(api_client: TestClient) -> None:
         category="Transfer",
     )
 
-    body = api_client.get(
-        "/analytics/summary", params={"year_month": "2026-03"}
-    ).json()
+    body = api_client.get("/analytics/summary", params={"year_month": "2026-03"}).json()
     spent = body["top_merchants_spent"]
     assert len(spent) == 1
     assert spent[0]["display_name"] == "W.ANJUM"

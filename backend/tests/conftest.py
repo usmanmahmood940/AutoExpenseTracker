@@ -20,6 +20,8 @@ os.environ["LOG_LEVEL"] = "WARNING"
 # Local `.env` must not change test behavior (Resend send, cron auth).
 os.environ["RESEND_API_KEY"] = ""
 os.environ["CRON_SECRET"] = ""
+# 32 zero bytes, standard base64. Stable so encrypt/decrypt round-trips in tests.
+os.environ["FIELD_ENCRYPTION_KEY"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
 from uuid import uuid4

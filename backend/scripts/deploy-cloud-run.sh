@@ -80,6 +80,7 @@ def require(name: str) -> str:
 
 firebase_web_api_key = require("FIREBASE_WEB_API_KEY")
 otp_hash_secret = require("OTP_HASH_SECRET")
+field_encryption_key = require("FIELD_ENCRYPTION_KEY")
 resend_api_key = require("RESEND_API_KEY")
 resend_from_email = (env.get("RESEND_FROM_EMAIL") or "").strip().strip('"').strip("'")
 if not resend_from_email:
@@ -94,6 +95,7 @@ lines = [
     f"DATABASE_URL: {yq(database_url)}",
     f"FIREBASE_WEB_API_KEY: {yq(firebase_web_api_key)}",
     f"OTP_HASH_SECRET: {yq(otp_hash_secret)}",
+    f"FIELD_ENCRYPTION_KEY: {yq(field_encryption_key)}",
     f"RESEND_API_KEY: {yq(resend_api_key)}",
     f"RESEND_FROM_EMAIL: {yq(resend_from_email)}",
 ]
@@ -106,7 +108,7 @@ out.write_text("\n".join(lines))
 out.chmod(0o600)
 
 print("database=" + re.sub(r"(://[^:]+:)([^@]+)(@)", r"\1***\3", database_url))
-print("phase_b_env=FIREBASE_WEB_API_KEY,OTP_HASH_SECRET,RESEND_API_KEY,RESEND_FROM_EMAIL")
+print("phase_b_env=FIREBASE_WEB_API_KEY,OTP_HASH_SECRET,FIELD_ENCRYPTION_KEY,RESEND_API_KEY,RESEND_FROM_EMAIL")
 PY
 
 echo "Deploying $SERVICE to Cloud Run ($REGION) — secrets from .env as plain env vars…"

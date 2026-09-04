@@ -417,3 +417,40 @@ def test_user_isolation() -> None:
         assert listed["items"] == []
         missing = client_b.get(f"/transactions/{created['id']}")
         assert missing.status_code == 404
+
+
+def test_note_encrypted_in_db_omitted_from_list(api_client: TestClient) -> None:
+    response = api_client.post(
+        "/transactions",
+        json={
+            "merchant": "KFC",
+            "amount": 200,
+            "transaction_date": "2026-03-01",
+            "note": "spent 200 at KFC",
+        },
+    )
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created["sms_source"]["raw"] == "spent 200 at KFC"
+    tx_id = created["id"]
+
+    listed = api_client.get("/transactions").json()
+    match = next(item for item in listed["items"] if item["id"] == tx_id)
+    assert match["sms_source"]["raw"] == ""
+
+    detail = api_client.get(f"/transactions/{tx_id}").json()
+    assert detail["sms_source"]["raw"] == "spent 200 at KFC"
+
+    from uuid import UUID
+
+    from app.db.models.transaction import Transaction
+    from app.services.field_crypto import is_encrypted
+    from tests.conftest import run_isolated
+
+    async def load(session):  # type: ignore[no-untyped-def]
+        return await session.get(Transaction, UUID(tx_id))
+
+    tx = run_isolated(load)
+    assert tx is not None
+    assert is_encrypted(tx.sms_source["raw_encrypted"])
+    assert not tx.sms_source.get("raw")

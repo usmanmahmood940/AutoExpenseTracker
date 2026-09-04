@@ -177,7 +177,7 @@ def _system_prompt(
         "never use placeholders.\n"
         "- If a bank message includes a date/time, prefer those values from the "
         "message.\n"
-        '- merchant: required. For cash withdrawal / ATM with no named merchant, '
+        "- merchant: required. For cash withdrawal / ATM with no named merchant, "
         'use "ATM" — never "Unknown". Put ATM location in merchantDetails when '
         "present.\n"
         '- Use "Unknown" for missing merchantDetails, branch, bank, or accountId '

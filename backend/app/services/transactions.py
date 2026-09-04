@@ -28,6 +28,7 @@ from app.db.models.transaction import Transaction
 from app.db.seeds.categories import FALLBACK_CATEGORY_NAME
 from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money, money_float
+from app.services.sms_source import build_sms_source, decrypt_ingestion_raw
 
 VISIBLE_STATUSES = (TransactionStatus.active, TransactionStatus.needs_review)
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -49,16 +50,6 @@ def weekday_name(value: date) -> str:
 
 def _escape_like(value: str) -> str:
     return _LIKE_SPECIAL.sub(r"\\\1", value)
-
-
-def _empty_sms_source() -> dict[str, Any]:
-    return {
-        "raw": "",
-        "source": "manual",
-        "received_at": None,
-        "message_id": None,
-        "idempotency_key": None,
-    }
 
 
 def _visible(user_id: uuid.UUID) -> list[Any]:
@@ -435,10 +426,11 @@ async def create_transaction(
         raise BadRequestError("merchant is required.", code="merchant_required")
 
     tx_id = uuid.uuid4()
-    sms_source = _empty_sms_source()
-    if note and note.strip():
-        sms_source["raw"] = note.strip()
-        sms_source["source"] = "manual"
+    sms_source = build_sms_source(
+        raw_plaintext=note.strip() if note and note.strip() else "",
+        source="manual",
+        user_id=user_id,
+    )
 
     tx = Transaction(
         id=tx_id,
@@ -477,13 +469,14 @@ async def create_transaction(
             raise NotFoundError("Ingestion not found.", code="ingestion_not_found")
         ingestion.status = IngestionStatus.parsed
         ingestion.transaction_id = tx_id
-        tx.sms_source = {
-            "raw": ingestion.raw,
-            "source": ingestion.source.value,
-            "received_at": ingestion.received_at.isoformat(),
-            "message_id": ingestion.message_id,
-            "idempotency_key": ingestion.idempotency_key,
-        }
+        tx.sms_source = build_sms_source(
+            raw_plaintext=decrypt_ingestion_raw(ingestion.raw, user_id=user_id),
+            source=ingestion.source.value,
+            user_id=user_id,
+            received_at=ingestion.received_at,
+            message_id=ingestion.message_id,
+            idempotency_key=ingestion.idempotency_key,
+        )
 
     await session.commit()
     await session.refresh(tx)

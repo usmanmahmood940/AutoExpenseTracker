@@ -128,6 +128,10 @@ async def migrate(args: argparse.Namespace) -> int:
     )
 
     settings = get_settings()
+    if not args.dry_run:
+        from app.services.field_crypto import require_persistent_key
+
+        require_persistent_key(settings)
     init_firebase(settings)
     app = require_app()
     db = firestore.client(app=app)

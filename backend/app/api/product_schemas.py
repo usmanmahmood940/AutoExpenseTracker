@@ -18,6 +18,7 @@ from app.db.models.enums import (
     TransactionType,
 )
 from app.services.money import money_float
+from app.services.sms_source import decrypt_ingestion_raw, sms_source_for_api
 
 
 class SmsSourceOut(BaseModel):
@@ -246,3 +247,26 @@ class MerchantOverrideOut(BaseModel):
     merchant_key: str
     display_name: str
     category: str
+
+
+def transaction_to_out(tx: Any, *, include_raw: bool) -> TransactionOut:
+    """ORM → API. Decrypts sms_source only when ``include_raw`` is True."""
+    payload = TransactionOut.model_validate(tx)
+    return payload.model_copy(
+        update={
+            "sms_source": SmsSourceOut.model_validate(
+                sms_source_for_api(
+                    getattr(tx, "sms_source", None),
+                    user_id=tx.user_id,
+                    include_raw=include_raw,
+                )
+            )
+        }
+    )
+
+
+def ingestion_to_out(row: Any) -> IngestionOut:
+    payload = IngestionOut.model_validate(row)
+    return payload.model_copy(
+        update={"raw": decrypt_ingestion_raw(row.raw, user_id=row.user_id)}
+    )

@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     cron_secret: str | None = None
     confidence_review_threshold: float = 0.8
 
+    # AES-256-GCM DEK for SMS payloads (raw_ingestions.raw, sms_source).
+    # Base64-encoded 32 bytes. Required outside local; local generates an
+    # ephemeral key if unset (encrypted rows will not decrypt after restart).
+    field_encryption_key: str | None = None
+
     min_password_length: int = 6
 
     # NoDecode: accept a comma-separated string instead of pydantic-settings'
@@ -114,6 +119,11 @@ class Settings(BaseSettings):
     def _apply_environment_defaults(self) -> Settings:
         if self.log_json is None:
             self.log_json = self.environment != "local"
+        key = (self.field_encryption_key or "").strip()
+        if self.environment != "local" and not key:
+            raise ValueError(
+                "FIELD_ENCRYPTION_KEY is required when ENVIRONMENT is not local"
+            )
         return self
 
     @property

@@ -122,6 +122,28 @@ def test_happy_path_creates_transaction(
     assert payload["transactionId"]
     assert "duplicate" not in payload
 
+    from uuid import UUID
+
+    from app.db.models.raw_ingestion import RawIngestion
+    from app.db.models.transaction import Transaction
+    from app.services.field_crypto import is_encrypted
+    from tests.conftest import run_isolated
+
+    tx_id = UUID(payload["transactionId"])
+    ing_id = UUID(payload["ingestionId"])
+
+    async def load(session):  # type: ignore[no-untyped-def]
+        return await session.get(Transaction, tx_id), await session.get(
+            RawIngestion, ing_id
+        )
+
+    tx, ingestion = run_isolated(load)
+    assert tx is not None
+    assert ingestion is not None
+    assert is_encrypted(ingestion.raw)
+    assert is_encrypted(tx.sms_source["raw_encrypted"])
+    assert not tx.sms_source.get("raw")
+
 
 def test_webhook_alias(ingest_client: tuple[TestClient, str]) -> None:
     client, uid = ingest_client

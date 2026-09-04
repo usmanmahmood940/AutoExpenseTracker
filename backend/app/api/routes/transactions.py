@@ -15,6 +15,7 @@ from app.api.product_schemas import (
     SearchListOut,
     TransactionListOut,
     TransactionOut,
+    transaction_to_out,
 )
 from app.db.models.enums import (
     IngestionSource,
@@ -181,7 +182,7 @@ async def search_transactions(
         order_by=order_by,
     )
     return SearchListOut(
-        items=[TransactionOut.model_validate(item) for item in page["items"]],
+        items=[transaction_to_out(item, include_raw=False) for item in page["items"]],
         next_cursor=page["next_cursor"],
         has_more=page["has_more"],
         total_count=page["total_count"],
@@ -230,7 +231,7 @@ async def list_transactions(
         amount_max=amount_max,
     )
     return TransactionListOut(
-        items=[TransactionOut.model_validate(item) for item in page["items"]],
+        items=[transaction_to_out(item, include_raw=False) for item in page["items"]],
         next_cursor=page["next_cursor"],
         has_more=page["has_more"],
         total_count=page["total_count"],
@@ -270,7 +271,7 @@ async def create_transaction(
         ingestion_id=body.ingestion_id,
         note=body.note,
     )
-    return TransactionOut.model_validate(tx)
+    return transaction_to_out(tx, include_raw=True)
 
 
 @router.post("/transactions/parse", response_model=TransactionParseOut)
@@ -319,7 +320,7 @@ async def get_transaction(
     tx = await tx_service.get_owned(
         session, user_id=user.id, transaction_id=transaction_id
     )
-    return TransactionOut.model_validate(tx)
+    return transaction_to_out(tx, include_raw=True)
 
 
 @router.patch("/transactions/{transaction_id}", response_model=TransactionOut)
@@ -335,7 +336,7 @@ async def update_transaction(
         transaction_id=transaction_id,
         updates=body.model_dump(exclude_unset=True),
     )
-    return TransactionOut.model_validate(tx)
+    return transaction_to_out(tx, include_raw=True)
 
 
 @router.delete(
@@ -360,4 +361,4 @@ async def review_transaction(
     tx = await tx_service.mark_reviewed(
         session, user_id=user.id, transaction_id=transaction_id
     )
-    return TransactionOut.model_validate(tx)
+    return transaction_to_out(tx, include_raw=True)

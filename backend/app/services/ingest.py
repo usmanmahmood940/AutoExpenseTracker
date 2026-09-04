@@ -35,6 +35,7 @@ from app.services.dedup import DedupFields, compute_dedup_key, mask_account_id
 from app.services.gemini import ParsedTransaction, ParseFail, parse_transaction
 from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money
+from app.services.sms_source import build_sms_source, encrypt_ingestion_raw
 from app.services.user_profile import ensure_profile
 
 INGESTION_SOURCES = {item.value for item in IngestionSource}
@@ -246,7 +247,7 @@ async def process_ingest(
 
     ingestion = RawIngestion(
         user_id=user.id,
-        raw=request.raw,
+        raw=encrypt_ingestion_raw(request.raw, user_id=user.id),
         source=request.source,
         received_at=request.received_at,
         message_id=request.message_id,
@@ -344,15 +345,14 @@ async def process_ingest(
         else TransactionStatus.active
     )
     tx_date = date.fromisoformat(parsed.transaction_date)
-    sms_source: dict[str, Any] = {
-        "raw": request.raw,
-        "source": request.source.value,
-        "receivedAt": request.received_at.isoformat(),
-    }
-    if request.message_id:
-        sms_source["messageId"] = request.message_id
-    if request.idempotency_key:
-        sms_source["idempotencyKey"] = request.idempotency_key
+    sms_source = build_sms_source(
+        raw_plaintext=request.raw,
+        source=request.source.value,
+        user_id=user.id,
+        received_at=request.received_at,
+        message_id=request.message_id,
+        idempotency_key=request.idempotency_key,
+    )
 
     tx = Transaction(
         user_id=user.id,

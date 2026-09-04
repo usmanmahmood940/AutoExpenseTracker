@@ -52,6 +52,16 @@ def test_cors_origins_accept_comma_separated_values(
 
 def test_json_logging_follows_the_environment() -> None:
     assert _settings(environment="local").log_json is False
-    assert _settings(environment="prod").log_json is True
+    assert _settings(environment="prod", field_encryption_key="x" * 44).log_json is True
     # An explicit setting always wins.
-    assert _settings(environment="prod", log_json=False).log_json is False
+    assert (
+        _settings(
+            environment="prod", field_encryption_key="x" * 44, log_json=False
+        ).log_json
+        is False
+    )
+
+
+def test_prod_requires_field_encryption_key() -> None:
+    with pytest.raises(ValidationError, match="FIELD_ENCRYPTION_KEY"):
+        _settings(environment="prod", field_encryption_key="")

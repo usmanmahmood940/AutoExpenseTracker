@@ -39,6 +39,7 @@ from app.db.models.user import DEFAULT_CURRENCY, DEFAULT_TIMEZONE, User
 from app.services.categories import CUSTOM_SORT_ORDER, _slugify
 from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money
+from app.services.sms_source import build_sms_source, encrypt_ingestion_raw
 
 logger = logging.getLogger(__name__)
 
@@ -188,13 +189,14 @@ def transaction_kwargs(
         return None
     sms = data.get("smsSource") if isinstance(data.get("smsSource"), dict) else {}
     received = as_datetime(sms.get("receivedAt"))
-    sms_source = {
-        "raw": sms.get("raw") or "",
-        "source": sms.get("source") or "manual",
-        "received_at": received.isoformat() if received else None,
-        "message_id": sms.get("messageId"),
-        "idempotency_key": sms.get("idempotencyKey"),
-    }
+    sms_source = build_sms_source(
+        raw_plaintext=str(sms.get("raw") or ""),
+        source=str(sms.get("source") or "manual"),
+        user_id=user_id,
+        received_at=received,
+        message_id=sms.get("messageId"),
+        idempotency_key=sms.get("idempotencyKey"),
+    )
     confidence = data.get("parseConfidence", 1)
     try:
         parse_confidence = Decimal(str(confidence))
@@ -217,9 +219,7 @@ def transaction_kwargs(
         "type": _enum_or(TransactionType, data.get("type"), TransactionType.debit),
         "merchant": merchant[:200],
         "merchant_details": (
-            str(data["merchantDetails"])[:500]
-            if data.get("merchantDetails")
-            else None
+            str(data["merchantDetails"])[:500] if data.get("merchantDetails") else None
         ),
         "merchant_normalized": normalized[:200],
         "is_recurring": bool(data.get("isRecurring", False)),
@@ -271,7 +271,7 @@ def ingestion_kwargs(
     return {
         "id": stable_uuid("ing", uid, doc_id),
         "user_id": user_id,
-        "raw": raw[:8000],
+        "raw": encrypt_ingestion_raw(raw[:8000], user_id=user_id),
         "source": _enum_or(IngestionSource, data.get("source"), IngestionSource.manual),
         "received_at": received,
         "message_id": _clip(data.get("messageId"), 256),

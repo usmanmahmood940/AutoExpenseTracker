@@ -84,7 +84,12 @@ def test_transaction_kwargs_maps_camel_case() -> None:
     assert kwargs["type"] is TransactionType.debit
     assert kwargs["status"] is TransactionStatus.active
     assert kwargs["transaction_date"] == date(2026, 8, 1)
-    assert kwargs["sms_source"]["raw"] == "PKR 99"
+    from app.services.sms_source import decrypt_sms_source_raw
+
+    assert decrypt_sms_source_raw(kwargs["sms_source"], user_id=kwargs["user_id"]) == (
+        "PKR 99"
+    )
+    assert "raw_encrypted" in kwargs["sms_source"]
 
 
 def test_transaction_kwargs_skips_missing_date() -> None:
@@ -115,6 +120,11 @@ def test_ingestion_points_at_mapped_transaction() -> None:
     )
     assert kwargs is not None
     assert kwargs["transaction_id"] == stable_uuid("tx", "uid", auto_tx)
+    from app.services.field_crypto import is_encrypted
+    from app.services.sms_source import decrypt_ingestion_raw
+
+    assert is_encrypted(kwargs["raw"])
+    assert decrypt_ingestion_raw(kwargs["raw"], user_id=kwargs["user_id"]) == "hello"
 
 
 def test_as_date_and_datetime_from_iso() -> None:

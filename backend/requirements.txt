@@ -17,3 +17,6 @@ firebase-admin==7.5.0
 
 # Phase B uses this for server-side Identity Toolkit password sign-in.
 httpx==0.28.1
+
+# Option A field encryption (AES-256-GCM) for SMS payloads at rest.
+cryptography==46.0.3
