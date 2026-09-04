@@ -43,7 +43,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get askPlaceholderBody =>
-      'You\'ll be able to ask questions about your transactions and get answers grounded in your data.';
+      'Try a suggested question, or type your own. Answers use your transactions — never raw messages.';
+
+  @override
+  String get askHint => 'Ask a question';
+
+  @override
+  String get askSend => 'Send';
+
+  @override
+  String get askSuggestionsTitle => 'Suggested questions';
+
+  @override
+  String get askThinking => 'Looking at your spending…';
+
+  @override
+  String get askCitations => 'Related transactions';
+
+  @override
+  String get askOpenActivity => 'Open in Activity';
+
+  @override
+  String get askErrorOffTopic =>
+      'I can only answer questions about your spending.';
+
+  @override
+  String get askErrorInsufficientData =>
+      'Add at least 10 transactions to start asking questions.';
+
+  @override
+  String get askErrorRateLimited =>
+      'Too many questions. Try again in a few minutes.';
+
+  @override
+  String get askErrorUnavailable =>
+      'Spending answers are temporarily unavailable.';
 
   @override
   String get searchPlaceholder =>

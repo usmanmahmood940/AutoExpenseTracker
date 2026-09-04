@@ -163,8 +163,68 @@ abstract class AppLocalizations {
   /// No description provided for @askPlaceholderBody.
   ///
   /// In en, this message translates to:
-  /// **'You\'ll be able to ask questions about your transactions and get answers grounded in your data.'**
+  /// **'Try a suggested question, or type your own. Answers use your transactions — never raw messages.'**
   String get askPlaceholderBody;
+
+  /// No description provided for @askHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a question'**
+  String get askHint;
+
+  /// No description provided for @askSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get askSend;
+
+  /// No description provided for @askSuggestionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested questions'**
+  String get askSuggestionsTitle;
+
+  /// No description provided for @askThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking at your spending…'**
+  String get askThinking;
+
+  /// No description provided for @askCitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Related transactions'**
+  String get askCitations;
+
+  /// No description provided for @askOpenActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Activity'**
+  String get askOpenActivity;
+
+  /// No description provided for @askErrorOffTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'I can only answer questions about your spending.'**
+  String get askErrorOffTopic;
+
+  /// No description provided for @askErrorInsufficientData.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least 10 transactions to start asking questions.'**
+  String get askErrorInsufficientData;
+
+  /// No description provided for @askErrorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many questions. Try again in a few minutes.'**
+  String get askErrorRateLimited;
+
+  /// No description provided for @askErrorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending answers are temporarily unavailable.'**
+  String get askErrorUnavailable;
 
   /// No description provided for @searchPlaceholder.
   ///

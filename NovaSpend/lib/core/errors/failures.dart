@@ -20,7 +20,9 @@ Never throwAsFailure(Object error) {
   if (error is NetworkException) throw NetworkFailure(error.message);
   if (error is AuthException) throw AuthFailure(error.message);
   if (error is CacheException) throw CacheFailure(error.message);
-  if (error is ServerException) throw ServerFailure(error.message);
+  if (error is ServerException) {
+    throw ServerFailure(error.message, error.code);
+  }
   throw UnknownFailure(error.toString());
 }
 
@@ -31,7 +33,12 @@ Stream<T> mapStreamFailures<T>(Stream<T> source) {
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure([super.message = 'Server error']);
+  const ServerFailure([super.message = 'Server error', this.code]);
+
+  final String? code;
+
+  @override
+  List<Object?> get props => [message, code];
 }
 
 class CacheFailure extends Failure {

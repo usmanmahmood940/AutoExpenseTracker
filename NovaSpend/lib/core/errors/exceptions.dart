@@ -1,8 +1,9 @@
 /// Data-layer exceptions mapped to [Failure] in repositories.
 class ServerException implements Exception {
-  const ServerException([this.message = 'Server error']);
+  const ServerException([this.message = 'Server error', this.code]);
 
   final String message;
+  final String? code;
 }
 
 class CacheException implements Exception {

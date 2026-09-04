@@ -180,4 +180,41 @@ void main() {
     expect(summary.topMerchantsSpent.single.visitCount, 2);
     expect(summary.topMerchantsSpent.single.merchantNormalized, 'kfc');
   });
+
+  test('chatSuggestionsFromApi drops blank questions', () {
+    final items = chatSuggestionsFromApi({
+      'suggestions': [
+        {
+          'question': 'Why did food spending jump?',
+          'signal_type': 'category_spike',
+        },
+        {'question': '  ', 'signal_type': 'weekend_skew'},
+      ],
+      'source': 'signals',
+    });
+    expect(items, hasLength(1));
+    expect(items.single.signalType, 'category_spike');
+  });
+
+  test('chatAnswerFromApi maps citations', () {
+    final answer = chatAnswerFromApi({
+      'answer': 'Food spending rose at KFC.',
+      'citations': [
+        {
+          'transaction_id': 'tx-1',
+          'date': '2026-03-10',
+          'amount': 8000,
+          'merchant': 'KFC',
+          'category': 'Food',
+        },
+      ],
+      'confidence': 'high',
+      'source': 'rag',
+      'model': 'gemini-2.5-flash',
+    });
+    expect(answer.answer, contains('KFC'));
+    expect(answer.citations.single.transactionId, 'tx-1');
+    expect(answer.citations.single.amount, 8000);
+    expect(answer.isNavigation, isFalse);
+  });
 }

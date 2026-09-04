@@ -5,6 +5,9 @@ import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
+import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
+import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
+import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
 import 'package:nova_spend/features/transactions/domain/entities/raw_ingestion_entity.dart';
@@ -326,6 +329,49 @@ ParsedTransactionDraft parsedTransactionDraftFromApi(
     branch: json['branch'] as String?,
     transactionTime: json['transaction_time'] as String?,
     transactionDate: json['transaction_date'] as String?,
+  );
+}
+
+List<ChatSuggestionEntity> chatSuggestionsFromApi(Map<String, dynamic> json) {
+  final raw = json['suggestions'];
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map>()
+      .map((item) {
+        final map = Map<String, dynamic>.from(item);
+        return ChatSuggestionEntity(
+          question: map['question']?.toString() ?? '',
+          signalType: map['signal_type']?.toString() ?? '',
+        );
+      })
+      .where((item) => item.question.trim().isNotEmpty)
+      .toList();
+}
+
+ChatCitationEntity chatCitationFromApi(Map<String, dynamic> json) {
+  return ChatCitationEntity(
+    transactionId: json['transaction_id']?.toString(),
+    date: json['date']?.toString(),
+    amount: (json['amount'] as num?)?.toDouble(),
+    merchant: json['merchant'] as String?,
+    category: json['category'] as String?,
+  );
+}
+
+ChatAnswerEntity chatAnswerFromApi(Map<String, dynamic> json) {
+  final raw = json['citations'];
+  final citations = raw is List
+      ? raw
+            .whereType<Map>()
+            .map((item) => chatCitationFromApi(Map<String, dynamic>.from(item)))
+            .toList()
+      : const <ChatCitationEntity>[];
+  return ChatAnswerEntity(
+    answer: json['answer']?.toString() ?? '',
+    citations: citations,
+    confidence: json['confidence']?.toString() ?? 'low',
+    source: json['source']?.toString() ?? 'none',
+    model: json['model']?.toString(),
   );
 }
 

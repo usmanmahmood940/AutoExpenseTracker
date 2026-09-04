@@ -19,6 +19,17 @@ void main() {
     );
   });
 
+  test('throwAsFailure keeps server error codes', () {
+    expect(
+      () => throwAsFailure(
+        const ServerException('outside spending', 'chat_off_topic'),
+      ),
+      throwsA(
+        isA<ServerFailure>().having((e) => e.code, 'code', 'chat_off_topic'),
+      ),
+    );
+  });
+
   test('Failure.toString exposes the message', () {
     expect(const ServerFailure('hidden').toString(), 'hidden');
   });

@@ -25,6 +25,9 @@ class ApiClient {
   /// Gemini parse can take longer than a typical CRUD call.
   static const Duration parseTimeout = Duration(seconds: 45);
 
+  /// Chat retrieve + generate can exceed the default CRUD timeout.
+  static const Duration chatTimeout = Duration(seconds: 60);
+
   final http.Client _client;
   final bool _ownsClient;
   final String baseUrl;
@@ -279,7 +282,7 @@ class ApiException implements Exception {
   Exception toDataException() {
     if (isNetwork) return NetworkException(message);
     if (statusCode == 401 || statusCode == 403) return AuthException(message);
-    return ServerException(message);
+    return ServerException(message, code);
   }
 
   @override

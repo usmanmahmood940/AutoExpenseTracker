@@ -18,6 +18,10 @@ import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dar
 import 'package:nova_spend/features/categories/data/datasource/backend_category_datasource.dart';
 import 'package:nova_spend/features/categories/data/repository_impl.dart';
 import 'package:nova_spend/features/categories/domain/repositories/category_repository.dart';
+import 'package:nova_spend/features/chat/data/datasource/backend_chat_datasource.dart';
+import 'package:nova_spend/features/chat/data/repository_impl.dart';
+import 'package:nova_spend/features/chat/domain/repositories/chat_repository.dart';
+import 'package:nova_spend/features/chat/presentation/provider/ask_provider.dart';
 import 'package:nova_spend/features/merchants/data/datasource/backend_merchant_datasource.dart';
 import 'package:nova_spend/features/merchants/data/repository_impl.dart';
 import 'package:nova_spend/features/merchants/domain/repositories/merchant_repository.dart';
@@ -67,6 +71,7 @@ Future<void> configureDependencies({SharedPreferences? prefs}) async {
   sl.registerLazySingleton(() => BackendMerchantDatasource(api: sl()));
   sl.registerLazySingleton(() => BackendCategoryDatasource(api: sl()));
   sl.registerLazySingleton(() => BackendAnalyticsDatasource(api: sl()));
+  sl.registerLazySingleton(() => BackendChatDatasource(api: sl()));
 
   sl.registerLazySingleton(() => BiometricService());
   sl.registerLazySingleton(() => ExportService());
@@ -110,6 +115,11 @@ Future<void> configureDependencies({SharedPreferences? prefs}) async {
     () => AnalyticsRepositoryImpl(backend: sl()),
   );
   sl.registerFactory(() => InsightsProvider(repository: sl()));
+
+  sl.registerLazySingleton<ChatRepository>(
+    () => ChatRepositoryImpl(backend: sl()),
+  );
+  sl.registerFactory(() => AskProvider(repository: sl()));
 
   sl.registerLazySingleton<MerchantRepository>(
     () => MerchantRepositoryImpl(backend: sl()),

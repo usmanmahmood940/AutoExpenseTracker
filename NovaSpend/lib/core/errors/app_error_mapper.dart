@@ -10,11 +10,7 @@ import 'package:nova_spend/l10n/app_localizations.dart';
 abstract final class AppErrorMapper {
   static String message(AppLocalizations l10n, Object error) {
     if (error is FirebaseAuthException) {
-      return AuthErrorMapper.friendlyAuthError(
-        l10n,
-        error.code,
-        error.message,
-      );
+      return AuthErrorMapper.friendlyAuthError(l10n, error.code, error.message);
     }
     if (error is PlatformException) {
       return AuthErrorMapper.friendlyPlatformAuthError(
