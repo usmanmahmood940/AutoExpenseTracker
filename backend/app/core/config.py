@@ -68,9 +68,12 @@ class Settings(BaseSettings):
     rate_limit_window_minutes: int = 15
 
     gemini_api_key: str | None = None
+    gemini_embedding_model: str = "text-embedding-004"
     ingest_shared_secret: str | None = None
     cron_secret: str | None = None
     confidence_review_threshold: float = 0.8
+    chat_ask_limit_per_user: int = 20
+    chat_min_transactions: int = 10
 
     # AES-256-GCM DEK for SMS payloads (raw_ingestions.raw, sms_source).
     # Base64-encoded 32 bytes. Required outside local; local generates an

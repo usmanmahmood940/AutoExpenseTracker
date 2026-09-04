@@ -17,6 +17,7 @@ from app.api.routes import (
     analytics,
     auth,
     categories,
+    chat,
     health,
     ingest,
     jobs,
@@ -96,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(transactions.router)
     app.include_router(period_stats.router)
     app.include_router(analytics.router)
+    app.include_router(chat.router)
     app.include_router(merchants.router)
     app.include_router(review.router)
     app.include_router(categories.router)

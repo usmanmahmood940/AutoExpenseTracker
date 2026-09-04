@@ -187,6 +187,53 @@ class NarrativeOut(BaseModel):
     model: str | None = None
 
 
+class SmartCardCitationOut(BaseModel):
+    transaction_id: str | None = None
+    date: str | None = None
+    amount: float | None = None
+    merchant: str | None = None
+    category: str | None = None
+
+
+class SmartCardOut(BaseModel):
+    title: str
+    body: str
+    signal_type: str
+    citations: list[SmartCardCitationOut] = Field(default_factory=list)
+
+
+class SmartCardsOut(BaseModel):
+    cards: list[SmartCardOut] = Field(default_factory=list)
+    source: str = "none"
+    model: str | None = None
+
+
+class ChatCitationOut(BaseModel):
+    transaction_id: str | None = None
+    date: str | None = None
+    amount: float | None = None
+    merchant: str | None = None
+    category: str | None = None
+
+
+class ChatSuggestionOut(BaseModel):
+    question: str
+    signal_type: str
+
+
+class ChatSuggestionsOut(BaseModel):
+    suggestions: list[ChatSuggestionOut] = Field(default_factory=list)
+    source: str = "signals"
+
+
+class ChatAskOut(BaseModel):
+    answer: str
+    citations: list[ChatCitationOut] = Field(default_factory=list)
+    confidence: str
+    source: str
+    model: str | None = None
+
+
 class MonthlySummaryListOut(BaseModel):
     items: list[MonthlySummaryOut]
 

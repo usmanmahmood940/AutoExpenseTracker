@@ -20,3 +20,6 @@ httpx==0.28.1
 
 # Option A field encryption (AES-256-GCM) for SMS payloads at rest.
 cryptography==46.0.3
+
+# pgvector bindings for RAG embeddings stored in Postgres.
+pgvector==0.4.1

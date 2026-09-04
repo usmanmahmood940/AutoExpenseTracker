@@ -234,3 +234,79 @@ def test_narrative_empty_without_gemini(api_client: TestClient, monkeypatch) -> 
     assert response.status_code == 200, response.text
     assert response.json()["narrative"] is None
     assert response.json()["source"] == "none"
+
+
+def test_smart_cards_cache_hit(api_client: TestClient, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from app.services import rag_insights
+
+    calls = {"n": 0}
+
+    async def fake_generate(api_key: str, prompt: str) -> tuple[str, str]:
+        calls["n"] += 1
+        return "Fuel and food were concentrated at KFC this period.", "fake-model"
+
+    monkeypatch.setattr(
+        rag_insights,
+        "get_settings",
+        lambda: SimpleNamespace(gemini_api_key="test-key"),
+    )
+    monkeypatch.setattr(rag_insights, "generate_card_text", fake_generate)
+
+    _post_tx(api_client, merchant="KFC", amount=500, tx_date="2026-03-10")
+    first = api_client.get(
+        "/analytics/smart-cards", params={"from": "2026-03-01", "to": "2026-03-31"}
+    )
+    assert first.status_code == 200, first.text
+    body = first.json()
+    assert body["source"] == "gemini"
+    assert body["cards"]
+    assert calls["n"] >= 1
+    generated = calls["n"]
+
+    second = api_client.get(
+        "/analytics/smart-cards", params={"from": "2026-03-01", "to": "2026-03-31"}
+    )
+    assert second.json()["source"] == "cache"
+    assert second.json()["cards"] == body["cards"]
+    assert calls["n"] == generated
+
+
+def test_smart_cards_regenerate_when_data_changes(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from types import SimpleNamespace
+
+    from app.services import rag_insights
+
+    calls = {"n": 0}
+
+    async def fake_generate(api_key: str, prompt: str) -> tuple[str, str]:
+        calls["n"] += 1
+        return f"Card draft {calls['n']}.", "fake-model"
+
+    monkeypatch.setattr(
+        rag_insights,
+        "get_settings",
+        lambda: SimpleNamespace(gemini_api_key="test-key"),
+    )
+    monkeypatch.setattr(rag_insights, "generate_card_text", fake_generate)
+
+    _post_tx(api_client, merchant="KFC", amount=500, tx_date="2026-03-10")
+    first = api_client.get(
+        "/analytics/smart-cards", params={"from": "2026-03-01", "to": "2026-03-31"}
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["source"] == "gemini"
+    first_calls = calls["n"]
+    assert first_calls >= 1
+
+    _post_tx(api_client, merchant="Daraz", amount=200, tx_date="2026-03-20")
+    second = api_client.get(
+        "/analytics/smart-cards", params={"from": "2026-03-01", "to": "2026-03-31"}
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["source"] == "gemini"
+    assert calls["n"] > first_calls
+    assert second.json()["cards"][0]["body"].startswith("Card draft")

@@ -480,6 +480,7 @@ async def create_transaction(
 
     await session.commit()
     await session.refresh(tx)
+    await _index_after_commit(session, user_id=user_id, transaction_id=tx.id)
     return tx
 
 
@@ -547,6 +548,7 @@ async def update_transaction(
 
     await session.commit()
     await session.refresh(tx)
+    await _index_after_commit(session, user_id=user_id, transaction_id=tx.id)
     return tx
 
 
@@ -556,6 +558,9 @@ async def soft_delete(
     tx = await get_owned(session, user_id=user_id, transaction_id=transaction_id)
     tx.status = TransactionStatus.deleted
     await session.commit()
+    await _index_after_commit(
+        session, user_id=user_id, transaction_id=transaction_id, deleted=True
+    )
 
 
 async def mark_reviewed(
@@ -568,4 +573,19 @@ async def mark_reviewed(
     tx.status = TransactionStatus.active
     await session.commit()
     await session.refresh(tx)
+    await _index_after_commit(session, user_id=user_id, transaction_id=tx.id)
     return tx
+
+
+async def _index_after_commit(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+    deleted: bool = False,
+) -> None:
+    from app.services.rag_indexer import index_after_commit
+
+    await index_after_commit(
+        session, user_id=user_id, transaction_id=transaction_id, deleted=deleted
+    )

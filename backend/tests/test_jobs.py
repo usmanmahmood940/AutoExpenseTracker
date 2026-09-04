@@ -36,3 +36,12 @@ def test_recompute_summaries_empty() -> None:
         response = client.post("/internal/jobs/recompute-summaries", json={})
     assert response.status_code == 200
     assert "months_updated" in response.json()
+
+
+def test_reindex_rag_empty() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post("/internal/jobs/reindex-rag", json={"full": True})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "users" in body
+    assert "transactions" in body

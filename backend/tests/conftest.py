@@ -20,6 +20,7 @@ os.environ["LOG_LEVEL"] = "WARNING"
 # Local `.env` must not change test behavior (Resend send, cron auth).
 os.environ["RESEND_API_KEY"] = ""
 os.environ["CRON_SECRET"] = ""
+os.environ["GEMINI_API_KEY"] = ""
 # 32 zero bytes, standard base64. Stable so encrypt/decrypt round-trips in tests.
 os.environ["FIELD_ENCRYPTION_KEY"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
@@ -28,6 +29,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -38,7 +40,7 @@ from app.api import deps
 from app.core.config import get_settings
 from app.core.firebase import FirebaseIdentity
 from app.db.models import Base
-from app.db.session import dispose_engine, get_sessionmaker
+from app.db.session import attach_pgvector, dispose_engine, get_sessionmaker
 from app.main import create_app
 from app.services.categories import seed_default_categories
 
@@ -47,8 +49,10 @@ from app.services.categories import seed_default_categories
 def schema() -> None:
     async def rebuild() -> None:
         engine = create_async_engine(get_settings().database_url)
+        attach_pgvector(engine)
         try:
             async with engine.begin() as conn:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 await conn.run_sync(Base.metadata.drop_all)
                 await conn.run_sync(Base.metadata.create_all)
             maker = async_sessionmaker(bind=engine, expire_on_commit=False)
@@ -111,6 +115,7 @@ def run_isolated[T](fn: Callable[[AsyncSession], Awaitable[T]]) -> T:
 
     async def _run() -> T:
         engine = create_async_engine(get_settings().database_url)
+        attach_pgvector(engine)
         sessionmaker = async_sessionmaker(bind=engine, expire_on_commit=False)
         try:
             async with sessionmaker() as db:

@@ -131,7 +131,7 @@ gcloud run deploy "$SERVICE" \
   --cpu=1 \
   --min-instances=0 \
   --max-instances=5 \
-  --timeout=120 \
+  --timeout=540 \
   --clear-secrets \
   --env-vars-file="$ENV_FILE" \
   --quiet

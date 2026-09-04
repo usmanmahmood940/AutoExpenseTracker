@@ -63,3 +63,9 @@ class TransactionSortBy(StrEnum):
 class SortOrder(StrEnum):
     asc = "asc"
     desc = "desc"
+
+
+class RagDocType(StrEnum):
+    transaction = "transaction"
+    merchant = "merchant"
+    period = "period"

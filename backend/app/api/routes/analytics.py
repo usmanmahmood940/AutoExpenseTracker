@@ -13,11 +13,12 @@ from app.api.product_schemas import (
     NarrativeOut,
     RecurringListOut,
     RecurringMerchantOut,
+    SmartCardsOut,
     TrendOut,
     TrendPointOut,
 )
 from app.services import analytics as analytics_service
-from app.services import insights_narrative
+from app.services import insights_narrative, rag_insights
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -109,3 +110,16 @@ async def get_narrative(
         session, user=user, date_from=date_from, date_to=date_to
     )
     return NarrativeOut.model_validate(payload)
+
+
+@router.get("/smart-cards", response_model=SmartCardsOut)
+async def get_smart_cards(
+    user: CurrentUser,
+    session: DbSession,
+    date_from: Annotated[str, Query(alias="from")],
+    date_to: Annotated[str, Query(alias="to")],
+) -> SmartCardsOut:
+    payload = await rag_insights.get_smart_cards(
+        session, user=user, date_from=date_from, date_to=date_to
+    )
+    return SmartCardsOut.model_validate(payload)

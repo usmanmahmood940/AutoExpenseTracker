@@ -16,6 +16,7 @@ from app.db.models.enums import (
     IngestionSource,
     IngestionStatus,
     PeriodKind,
+    RagDocType,
     SortOrder,
     TransactionSortBy,
     TransactionStatus,
@@ -24,6 +25,8 @@ from app.db.models.enums import (
 from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.monthly_summary import MonthlySummary
 from app.db.models.password_reset_session import PasswordResetSession
+from app.db.models.rag_document import RagDocument
+from app.db.models.rag_insight_cache import RagInsightCache
 from app.db.models.raw_ingestion import RawIngestion
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
@@ -45,6 +48,9 @@ __all__ = [
     "OtpPurpose",
     "PasswordResetSession",
     "PeriodKind",
+    "RagDocType",
+    "RagDocument",
+    "RagInsightCache",
     "RawIngestion",
     "SortOrder",
     "Transaction",

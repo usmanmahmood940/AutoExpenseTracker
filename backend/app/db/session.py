@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -17,8 +18,18 @@ _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
 
+def attach_pgvector(engine: AsyncEngine) -> None:
+    """Register the pgvector codec on every asyncpg connection."""
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _register_vector(dbapi_connection, _connection_record) -> None:  # type: ignore[no-untyped-def]
+        from pgvector.asyncpg import register_vector
+
+        dbapi_connection.run_async(register_vector)
+
+
 def _build_engine(settings: Settings) -> AsyncEngine:
-    return create_async_engine(
+    engine = create_async_engine(
         settings.database_url,
         echo=settings.db_echo,
         pool_size=settings.db_pool_size,
@@ -28,6 +39,8 @@ def _build_engine(settings: Settings) -> AsyncEngine:
         pool_recycle=settings.db_pool_recycle,
         pool_pre_ping=True,
     )
+    attach_pgvector(engine)
+    return engine
 
 
 def get_engine() -> AsyncEngine:

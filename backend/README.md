@@ -23,13 +23,19 @@ Next up: [`../docs/encryption-and-rag-plan.md`](../docs/encryption-and-rag-plan.
 | E | Flutter ApiClient (dev) | **done** (needs step 5 data before Home looks real) |
 | F | Prod migrate + freeze + cutover | **dual-run** (step 11) |
 | E1 | SMS payload encryption (`field_crypto`) | **done** (deployed + backfilled 2026-09-04) |
-| R1–R4 | pgvector RAG, smart cards, chat API | planned — see encryption-and-rag plan §8.2–8.5 |
+| R1–R3 | pgvector RAG, smart cards, chat API | **done** (schema + APIs; deploy + reindex in rollout) |
+| R4 | audit logs, cost caps, load test | planned — see encryption-and-rag plan §8.5 |
 
 ## Requirements
 
 - Python 3.12 (`brew install python@3.12`) — 3.14 is not used because some
   database and gRPC wheels still lag behind it
 - PostgreSQL 16 (`brew install postgresql@16`)
+- pgvector for PostgreSQL 16. Homebrew's bottle targets PG 17/18, so compile
+  against `@16` once: `PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"`
+  then `make && make install` from the pgvector source. After that:
+  `psql -d novaspend_dev -c "CREATE EXTENSION IF NOT EXISTS vector;"`
+  (same for `novaspend_test`; superuser required the first time).
 
 ## First-time setup
 
@@ -77,11 +83,12 @@ All settings come from the environment (`.env` locally). See
   signup/forgot-password. Leave them unset locally: the OTP is logged
   (`email_not_sent_dev_fallback`) instead of emailed, so Swagger can drive the
   whole signup/reset flow with no Resend account.
-- `GEMINI_API_KEY` is required for a real SMS parse on `POST /ingest`. Unset,
-  ingest still writes a `raw_ingestions` row with `needs_parse`.
+- `GEMINI_API_KEY` is required for a real SMS parse on `POST /ingest`, smart cards,
+  and `/chat/ask`. Unset, ingest still writes a `raw_ingestions` row with
+  `needs_parse`, and embeddings fall back to a local hash vector.
 - `CRON_SECRET` protects `/internal/jobs/*`. Unset is allowed only when
-  `ENVIRONMENT=local`. After a Cloud Run deploy: `make scheduler` (03:00 and
-  03:15 Asia/Karachi).
+  `ENVIRONMENT=local`. After a Cloud Run deploy: `make scheduler` (03:00 cleanup,
+  03:15 summaries, Sunday 04:00 RAG reindex, Asia/Karachi).
 - Firestore → Postgres copy (plan §6 step 5): `make migrate-firestore SUPABASE=1 DRY_RUN=1` then the same without `DRY_RUN`.
 - `INGEST_SHARED_SECRET` is optional extra webhook auth. Unset keeps Function
   parity (`X-User-Id` only).
@@ -108,7 +115,7 @@ app/
 │                      # identity_toolkit, firebase_users, user_profile,
 │                      # reset_session, devices, transactions, period_stats,
 │                      # analytics, merchants, review, categories, ingest,
-│                      # gemini, push
+│                      # gemini, embeddings, rag_indexer, chat_rag, push
 └── workers/           # cleanup-auth, monthly_summaries recompute
 alembic/               # migrations
 tests/
@@ -147,6 +154,9 @@ tests/
 | GET | `/analytics/trend` | Debit trend buckets for a range (`from`, `to`, optional `bucket=day\|week`). |
 | GET | `/analytics/recurring` | Recurring debit merchants for a range (`from`, `to`). |
 | GET | `/analytics/narrative` | Cached Gemini insights paragraph for a range (`from`, `to`), or `null` when unavailable. |
+| GET | `/analytics/smart-cards` | Cached Gemini insight cards from spending signals (`from`, `to`). |
+| GET | `/chat/suggestions` | Up to 5 template questions from SQL spending signals (`from`, `to`). Empty list if sparse. |
+| POST | `/chat/ask` | Grounded spending answer + transaction citations. `400` off-topic / insufficient data; `429` rate limited. |
 | GET | `/merchants/{key}` | Merchant spend summary. |
 | GET | `/merchants/{key}/transactions` | That merchant's transactions. |
 | GET | `/merchants/{key}/category-override` | Saved "remember this merchant" category. `404` if none. |
@@ -158,6 +168,7 @@ tests/
 | POST | `/ingest` | SMS/email webhook. Auth is `X-User-Id` (Firebase UID), not Bearer. Same JSON as the Cloud Function. Alias: `POST /webhooks/sms`. |
 | POST | `/internal/jobs/cleanup-auth` | Delete expired OTPs / reset sessions / stale rate limits. `X-Cron-Secret` when `CRON_SECRET` is set. |
 | POST | `/internal/jobs/recompute-summaries` | Rebuild `monthly_summaries` from live SQL. |
+| POST | `/internal/jobs/reindex-rag` | Backfill `rag_documents` embeddings. Body `{ user_id?, full? }`. |
 
 Paths deliberately carry no `/v1` prefix, matching the API tables in the
 migration plan. `/auth/*` is public. `POST /ingest` authenticates with

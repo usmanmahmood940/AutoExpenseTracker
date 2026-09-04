@@ -35,6 +35,7 @@ from app.services.dedup import DedupFields, compute_dedup_key, mask_account_id
 from app.services.gemini import ParsedTransaction, ParseFail, parse_transaction
 from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money
+from app.services.rag_indexer import index_after_commit
 from app.services.sms_source import build_sms_source, encrypt_ingestion_raw
 from app.services.user_profile import ensure_profile
 
@@ -408,6 +409,7 @@ async def process_ingest(
         )
 
     # Insights read live SQL; monthly_summaries is a later cache, not on this path.
+    await index_after_commit(session, user_id=user.id, transaction_id=tx.id)
     return WebhookResponse(
         success=True,
         ingestion_id=str(ingestion.id),

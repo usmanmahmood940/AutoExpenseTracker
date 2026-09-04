@@ -26,26 +26,32 @@ upsert_job() {
   local name="$1"
   local schedule="$2"
   local path="$3"
-  local args=(
+  local body="${4:-{}}"
+  local common=(
     --location="$LOCATION"
     --schedule="$schedule"
     --time-zone="Asia/Karachi"
     --uri="${SERVICE_URL}${path}"
     --http-method=POST
-    --headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json"
-    --message-body="{}"
+    --message-body="${body}"
+    --attempt-deadline=540s
+    --quiet
   )
+  # create uses --headers; update uses --update-headers (not --headers).
   if gcloud scheduler jobs describe "$name" --location="$LOCATION" >/dev/null 2>&1; then
-    gcloud scheduler jobs update http "$name" "${args[@]}"
+    gcloud scheduler jobs update http "$name" "${common[@]}" \
+      --update-headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json"
   else
-    gcloud scheduler jobs create http "$name" "${args[@]}"
+    gcloud scheduler jobs create http "$name" "${common[@]}" \
+      --headers="X-Cron-Secret=${CRON_SECRET},Content-Type=application/json"
   fi
 }
 
 # Cloud Run stays publicly reachable; job routes require X-Cron-Secret.
 upsert_job novaspend-cleanup-auth "0 3 * * *" "/internal/jobs/cleanup-auth"
 upsert_job novaspend-recompute-summaries "15 3 * * *" "/internal/jobs/recompute-summaries"
+upsert_job novaspend-reindex-rag "0 4 * * 0" "/internal/jobs/reindex-rag" '{"full":true}'
 
 echo "Scheduler jobs:"
 gcloud scheduler jobs list --location="$LOCATION" \
-  --filter="name:(novaspend-cleanup-auth OR novaspend-recompute-summaries)"
+  --filter="name:(novaspend-cleanup-auth OR novaspend-recompute-summaries OR novaspend-reindex-rag)"

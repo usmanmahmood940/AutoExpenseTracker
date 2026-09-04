@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import AppSettings, DbSession
 from app.core.errors import ServiceUnavailableError, UnauthorizedError
+from app.services.rag_indexer import reindex_users
 from app.workers.cleanup import cleanup_expired_auth
 from app.workers.summaries import recompute_recent
 
@@ -29,6 +30,20 @@ class RecomputeRequest(BaseModel):
 
 class RecomputeResult(BaseModel):
     months_updated: int
+
+
+class ReindexRagRequest(BaseModel):
+    user_id: UUID | None = None
+    full: bool = False
+
+
+class ReindexRagResult(BaseModel):
+    users: int
+    transactions: int
+    merchants: int
+    periods: int
+    skipped: int
+    deleted: int
 
 
 def _require_cron(settings: AppSettings, x_cron_secret: str | None) -> None:
@@ -75,3 +90,27 @@ async def recompute_summaries(
         session, user_id=payload.user_id, limit=payload.limit
     )
     return RecomputeResult(months_updated=count)
+
+
+@router.post(
+    "/reindex-rag",
+    response_model=ReindexRagResult,
+    summary="Backfill rag_documents embeddings for one or all users",
+)
+async def reindex_rag(
+    session: DbSession,
+    settings: AppSettings,
+    body: ReindexRagRequest | None = None,
+    x_cron_secret: Annotated[str | None, Header(alias="X-Cron-Secret")] = None,
+) -> ReindexRagResult:
+    _require_cron(settings, x_cron_secret)
+    payload = body or ReindexRagRequest()
+    stats = await reindex_users(session, user_id=payload.user_id, full=payload.full)
+    return ReindexRagResult(
+        users=stats.users,
+        transactions=stats.transactions,
+        merchants=stats.merchants,
+        periods=stats.periods,
+        skipped=stats.skipped,
+        deleted=stats.deleted,
+    )
