@@ -262,6 +262,7 @@ def test_smart_cards_cache_hit(api_client: TestClient, monkeypatch) -> None:
     body = first.json()
     assert body["source"] == "gemini"
     assert body["cards"]
+    assert all("suggested_question" in card for card in body["cards"])
     assert calls["n"] >= 1
     generated = calls["n"]
 

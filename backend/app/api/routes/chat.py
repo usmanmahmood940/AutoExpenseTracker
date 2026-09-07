@@ -14,12 +14,18 @@ from app.services import chat_rag
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
+class ChatHistoryTurn(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = Field(min_length=1, max_length=500)
+
+
 class ChatAskRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     question: str = Field(min_length=1, max_length=2000)
     date_from: str | None = Field(default=None, alias="from")
     date_to: str | None = Field(default=None, alias="to")
+    history: list[ChatHistoryTurn] = Field(default_factory=list, max_length=3)
 
 
 @router.get("/suggestions", response_model=ChatSuggestionsOut)
@@ -49,5 +55,6 @@ async def ask(
         question=body.question,
         date_from=body.date_from,
         date_to=body.date_to,
+        history=[turn.model_dump() for turn in body.history],
     )
     return ChatAskOut.model_validate(payload)

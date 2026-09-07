@@ -34,6 +34,7 @@ async def retrieve(
     doc_types: list[str] | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    strict_period: bool = False,
 ) -> list[RagHit]:
     query = (query_text or "").strip()
     if not query or limit <= 0:
@@ -50,14 +51,23 @@ async def retrieve(
         if allowed:
             stmt = stmt.where(RagDocument.doc_type.in_(allowed))
     if date_from is not None and date_to is not None:
-        stmt = stmt.where(
-            or_(
-                RagDocument.period_from.is_(None),
-                RagDocument.period_to.is_(None),
-                (RagDocument.period_from <= date_to)
-                & (RagDocument.period_to >= date_from),
-            )
+        overlap = (RagDocument.period_from <= date_to) & (
+            RagDocument.period_to >= date_from
         )
+        if strict_period:
+            stmt = stmt.where(
+                RagDocument.period_from.is_not(None),
+                RagDocument.period_to.is_not(None),
+                overlap,
+            )
+        else:
+            stmt = stmt.where(
+                or_(
+                    RagDocument.period_from.is_(None),
+                    RagDocument.period_to.is_(None),
+                    overlap,
+                )
+            )
     stmt = stmt.order_by(distance).limit(limit)
     rows = (await session.execute(stmt)).all()
     return [

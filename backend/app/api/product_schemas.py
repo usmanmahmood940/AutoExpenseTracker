@@ -199,6 +199,7 @@ class SmartCardOut(BaseModel):
     title: str
     body: str
     signal_type: str
+    suggested_question: str = ""
     citations: list[SmartCardCitationOut] = Field(default_factory=list)
 
 
@@ -232,6 +233,9 @@ class ChatAskOut(BaseModel):
     confidence: str
     source: str
     model: str | None = None
+    filter_term: str | None = None
+    window_from: str | None = None
+    window_to: str | None = None
 
 
 class MonthlySummaryListOut(BaseModel):

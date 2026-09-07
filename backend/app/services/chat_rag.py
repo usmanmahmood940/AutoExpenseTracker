@@ -13,13 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.errors import BadRequestError, ServiceUnavailableError
-from app.db.models.enums import TransactionStatus
+from app.db.models.enums import TransactionStatus, TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services import analytics as analytics_service
+from app.services.chat_question_range import resolve_ask_window
 from app.services.insights_narrative import generate_spend_narrative_text
-from app.services.money import money_float
-from app.services.rag_retrieval import retrieve
+from app.services.money import as_money, money_float
+from app.services.rag_documents import build_transaction_doc
+from app.services.rag_retrieval import RagHit, retrieve
 from app.services.rate_limit import enforce_rate_limit
 from app.services.spending_signals import detect_signals
 
@@ -27,6 +29,14 @@ logger = logging.getLogger(__name__)
 
 _MAX_SUGGESTIONS = 5
 _DEFAULT_ASK_DAYS = 365
+_SHORT_WINDOW_DAYS = 3
+_LONG_WINDOW_DAYS = 45
+_TX_RETRIEVE_LIMIT = 12
+_PERIOD_RETRIEVE_LIMIT = 3
+_LARGEST_DEBITS = 5
+_SHORT_WINDOW_TX_LIMIT = 40
+_HISTORY_TURNS = 3
+_HISTORY_CHARS = 500
 
 _OFF_TOPIC = re.compile(
     r"\b(weather|forecast|stock market|invest(?:ing|ment)?s?|crypto|"
@@ -56,8 +66,13 @@ Mention specific merchants and amounts when available.
 Do not invent transactions, budgets, or financial advice.
 If the data is insufficient, say so.
 Never quote SMS or raw message text.
-Currency: {currency}. Period: {date_from} to {date_to}.
-Question: {question}
+Today is {today} ({weekday}).
+Selected period: {ui_from} to {ui_to}.
+Answer using this window: {eff_from} to {eff_to}.
+Relative words like today, yesterday, and this week refer to the calendar dates above.
+Do not say there is no data for today if tools or documents include {today}.
+Currency: {currency}.
+{history_block}Question: {question}
 
 Tool outputs (exact numbers):
 {tools}
@@ -122,7 +137,7 @@ def _guardrail(question: str) -> None:
         )
 
 
-def _navigation_reply(question: str) -> str | None:
+def _navigation_reply(question: str) -> tuple[str, str] | None:
     if _ANALYTICS_HINT.search(question):
         return None
     match = _NAV.match(question.strip())
@@ -131,10 +146,114 @@ def _navigation_reply(question: str) -> str | None:
     term = re.sub(r"\s+", " ", match.group(1)).strip(" ?.")
     if not term:
         return None
-    return (
+    answer = (
         f"Use the Activity screen and filter by “{term}”. "
         "Chat answers spending questions; it does not browse your list."
     )
+    return answer, term
+
+
+def _tx_filters(user_id: uuid.UUID, start: date, end: date):
+    return (
+        Transaction.user_id == user_id,
+        Transaction.status == TransactionStatus.active,
+        Transaction.transaction_date >= start,
+        Transaction.transaction_date <= end,
+    )
+
+
+def _citation_from_tx(tx: Transaction) -> dict:
+    return {
+        "transaction_id": str(tx.id),
+        "date": tx.transaction_date.isoformat(),
+        "amount": money_float(tx.amount),
+        "merchant": tx.merchant,
+        "category": tx.category,
+    }
+
+
+def _hit_from_tx(tx: Transaction) -> RagHit:
+    return RagHit(
+        id=tx.id,
+        doc_type="transaction",
+        ref_id=str(tx.id),
+        content_text=build_transaction_doc(tx),
+        distance=0.0,
+        period_from=tx.transaction_date,
+        period_to=tx.transaction_date,
+    )
+
+
+async def _largest_debits(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    limit: int = _LARGEST_DEBITS,
+) -> list[Transaction]:
+    result = await session.execute(
+        select(Transaction)
+        .where(
+            *_tx_filters(user.id, start, end),
+            Transaction.type == TransactionType.debit,
+        )
+        .order_by(Transaction.amount.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def _day_totals(
+    session: AsyncSession,
+    *,
+    user: User,
+    day: date,
+) -> dict:
+    rows = (
+        await session.execute(
+            select(
+                Transaction.type,
+                func.coalesce(func.sum(Transaction.amount), 0),
+                func.count(Transaction.id),
+            )
+            .where(*_tx_filters(user.id, day, day))
+            .group_by(Transaction.type)
+        )
+    ).all()
+    debit = as_money(0)
+    credit = as_money(0)
+    count = 0
+    for tx_type, amount, visits in rows:
+        count += int(visits)
+        money = as_money(amount)
+        if tx_type == TransactionType.debit:
+            debit = money
+        elif tx_type == TransactionType.credit:
+            credit = money
+    return {
+        "date": day.isoformat(),
+        "total_debit": money_float(debit),
+        "total_credit": money_float(credit),
+        "transaction_count": count,
+    }
+
+
+async def _transactions_in_range(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    limit: int = _SHORT_WINDOW_TX_LIMIT,
+) -> list[Transaction]:
+    result = await session.execute(
+        select(Transaction)
+        .where(*_tx_filters(user.id, start, end))
+        .order_by(Transaction.amount.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
 
 
 async def _tool_payload(
@@ -143,11 +262,14 @@ async def _tool_payload(
     user: User,
     date_from: str,
     date_to: str,
+    start: date,
+    end: date,
 ) -> dict:
     summary = await analytics_service.get_range_summary(
         session, user=user, date_from=date_from, date_to=date_to
     )
-    return {
+    largest = await _largest_debits(session, user=user, start=start, end=end)
+    payload = {
         "range": {
             "from": summary.get("date_from"),
             "to": summary.get("date_to"),
@@ -159,14 +281,55 @@ async def _tool_payload(
         },
         "by_category": summary.get("by_category") or {},
         "top_merchants_spent": summary.get("top_merchants_spent") or [],
+        "largest_debits": [_citation_from_tx(tx) for tx in largest],
     }
+    if start == end:
+        payload["day_totals"] = await _day_totals(session, user=user, day=start)
+    return payload
+
+
+async def _ask_docs(
+    session: AsyncSession,
+    *,
+    user: User,
+    question: str,
+    start: date,
+    end: date,
+) -> list[RagHit]:
+    span = (end - start).days + 1
+    if span <= _SHORT_WINDOW_DAYS:
+        txs = await _transactions_in_range(session, user=user, start=start, end=end)
+        return [_hit_from_tx(tx) for tx in txs]
+    hits = await retrieve(
+        session,
+        user_id=user.id,
+        query_text=question,
+        limit=_TX_RETRIEVE_LIMIT,
+        doc_types=["transaction"],
+        date_from=start,
+        date_to=end,
+        strict_period=True,
+    )
+    if span > _LONG_WINDOW_DAYS:
+        period_hits = await retrieve(
+            session,
+            user_id=user.id,
+            query_text=question,
+            limit=_PERIOD_RETRIEVE_LIMIT,
+            doc_types=["period"],
+            date_from=start,
+            date_to=end,
+            strict_period=True,
+        )
+        hits = [*hits, *period_hits]
+    return hits
 
 
 async def _citations_from_hits(
     session: AsyncSession,
     *,
     user: User,
-    hits,
+    hits: list[RagHit],
 ) -> list[dict]:
     citations: list[dict] = []
     seen: set[str] = set()
@@ -185,19 +348,26 @@ async def _citations_from_hits(
             or tx.status == TransactionStatus.deleted
         ):
             continue
-        citations.append(
-            {
-                "transaction_id": str(tx.id),
-                "date": tx.transaction_date.isoformat(),
-                "amount": money_float(tx.amount),
-                "merchant": tx.merchant,
-                "category": tx.category,
-            }
-        )
+        citations.append(_citation_from_tx(tx))
         seen.add(hit.ref_id)
         if len(citations) >= 8:
             break
     return citations
+
+
+def _merge_citations(*groups: list[dict], limit: int = 8) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for group in groups:
+        for item in group:
+            tid = str(item.get("transaction_id") or "")
+            if not tid or tid in seen:
+                continue
+            seen.add(tid)
+            out.append(item)
+            if len(out) >= limit:
+                return out
+    return out
 
 
 def _confidence(citation_count: int, tool_count: int) -> str:
@@ -208,10 +378,10 @@ def _confidence(citation_count: int, tool_count: int) -> str:
     return "low"
 
 
-def _resolve_range(date_from: str | None, date_to: str | None) -> tuple[str, str, bool]:
+def _resolve_range(date_from: str | None, date_to: str | None) -> tuple[str, str]:
     if date_from and date_to:
         analytics_service.parse_range(date_from, date_to)
-        return date_from, date_to, True
+        return date_from, date_to
     if date_from or date_to:
         raise BadRequestError(
             "Provide both `from` and `to`, or neither.",
@@ -219,7 +389,32 @@ def _resolve_range(date_from: str | None, date_to: str | None) -> tuple[str, str
         )
     end = date.today()
     start = end - timedelta(days=_DEFAULT_ASK_DAYS)
-    return start.isoformat(), end.isoformat(), False
+    return start.isoformat(), end.isoformat()
+
+
+def _normalize_history(history: list[dict] | None) -> list[dict[str, str]]:
+    if not history:
+        return []
+    out: list[dict[str, str]] = []
+    for item in history[:_HISTORY_TURNS]:
+        question = str(item.get("question") or "").strip()[:_HISTORY_CHARS]
+        answer = str(item.get("answer") or "").strip()[:_HISTORY_CHARS]
+        if question and answer:
+            out.append({"question": question, "answer": answer})
+    return out
+
+
+def _history_block(history: list[dict[str, str]]) -> str:
+    if not history:
+        return ""
+    lines = [
+        "Recent questions in this thread (for follow-ups only; "
+        "numbers must still come from tools/docs for the current window):"
+    ]
+    for item in history:
+        lines.append(f"Q: {item['question']}")
+        lines.append(f"A: {item['answer']}")
+    return "\n".join(lines) + "\n"
 
 
 async def ask(
@@ -230,6 +425,7 @@ async def ask(
     question: str,
     date_from: str | None = None,
     date_to: str | None = None,
+    history: list[dict] | None = None,
 ) -> dict:
     settings = settings or get_settings()
     text = (question or "").strip()
@@ -255,32 +451,46 @@ async def ask(
 
     nav = _navigation_reply(text)
     if nav is not None:
+        answer, term = nav
         return {
-            "answer": nav,
+            "answer": answer,
             "citations": [],
             "confidence": "high",
             "source": "navigation",
             "model": None,
+            "filter_term": term,
         }
 
-    range_from, range_to, scoped = _resolve_range(date_from, date_to)
+    ui_from, ui_to = _resolve_range(date_from, date_to)
+    selected_from, selected_to = analytics_service.parse_range(ui_from, ui_to)
+    today = date.today()
+    eff_from, eff_to = resolve_ask_window(
+        selected_from, selected_to, text, today=today
+    )
     tools = await _tool_payload(
-        session, user=user, date_from=range_from, date_to=range_to
-    )
-    hits = await retrieve(
         session,
-        user_id=user.id,
-        query_text=text,
-        limit=10,
-        date_from=date.fromisoformat(range_from) if scoped else None,
-        date_to=date.fromisoformat(range_to) if scoped else None,
+        user=user,
+        date_from=eff_from.isoformat(),
+        date_to=eff_to.isoformat(),
+        start=eff_from,
+        end=eff_to,
     )
-    citations = await _citations_from_hits(session, user=user, hits=hits)
+    hits = await _ask_docs(
+        session, user=user, question=text, start=eff_from, end=eff_to
+    )
+    sql_citations = list(tools.get("largest_debits") or [])
+    rag_citations = await _citations_from_hits(session, user=user, hits=hits)
+    citations = _merge_citations(sql_citations, rag_citations)
     docs = "\n".join(f"- {hit.content_text}" for hit in hits) or "none"
     prompt = _ASK_PROMPT.format(
         currency=tools["range"].get("currency") or user.default_currency,
-        date_from=range_from,
-        date_to=range_to,
+        today=today.isoformat(),
+        weekday=today.strftime("%A"),
+        ui_from=ui_from,
+        ui_to=ui_to,
+        eff_from=eff_from.isoformat(),
+        eff_to=eff_to.isoformat(),
+        history_block=_history_block(_normalize_history(history)),
         question=text,
         tools=json.dumps(tools, default=str),
         docs=docs,
@@ -305,4 +515,6 @@ async def ask(
         "confidence": _confidence(len(citations), tool_count),
         "source": "gemini",
         "model": model,
+        "window_from": eff_from.isoformat(),
+        "window_to": eff_to.isoformat(),
     }

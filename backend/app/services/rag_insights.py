@@ -219,6 +219,7 @@ async def _build_cards(
                 "title": _title_for(signal),
                 "body": text,
                 "signal_type": signal.signal_type,
+                "suggested_question": signal.suggested_question,
                 "citations": await _citations_for_signal(
                     session,
                     user=user,

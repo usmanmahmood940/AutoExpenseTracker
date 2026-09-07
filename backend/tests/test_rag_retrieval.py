@@ -126,3 +126,63 @@ def test_retrieval_seeded_vectors_rank_kfc() -> None:
 
     ranking = run_isolated(seed_and_search)
     assert ranking[0] == "kfc-ref"
+
+
+def test_strict_period_skips_null_period_docs() -> None:
+    async def seed_and_search(session):  # type: ignore[no-untyped-def]
+        user = User(
+            email=f"strict-{uuid4().hex[:8]}@example.com",
+            firebase_uid=f"uid-strict-{uuid4().hex[:8]}",
+            bank_senders=[],
+            email_filters=[],
+        )
+        session.add(user)
+        await session.flush()
+        merchant = RagDocument(
+            user_id=user.id,
+            doc_type=RagDocType.merchant.value,
+            content_text="merchant | KFC | 20 visits | total PKR 8000",
+            embedding=hash_embed("KFC fried chicken"),
+            ref_id="kfc-merchant",
+            period_from=None,
+            period_to=None,
+            fingerprint="merchant-kfc",
+        )
+        tx = RagDocument(
+            user_id=user.id,
+            doc_type=RagDocType.transaction.value,
+            content_text=(
+                "2026-03-10 | debit | PKR 500.00 | KFC | Food & Dining | unknown"
+            ),
+            embedding=hash_embed("KFC fried chicken"),
+            ref_id="kfc-tx",
+            period_from=date(2026, 3, 10),
+            period_to=date(2026, 3, 10),
+            fingerprint="tx-kfc",
+        )
+        session.add_all([merchant, tx])
+        await session.commit()
+        loose = await retrieve(
+            session,
+            user_id=user.id,
+            query_text="KFC",
+            limit=10,
+            date_from=date(2026, 1, 1),
+            date_to=date(2026, 12, 31),
+        )
+        strict = await retrieve(
+            session,
+            user_id=user.id,
+            query_text="KFC",
+            limit=10,
+            doc_types=["transaction"],
+            date_from=date(2026, 1, 1),
+            date_to=date(2026, 12, 31),
+            strict_period=True,
+        )
+        return [hit.ref_id for hit in loose], [hit.doc_type for hit in strict]
+
+    loose_ids, strict_types = run_isolated(seed_and_search)
+    assert "kfc-merchant" in loose_ids
+    assert strict_types
+    assert all(doc_type == "transaction" for doc_type in strict_types)
