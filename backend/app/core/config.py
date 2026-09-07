@@ -68,7 +68,9 @@ class Settings(BaseSettings):
     rate_limit_window_minutes: int = 15
 
     gemini_api_key: str | None = None
-    gemini_embedding_model: str = "text-embedding-004"
+    # text-embedding-004 was retired; gemini-embedding-001 is the text model
+    # with a free tier and 768-d outputDimensionality.
+    gemini_embedding_model: str = "gemini-embedding-001"
     ingest_shared_secret: str | None = None
     cron_secret: str | None = None
     confidence_review_threshold: float = 0.8

@@ -103,6 +103,11 @@ for name in ("GEMINI_API_KEY", "CRON_SECRET", "INGEST_SHARED_SECRET"):
     value = (env.get(name) or "").strip().strip('"').strip("'")
     if value:
         lines.append(f"{name}: {yq(value)}")
+embedding_model = (
+    (env.get("GEMINI_EMBEDDING_MODEL") or "").strip().strip('"').strip("'")
+    or "gemini-embedding-001"
+)
+lines.append(f"GEMINI_EMBEDDING_MODEL: {yq(embedding_model)}")
 lines.append("")
 out.write_text("\n".join(lines))
 out.chmod(0o600)
