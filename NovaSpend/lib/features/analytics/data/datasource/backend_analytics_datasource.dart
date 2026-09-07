@@ -2,6 +2,7 @@ import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/smart_card_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 
 class BackendAnalyticsDatasource {
@@ -56,10 +57,7 @@ class BackendAnalyticsDatasource {
     try {
       final json = await _api.get(
         '/analytics/range',
-        query: compactQuery({
-          'from': isoDate(from),
-          'to': isoDate(to),
-        }),
+        query: compactQuery({'from': isoDate(from), 'to': isoDate(to)}),
         requireAuth: true,
       );
       return monthlySummaryFromApi(json);
@@ -96,10 +94,7 @@ class BackendAnalyticsDatasource {
     try {
       final json = await _api.get(
         '/analytics/recurring',
-        query: compactQuery({
-          'from': isoDate(from),
-          'to': isoDate(to),
-        }),
+        query: compactQuery({'from': isoDate(from), 'to': isoDate(to)}),
         requireAuth: true,
       );
       return recurringMerchantsFromApi(json);
@@ -115,13 +110,26 @@ class BackendAnalyticsDatasource {
     try {
       final json = await _api.get(
         '/analytics/narrative',
-        query: compactQuery({
-          'from': isoDate(from),
-          'to': isoDate(to),
-        }),
+        query: compactQuery({'from': isoDate(from), 'to': isoDate(to)}),
         requireAuth: true,
       );
       return narrativeFromApi(json);
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<List<SmartCardEntity>> fetchSmartCards({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    try {
+      final json = await _api.get(
+        '/analytics/smart-cards',
+        query: compactQuery({'from': isoDate(from), 'to': isoDate(to)}),
+        requireAuth: true,
+      );
+      return smartCardsFromApi(json);
     } on ApiException catch (e) {
       throw e.toDataException();
     }

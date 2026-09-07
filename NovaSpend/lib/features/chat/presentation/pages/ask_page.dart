@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
+import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
-import 'package:nova_spend/core/widgets/app_segmented_toggle.dart';
-import 'package:nova_spend/core/widgets/empty_state_view.dart';
 import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/hero_wash.dart';
-import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
 import 'package:nova_spend/features/chat/presentation/ask_error_mapper.dart';
@@ -36,21 +34,15 @@ class AskPage extends StatelessWidget {
       return _AskChrome(body: AppPageLoader(label: context.l10n.authLoading));
     }
 
-    return ChangeNotifierProvider(
-      create: (_) {
-        final provider = sl<AskProvider>();
-        provider.start(uid);
-        return provider;
-      },
-      child: const _AskView(),
-    );
+    return const _AskView();
   }
 }
 
 class _AskChrome extends StatelessWidget {
-  const _AskChrome({required this.body});
+  const _AskChrome({required this.body, this.leadingActions = const []});
 
   final Widget body;
+  final List<Widget> leadingActions;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +60,7 @@ class _AskChrome extends StatelessWidget {
             left: 0,
             right: 0,
             height: GlassHeaderBar.totalHeight(context),
-            child: const ShellGlassHeaderBar(),
+            child: ShellGlassHeaderBar(leadingActions: leadingActions),
           ),
         ],
       ),
@@ -87,6 +79,13 @@ class _AskViewState extends State<_AskView> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   var _draft = '';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final uid = context.read<AuthProvider>().uid;
+    if (uid != null) context.read<AskProvider>().start(uid);
+  }
 
   @override
   void dispose() {
@@ -116,8 +115,8 @@ class _AskViewState extends State<_AskView> {
     _scrollToEnd();
   }
 
-  void _openActivity(String answer) {
-    final term = navigationFilterTerm(answer);
+  void _openActivity(String answer, {String? filterTerm}) {
+    final term = navigationFilterTerm(answer, filterTerm: filterTerm);
     if (term != null && term.isNotEmpty) {
       context.read<SearchProvider>().submitText(term);
     }
@@ -153,47 +152,55 @@ class _AskViewState extends State<_AskView> {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final asking = provider.isAsking;
     final canSend = _draft.trim().isNotEmpty && !asking;
+    final clearColor = AppColors.primaryInk(Theme.of(context).brightness);
 
     return _AskChrome(
+      leadingActions: [
+        if (provider.hasConversation)
+          TextButton(
+            onPressed: provider.clearThread,
+            style: TextButton.styleFrom(
+              foregroundColor: clearColor,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            ),
+            child: Text(l10n.askClearThread),
+          ),
+      ],
       body: Padding(
         padding: EdgeInsets.only(bottom: keyboardInset),
         child: Column(
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                GlassHeaderBar.contentTopPadding(context),
-                AppSpacing.md,
-                0,
-              ),
-              child: AppSegmentedToggle<InsightsPeriodPreset>(
-                value: provider.preset,
-                onChanged: provider.setPreset,
-                segments: [
-                  AppSegment(
-                    value: InsightsPeriodPreset.thisMonth,
-                    label: l10n.insightsThisMonth,
-                  ),
-                  AppSegment(
-                    value: InsightsPeriodPreset.lastMonth,
-                    label: l10n.insightsLastMonth,
-                  ),
-                  AppSegment(
-                    value: InsightsPeriodPreset.thisYear,
-                    label: l10n.insightsThisYear,
-                  ),
-                ],
-              ),
-            ),
             Expanded(child: _buildConversation(context, provider, money)),
-            AskSuggestionChips(
-              suggestions: provider.suggestions,
-              enabled: !asking,
-              onSelected: _send,
-            ),
+            if (provider.hasConversation && provider.suggestions.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  child: TextButton(
+                    onPressed: provider.toggleMoreSuggestions,
+                    child: Text(l10n.askMoreQuestions),
+                  ),
+                ),
+              ),
+            if (provider.hasConversation && provider.showMoreSuggestions)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
+                child: AskSuggestionChips(
+                  suggestions: provider.suggestions,
+                  enabled: !asking,
+                  onSelected: _send,
+                ),
+              ),
             AskInputBar(
               controller: _input,
-              enabled: !asking,
               canSend: canSend,
               onChanged: (value) => setState(() => _draft = value),
               onSend: () => _send(_input.text),
@@ -217,18 +224,46 @@ class _AskViewState extends State<_AskView> {
           onRetry: provider.loadSuggestions,
         );
       }
-      return EmptyStateView(
-        iconAsset: 'assets/icons/icon_nav_ask.svg',
-        title: l10n.askPlaceholderTitle,
-        message: l10n.askPlaceholderBody,
+      return ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          GlassHeaderBar.contentTopPadding(context),
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        children: [
+          Text(
+            l10n.askPlaceholderTitle,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.askPlaceholderBody,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              height: 1.4,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (provider.isLoadingSuggestions)
+            const AskSuggestionChipsSkeleton()
+          else
+            AskSuggestionChips(
+              suggestions: provider.suggestions,
+              enabled: !provider.isAsking,
+              onSelected: _send,
+            ),
+        ],
       );
     }
 
     return ListView.separated(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.sm,
+        GlassHeaderBar.contentTopPadding(context),
         AppSpacing.md,
         AppSpacing.md,
       ),
@@ -245,9 +280,17 @@ class _AskViewState extends State<_AskView> {
             AskAssistantCard(
               turn: turn,
               formatMoney: money.formatMoney,
+              periodLabel: askPeriodLabel(
+                l10n,
+                windowFrom: turn.answer?.windowFrom,
+                windowTo: turn.answer?.windowTo,
+              ),
               onRetry: isLast && turn.error != null ? provider.retryLast : null,
               onOpenActivity: turn.answer?.isNavigation == true
-                  ? () => _openActivity(turn.answer!.answer)
+                  ? () => _openActivity(
+                      turn.answer!.answer,
+                      filterTerm: turn.answer!.filterTerm,
+                    )
                   : null,
               onCitationTap: _openCitation,
             ),

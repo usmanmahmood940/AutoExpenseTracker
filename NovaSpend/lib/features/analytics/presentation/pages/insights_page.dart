@@ -23,8 +23,10 @@ import 'package:nova_spend/features/analytics/presentation/widgets/insights_merc
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_narrative_card.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_recurring_list.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_skeleton.dart';
+import 'package:nova_spend/features/analytics/presentation/widgets/insights_smart_cards.dart';
 import 'package:nova_spend/features/analytics/presentation/widgets/insights_trend_chart.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/chat/presentation/provider/ask_provider.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -204,6 +206,7 @@ class _InsightsSections extends StatelessWidget {
       children: const [
         _TrendSection(),
         _NarrativeSection(),
+        _SmartCardsSection(),
         _CategoriesSection(),
         _TopMerchantsSection(),
         _RecurringSection(),
@@ -295,6 +298,47 @@ class _NarrativeSection extends StatelessWidget {
           )
         else
           InsightsSectionEmpty(message: l10n.insightsSectionNarrativeEmpty),
+      ],
+    );
+  }
+}
+
+class _SmartCardsSection extends StatelessWidget {
+  const _SmartCardsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final snapshot = context.select(
+      (InsightsProvider p) =>
+          (p.isLoading, p.isLoadingSmartCards, p.smartCards),
+    );
+    final (isLoading, isLoadingSmartCards, smartCards) = snapshot;
+    if (!isLoadingSmartCards && smartCards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: _InsightsView._sectionGap),
+        _PaddedSectionHeader(l10n.insightsSmartCards),
+        if (isLoading || isLoadingSmartCards)
+          const InsightsNarrativeSkeleton()
+        else
+          InsightsSmartCards(
+            cards: smartCards,
+            onAsk: (question) {
+              final insights = context.read<InsightsProvider>();
+              final bounds = insights.range;
+              context.read<AskProvider>().submit(
+                question,
+                from: bounds.from,
+                to: bounds.to,
+              );
+              MainShellScope.selectAskTab(context);
+            },
+          ),
       ],
     );
   }

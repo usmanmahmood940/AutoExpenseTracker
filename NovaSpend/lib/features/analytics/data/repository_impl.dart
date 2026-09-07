@@ -2,13 +2,13 @@ import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/analytics/data/datasource/backend_analytics_datasource.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/smart_card_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/analytics/domain/repositories/analytics_repository.dart';
 
 class AnalyticsRepositoryImpl implements AnalyticsRepository {
-  AnalyticsRepositoryImpl({
-    required BackendAnalyticsDatasource backend,
-  }) : _backend = backend;
+  AnalyticsRepositoryImpl({required BackendAnalyticsDatasource backend})
+    : _backend = backend;
 
   final BackendAnalyticsDatasource _backend;
 
@@ -65,6 +65,15 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     required DateTime to,
   }) {
     return _map(_backend.fetchNarrative(from: from, to: to));
+  }
+
+  @override
+  Future<List<SmartCardEntity>> getSmartCards(
+    String uid, {
+    required DateTime from,
+    required DateTime to,
+  }) {
+    return _map(_backend.fetchSmartCards(from: from, to: to));
   }
 
   Future<T> _map<T>(Future<T> future) async {

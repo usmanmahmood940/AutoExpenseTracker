@@ -25,8 +25,11 @@ class ChatRepositoryImpl implements ChatRepository {
     required String question,
     DateTime? from,
     DateTime? to,
+    List<({String question, String answer})> history = const [],
   }) {
-    return _map(_backend.ask(question: question, from: from, to: to));
+    return _map(
+      _backend.ask(question: question, from: from, to: to, history: history),
+    );
   }
 
   Future<T> _map<T>(Future<T> future) async {

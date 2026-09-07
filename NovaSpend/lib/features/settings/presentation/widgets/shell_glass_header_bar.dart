@@ -4,10 +4,14 @@ import 'package:nova_spend/features/settings/presentation/widgets/header_setting
 
 /// Brand header used on primary tabs, with Settings in the top-right.
 class ShellGlassHeaderBar extends StatelessWidget {
-  const ShellGlassHeaderBar({super.key});
+  const ShellGlassHeaderBar({this.leadingActions = const [], super.key});
+
+  final List<Widget> leadingActions;
 
   @override
   Widget build(BuildContext context) {
-    return const GlassHeaderBar.brand(actions: [HeaderSettingsButton()]);
+    return GlassHeaderBar.brand(
+      actions: [...leadingActions, const HeaderSettingsButton()],
+    );
   }
 }

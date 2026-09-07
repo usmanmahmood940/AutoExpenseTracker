@@ -216,5 +216,51 @@ void main() {
     expect(answer.citations.single.transactionId, 'tx-1');
     expect(answer.citations.single.amount, 8000);
     expect(answer.isNavigation, isFalse);
+    expect(answer.filterTerm, isNull);
+  });
+
+  test('chatAnswerFromApi maps filter_term', () {
+    final answer = chatAnswerFromApi({
+      'answer': 'Use the Activity screen and filter by “KFC”.',
+      'confidence': 'high',
+      'source': 'navigation',
+      'filter_term': 'KFC',
+    });
+    expect(answer.isNavigation, isTrue);
+    expect(answer.filterTerm, 'KFC');
+  });
+
+  test('chatAnswerFromApi maps window_from and window_to', () {
+    final answer = chatAnswerFromApi({
+      'answer': 'PSO was the largest debit today.',
+      'confidence': 'high',
+      'source': 'gemini',
+      'window_from': '2026-09-07',
+      'window_to': '2026-09-07',
+    });
+    expect(answer.windowFrom, '2026-09-07');
+    expect(answer.windowTo, '2026-09-07');
+  });
+
+  test('smartCardsFromApi maps suggested_question and skips blanks', () {
+    final cards = smartCardsFromApi({
+      'cards': [
+        {
+          'title': 'Food jumped',
+          'body': 'KFC drove the increase.',
+          'signal_type': 'category_spike',
+          'suggested_question': 'Why did food spending jump?',
+        },
+        {'title': '', 'body': '', 'signal_type': 'x'},
+        {
+          'title': 'Old cache card',
+          'body': 'No question field.',
+          'signal_type': 'merchant_concentration',
+        },
+      ],
+    });
+    expect(cards, hasLength(2));
+    expect(cards.first.askQuestion, 'Why did food spending jump?');
+    expect(cards.last.askQuestion, 'Old cache card');
   });
 }

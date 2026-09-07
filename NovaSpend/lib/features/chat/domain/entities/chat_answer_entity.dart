@@ -8,6 +8,9 @@ class ChatAnswerEntity extends Equatable {
     this.confidence = 'low',
     this.source = 'none',
     this.model,
+    this.filterTerm,
+    this.windowFrom,
+    this.windowTo,
   });
 
   final String answer;
@@ -15,9 +18,23 @@ class ChatAnswerEntity extends Equatable {
   final String confidence;
   final String source;
   final String? model;
+  final String? filterTerm;
+  final String? windowFrom;
+  final String? windowTo;
 
   bool get isNavigation => source == 'navigation';
 
+  bool get isLowConfidence => confidence == 'low';
+
   @override
-  List<Object?> get props => [answer, citations, confidence, source, model];
+  List<Object?> get props => [
+    answer,
+    citations,
+    confidence,
+    source,
+    model,
+    filterTerm,
+    windowFrom,
+    windowTo,
+  ];
 }

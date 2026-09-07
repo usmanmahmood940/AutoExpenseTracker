@@ -7,7 +7,6 @@ import 'package:nova_spend/l10n/app_strings.dart';
 class AskInputBar extends StatelessWidget {
   const AskInputBar({
     required this.controller,
-    required this.enabled,
     required this.canSend,
     required this.onChanged,
     required this.onSend,
@@ -15,7 +14,6 @@ class AskInputBar extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final bool enabled;
   final bool canSend;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
@@ -40,7 +38,6 @@ class AskInputBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              enabled: enabled,
               minLines: 1,
               maxLines: 4,
               textInputAction: TextInputAction.send,

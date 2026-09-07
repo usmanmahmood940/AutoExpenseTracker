@@ -2,6 +2,7 @@ import 'package:nova_spend/core/constants/currencies.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/smart_card_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
@@ -372,7 +373,30 @@ ChatAnswerEntity chatAnswerFromApi(Map<String, dynamic> json) {
     confidence: json['confidence']?.toString() ?? 'low',
     source: json['source']?.toString() ?? 'none',
     model: json['model']?.toString(),
+    filterTerm: json['filter_term']?.toString(),
+    windowFrom: json['window_from']?.toString(),
+    windowTo: json['window_to']?.toString(),
   );
+}
+
+List<SmartCardEntity> smartCardsFromApi(Map<String, dynamic> json) {
+  final raw = json['cards'];
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map>()
+      .map((item) {
+        final map = Map<String, dynamic>.from(item);
+        return SmartCardEntity(
+          title: map['title']?.toString() ?? '',
+          body: map['body']?.toString() ?? '',
+          signalType: map['signal_type']?.toString() ?? '',
+          suggestedQuestion: map['suggested_question']?.toString() ?? '',
+        );
+      })
+      .where(
+        (card) => card.title.trim().isNotEmpty || card.body.trim().isNotEmpty,
+      )
+      .toList();
 }
 
 bool _isJsonValue(dynamic value) {

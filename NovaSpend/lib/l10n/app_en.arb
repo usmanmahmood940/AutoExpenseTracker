@@ -22,6 +22,11 @@
   "askErrorInsufficientData": "Add at least 10 transactions to start asking questions.",
   "askErrorRateLimited": "Too many questions. Try again in a few minutes.",
   "askErrorUnavailable": "Spending answers are temporarily unavailable.",
+  "askErrorRangeMismatch": "That day is outside the selected period.",
+  "askClearThread": "Clear",
+  "askMoreQuestions": "More questions",
+  "askLowConfidence": "This is a best guess from the transactions in range.",
+  "askLast12Months": "Last 12 months",
   "searchPlaceholder": "Search is coming soon. You'll be able to find transactions by merchant, category, and more.",
   "searchHint": "Search transactions",
   "searchRecent": "Recent searches",
@@ -427,6 +432,9 @@
   "insightsTopMerchantsSortReceived": "By amount received",
   "insightsTopMerchantsSortVisits": "By visits",
   "insightsWhatChanged": "What changed",
+  "insightsSmartCards": "Worth a look",
+  "insightsAskThis": "Ask about this",
+  "insightsSectionSmartCardsEmpty": "No extra insights for this period.",
   "insightsNarrativeHeadlineSpendUp": "You spent {percent}% more this month",
   "@insightsNarrativeHeadlineSpendUp": {
     "placeholders": {

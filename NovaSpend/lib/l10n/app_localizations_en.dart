@@ -80,6 +80,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Spending answers are temporarily unavailable.';
 
   @override
+  String get askErrorRangeMismatch =>
+      'That day is outside the selected period.';
+
+  @override
+  String get askClearThread => 'Clear';
+
+  @override
+  String get askMoreQuestions => 'More questions';
+
+  @override
+  String get askLowConfidence =>
+      'This is a best guess from the transactions in range.';
+
+  @override
+  String get askLast12Months => 'Last 12 months';
+
+  @override
   String get searchPlaceholder =>
       'Search is coming soon. You\'ll be able to find transactions by merchant, category, and more.';
 
@@ -984,6 +1001,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightsWhatChanged => 'What changed';
+
+  @override
+  String get insightsSmartCards => 'Worth a look';
+
+  @override
+  String get insightsAskThis => 'Ask about this';
+
+  @override
+  String get insightsSectionSmartCardsEmpty =>
+      'No extra insights for this period.';
 
   @override
   String insightsNarrativeHeadlineSpendUp(String percent) {

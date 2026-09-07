@@ -4,9 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
+import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
 import 'package:nova_spend/features/chat/presentation/ask_error_mapper.dart';
 import 'package:nova_spend/features/chat/presentation/provider/ask_provider.dart';
+import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 
 class AskUserBubble extends StatelessWidget {
@@ -20,27 +23,34 @@ class AskUserBubble extends StatelessWidget {
     final brightness = theme.brightness;
     return Align(
       alignment: Alignment.centerRight,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.neutralFill(brightness),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.smPlus2,
-            ),
-            child: Text(
-              question,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                height: 1.4,
-                color: theme.colorScheme.onSurface,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth * 0.82
+              : 320.0;
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.neutralFill(brightness),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.smPlus2,
+                ),
+                child: Text(
+                  question,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.4,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -50,6 +60,7 @@ class AskAssistantCard extends StatelessWidget {
   const AskAssistantCard({
     required this.turn,
     required this.formatMoney,
+    required this.periodLabel,
     this.onRetry,
     this.onOpenActivity,
     this.onCitationTap,
@@ -58,6 +69,7 @@ class AskAssistantCard extends StatelessWidget {
 
   final AskTurn turn;
   final String Function(double amount) formatMoney;
+  final String periodLabel;
   final VoidCallback? onRetry;
   final VoidCallback? onOpenActivity;
   final ValueChanged<ChatCitationEntity>? onCitationTap;
@@ -71,13 +83,7 @@ class AskAssistantCard extends StatelessWidget {
 
     Widget body;
     if (turn.isLoading) {
-      body = Text(
-        l10n.askThinking,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          height: 1.45,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      );
+      body = const _AskAnswerSkeleton();
     } else if (turn.error != null) {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,6 +106,16 @@ class AskAssistantCard extends StatelessWidget {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (answer != null && answer.isLowConfidence) ...[
+            Text(
+              l10n.askLowConfidence,
+              style: theme.textTheme.bodySmall?.copyWith(
+                height: 1.4,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           Text(
             answer?.answer ?? '',
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -125,7 +141,7 @@ class AskAssistantCard extends StatelessWidget {
             ),
           ],
           if (answer != null && answer.citations.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.smPlus2),
+            const SizedBox(height: AppSpacing.md),
             Text(
               l10n.askCitations,
               style: theme.textTheme.labelLarge?.copyWith(
@@ -134,20 +150,20 @@ class AskAssistantCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final citation in answer.citations)
-                  _CitationChip(
-                    citation: citation,
-                    formatMoney: formatMoney,
-                    onTap: citation.transactionId == null
-                        ? null
-                        : () => onCitationTap?.call(citation),
-                  ),
-              ],
-            ),
+            for (var i = 0; i < answer.citations.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  color: AppColors.border(brightness).withValues(alpha: 0.35),
+                ),
+              _CitationRow(
+                citation: answer.citations[i],
+                formatMoney: formatMoney,
+                onTap: answer.citations[i].transactionId == null
+                    ? null
+                    : () => onCitationTap?.call(answer.citations[i]),
+              ),
+            ],
           ],
         ],
       );
@@ -182,7 +198,22 @@ class AskAssistantCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.smPlus2),
-            Expanded(child: body),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    periodLabel,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: ink,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  body,
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -190,8 +221,28 @@ class AskAssistantCard extends StatelessWidget {
   }
 }
 
-class _CitationChip extends StatelessWidget {
-  const _CitationChip({
+class _AskAnswerSkeleton extends StatelessWidget {
+  const _AskAnswerSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SkeletonPulse(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonBox(width: double.infinity, height: 11),
+          SizedBox(height: AppSpacing.xs),
+          SkeletonBox(width: double.infinity, height: 11),
+          SizedBox(height: AppSpacing.xs),
+          SkeletonBox(width: 180, height: 11),
+        ],
+      ),
+    );
+  }
+}
+
+class _CitationRow extends StatelessWidget {
+  const _CitationRow({
     required this.citation,
     required this.formatMoney,
     this.onTap,
@@ -205,37 +256,88 @@ class _CitationChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    final parts = <String>[];
-    final merchant = citation.merchant?.trim();
-    if (merchant != null && merchant.isNotEmpty) parts.add(merchant);
-    if (citation.amount != null) parts.add(formatMoney(citation.amount!));
+    final cs = theme.colorScheme;
+    final merchant = citation.merchant?.trim() ?? '';
     final date = citation.date?.trim();
+    String? dateLabel;
     if (date != null && date.isNotEmpty) {
       final parsed = DateTime.tryParse(date);
-      parts.add(parsed == null ? date : DateFormat.MMMd().format(parsed));
+      dateLabel = parsed == null ? date : DateFormat.MMMd().format(parsed);
     }
-    if (parts.isEmpty) return const SizedBox.shrink();
 
     return Material(
-      color: AppColors.card(brightness),
-      borderRadius: BorderRadius.circular(AppRadius.pill),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.smPlus2,
-            vertical: AppSpacing.sm,
-          ),
-          child: Text(
-            parts.join(' · '),
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
-            ),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      merchant.isEmpty ? '—' : merchant,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    if (dateLabel != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        dateLabel,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (citation.amount != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  formatMoney(citation.amount!),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ],
+              if (onTap != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: AppColors.primaryInk(brightness),
+                ),
+              ],
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+String askPeriodLabel(
+  AppLocalizations l10n, {
+  String? windowFrom,
+  String? windowTo,
+}) {
+  final from = DateTime.tryParse(windowFrom ?? '');
+  final to = DateTime.tryParse(windowTo ?? '');
+  if (from == null || to == null) return l10n.askLast12Months;
+  final fromDay = dateOnly(from);
+  final toDay = dateOnly(to);
+  if (fromDay == toDay) return DateFormat.MMMd().format(fromDay);
+  if (fromDay.year == toDay.year) {
+    return '${DateFormat.MMMd().format(fromDay)} – ${DateFormat.MMMd().format(toDay)}';
+  }
+  return '${DateFormat.yMMMd().format(fromDay)} – ${DateFormat.yMMMd().format(toDay)}';
 }

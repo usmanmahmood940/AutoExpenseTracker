@@ -12,6 +12,8 @@ abstract final class AskErrorMapper {
         return l10n.askErrorInsufficientData;
       case 'rate_limited':
         return l10n.askErrorRateLimited;
+      case 'range_mismatch':
+        return l10n.askErrorRangeMismatch;
       case 'gemini_unconfigured':
       case 'gemini_unavailable':
       case 'service_unavailable':
@@ -22,7 +24,9 @@ abstract final class AskErrorMapper {
   }
 }
 
-String? navigationFilterTerm(String answer) {
+String? navigationFilterTerm(String answer, {String? filterTerm}) {
+  final structured = filterTerm?.trim();
+  if (structured != null && structured.isNotEmpty) return structured;
   final match = RegExp('“([^”]+)”|"([^"]+)"').firstMatch(answer);
   return (match?.group(1) ?? match?.group(2))?.trim();
 }

@@ -1,5 +1,6 @@
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/smart_card_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 
 abstract class AnalyticsRepository {
@@ -32,6 +33,12 @@ abstract class AnalyticsRepository {
   });
 
   Future<String?> getNarrative(
+    String uid, {
+    required DateTime from,
+    required DateTime to,
+  });
+
+  Future<List<SmartCardEntity>> getSmartCards(
     String uid, {
     required DateTime from,
     required DateTime to,

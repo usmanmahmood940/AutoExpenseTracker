@@ -6,15 +6,21 @@ import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
 import 'package:nova_spend/features/chat/domain/repositories/chat_repository.dart';
 
+const askDefaultLookbackDays = 365;
+
 class AskTurn {
   const AskTurn({
     required this.question,
+    this.from,
+    this.to,
     this.answer,
     this.error,
     this.isLoading = false,
   });
 
   final String question;
+  final DateTime? from;
+  final DateTime? to;
   final ChatAnswerEntity? answer;
   final Object? error;
   final bool isLoading;
@@ -25,10 +31,10 @@ class AskProvider extends SafeChangeNotifier {
 
   final ChatRepository _repository;
 
-  InsightsPeriodPreset preset = InsightsPeriodPreset.thisMonth;
   List<ChatSuggestionEntity> suggestions = const [];
   List<AskTurn> turns = const [];
   bool isLoadingSuggestions = false;
+  bool showMoreSuggestions = false;
   Object? suggestionsError;
   String? _uid;
   int _suggestionToken = 0;
@@ -39,7 +45,9 @@ class AskProvider extends SafeChangeNotifier {
   bool get hasConversation => turns.isNotEmpty;
 
   ({DateTime from, DateTime to}) get range {
-    return insightsRange(preset: preset, now: DateTime.now());
+    final to = dateOnly(DateTime.now());
+    final from = to.subtract(const Duration(days: askDefaultLookbackDays));
+    return (from: from, to: to);
   }
 
   void start(String uid) {
@@ -48,11 +56,17 @@ class AskProvider extends SafeChangeNotifier {
     unawaited(loadSuggestions());
   }
 
-  void setPreset(InsightsPeriodPreset next) {
-    if (preset == next) return;
-    preset = next;
+  void clearThread() {
+    if (!hasConversation && !showMoreSuggestions) return;
+    _askToken++;
+    turns = const [];
+    showMoreSuggestions = false;
     notifyListeners();
-    unawaited(loadSuggestions());
+  }
+
+  void toggleMoreSuggestions() {
+    showMoreSuggestions = !showMoreSuggestions;
+    notifyListeners();
   }
 
   Future<void> loadSuggestions() async {
@@ -83,31 +97,46 @@ class AskProvider extends SafeChangeNotifier {
     }
   }
 
-  Future<void> submit(String question) async {
+  Future<void> submit(String question, {DateTime? from, DateTime? to}) async {
     final uid = _uid;
     final text = question.trim();
     if (uid == null || text.isEmpty || isAsking) return;
+    final history = [
+      for (final turn in turns)
+        if (turn.answer != null && turn.answer!.answer.trim().isNotEmpty)
+          (question: turn.question, answer: turn.answer!.answer),
+    ];
+    final prior = history.length > 3
+        ? history.sublist(history.length - 3)
+        : history;
     final token = ++_askToken;
-    turns = [...turns, AskTurn(question: text, isLoading: true)];
+    showMoreSuggestions = false;
+    final bounds = range;
+    final usedFrom = from ?? bounds.from;
+    final usedTo = to ?? bounds.to;
+    turns = [
+      ...turns,
+      AskTurn(question: text, from: usedFrom, to: usedTo, isLoading: true),
+    ];
     notifyListeners();
     try {
-      final bounds = range;
       final answer = await _repository.ask(
         uid,
         question: text,
-        from: bounds.from,
-        to: bounds.to,
+        from: usedFrom,
+        to: usedTo,
+        history: prior,
       );
       if (token != _askToken) return;
       turns = [
         ...turns.sublist(0, turns.length - 1),
-        AskTurn(question: text, answer: answer),
+        AskTurn(question: text, from: usedFrom, to: usedTo, answer: answer),
       ];
     } catch (error) {
       if (token != _askToken) return;
       turns = [
         ...turns.sublist(0, turns.length - 1),
-        AskTurn(question: text, error: error),
+        AskTurn(question: text, from: usedFrom, to: usedTo, error: error),
       ];
     } finally {
       if (token == _askToken) notifyListeners();
@@ -119,6 +148,6 @@ class AskProvider extends SafeChangeNotifier {
     final last = turns.last;
     if (last.error == null) return;
     turns = turns.sublist(0, turns.length - 1);
-    await submit(last.question);
+    await submit(last.question, from: last.from, to: last.to);
   }
 }

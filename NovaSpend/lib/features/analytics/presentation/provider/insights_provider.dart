@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/features/analytics/domain/entities/monthly_summary_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/recurring_merchant_entity.dart';
+import 'package:nova_spend/features/analytics/domain/entities/smart_card_entity.dart';
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/analytics/domain/repositories/analytics_repository.dart';
@@ -21,13 +22,14 @@ class _InsightsExtras {
 
 class InsightsProvider extends SafeChangeNotifier {
   InsightsProvider({required AnalyticsRepository repository})
-      : _repository = repository;
+    : _repository = repository;
 
   final AnalyticsRepository _repository;
   final Map<String, MonthlySummaryEntity> _summaryCache = {};
   final Map<String, MonthlySummaryEntity?> _previousSummaryCache = {};
   final Map<String, _InsightsExtras> _extrasCache = {};
   final Map<String, String?> _narrativeCache = {};
+  final Map<String, List<SmartCardEntity>> _smartCardsCache = {};
 
   InsightsPeriodPreset preset = InsightsPeriodPreset.thisMonth;
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
@@ -38,10 +40,12 @@ class InsightsProvider extends SafeChangeNotifier {
   List<TrendPointEntity> trend = const [];
   List<TrendPointEntity> previousTrend = const [];
   List<RecurringMerchantEntity> recurring = const [];
+  List<SmartCardEntity> smartCards = const [];
   String? aiNarrative;
   bool isLoading = true;
   bool isLoadingExtras = false;
   bool isLoadingNarrative = false;
+  bool isLoadingSmartCards = false;
   String? error;
   String? _uid;
   int _loadToken = 0;
@@ -53,17 +57,14 @@ class InsightsProvider extends SafeChangeNotifier {
 
   bool get chevronOverride => _chevronOverride;
 
-  InsightsPeriodPreset? get selectedPreset =>
-      _chevronOverride ? null : preset;
+  InsightsPeriodPreset? get selectedPreset => _chevronOverride ? null : preset;
 
   DateTime get month => _month;
   String get yearMonth => DateFormat('yyyy-MM').format(_month);
 
   ({DateTime from, DateTime to}) get range {
     return insightsRange(
-      preset: _chevronOverride
-          ? InsightsPeriodPreset.thisMonth
-          : preset,
+      preset: _chevronOverride ? InsightsPeriodPreset.thisMonth : preset,
       now: DateTime.now(),
       month: _month,
     );
@@ -116,10 +117,7 @@ class InsightsProvider extends SafeChangeNotifier {
   }
 
   List<double> get previousTrendValues {
-    return alignPreviousTrendValues(
-      current: trend,
-      previous: previousTrend,
-    );
+    return alignPreviousTrendValues(current: trend, previous: previousTrend);
   }
 
   ({DateTime from, DateTime to}) get previousRange {
@@ -253,6 +251,8 @@ class InsightsProvider extends SafeChangeNotifier {
     isLoadingExtras = summary != null && !_extrasCache.containsKey(rangeKey);
     isLoadingNarrative =
         summary != null && !_narrativeCache.containsKey(rangeKey);
+    isLoadingSmartCards =
+        summary != null && !_smartCardsCache.containsKey(rangeKey);
     notifyListeners();
 
     try {
@@ -303,9 +303,11 @@ class InsightsProvider extends SafeChangeNotifier {
         if (summary != null) {
           isLoadingExtras = !_extrasCache.containsKey(rangeKey);
           isLoadingNarrative = !_narrativeCache.containsKey(rangeKey);
+          isLoadingSmartCards = !_smartCardsCache.containsKey(rangeKey);
         } else {
           isLoadingExtras = false;
           isLoadingNarrative = false;
+          isLoadingSmartCards = false;
         }
         notifyListeners();
       }
@@ -339,6 +341,7 @@ class InsightsProvider extends SafeChangeNotifier {
         _narrativeRangeKey = null;
       }
     }
+    smartCards = _smartCardsCache[rangeKey] ?? const [];
   }
 
   Future<MonthlySummaryEntity?> _tryPreviousMonth(
@@ -359,25 +362,20 @@ class InsightsProvider extends SafeChangeNotifier {
     ({DateTime from, DateTime to}) bounds, {
     bool forceRefresh = false,
   }) async {
-    return _cachedSummary(
-      uid,
-      bounds,
-      () async {
-        if (!_rangeUnavailable) {
-          try {
-            return await _repository.getRange(
-              uid,
-              from: bounds.from,
-              to: bounds.to,
-            );
-          } catch (_) {
-            _rangeUnavailable = true;
-          }
+    return _cachedSummary(uid, bounds, () async {
+      if (!_rangeUnavailable) {
+        try {
+          return await _repository.getRange(
+            uid,
+            from: bounds.from,
+            to: bounds.to,
+          );
+        } catch (_) {
+          _rangeUnavailable = true;
         }
-        return _summaryFromMonths(uid, bounds);
-      },
-      forceRefresh: forceRefresh,
-    );
+      }
+      return _summaryFromMonths(uid, bounds);
+    }, forceRefresh: forceRefresh);
   }
 
   Future<MonthlySummaryEntity> _summaryFromMonths(
@@ -388,11 +386,7 @@ class InsightsProvider extends SafeChangeNotifier {
     final items = await Future.wait(
       months.map((yearMonth) => _repository.getSummary(uid, yearMonth)),
     );
-    return mergeMonthlySummaries(
-      items,
-      from: bounds.from,
-      to: bounds.to,
-    );
+    return mergeMonthlySummaries(items, from: bounds.from, to: bounds.to);
   }
 
   Future<void> _loadExtras(
@@ -404,11 +398,16 @@ class InsightsProvider extends SafeChangeNotifier {
     if (_extrasCache.containsKey(rangeKey)) {
       isLoadingExtras = false;
       isLoadingNarrative = !_narrativeCache.containsKey(rangeKey);
+      isLoadingSmartCards = !_smartCardsCache.containsKey(rangeKey);
       notifyListeners();
-      if (_narrativeCache.containsKey(rangeKey)) return;
+      if (_narrativeCache.containsKey(rangeKey) &&
+          _smartCardsCache.containsKey(rangeKey)) {
+        return;
+      }
     } else {
       isLoadingExtras = true;
       isLoadingNarrative = true;
+      isLoadingSmartCards = true;
       notifyListeners();
     }
 
@@ -417,6 +416,7 @@ class InsightsProvider extends SafeChangeNotifier {
     final previousTrendFuture = _tryTrend(uid, previousBounds);
     final recurringFuture = _tryRecurring(uid, bounds);
     final narrativeFuture = _tryNarrative(uid, bounds);
+    final smartCardsFuture = _trySmartCards(uid, bounds);
 
     if (!_extrasCache.containsKey(rangeKey)) {
       final results = await Future.wait([
@@ -444,6 +444,14 @@ class InsightsProvider extends SafeChangeNotifier {
       _narrativeCache[rangeKey] = aiNarrative;
       _narrativeRangeKey = rangeKey;
       isLoadingNarrative = false;
+      notifyListeners();
+    }
+
+    if (!_smartCardsCache.containsKey(rangeKey)) {
+      smartCards = await smartCardsFuture;
+      if (token != _loadToken) return;
+      _smartCardsCache[rangeKey] = smartCards;
+      isLoadingSmartCards = false;
       notifyListeners();
     }
   }
@@ -485,11 +493,7 @@ class InsightsProvider extends SafeChangeNotifier {
     ({DateTime from, DateTime to}) bounds,
   ) async {
     try {
-      return await _repository.getTrend(
-        uid,
-        from: bounds.from,
-        to: bounds.to,
-      );
+      return await _repository.getTrend(uid, from: bounds.from, to: bounds.to);
     } catch (_) {
       return const [];
     }
@@ -525,11 +529,27 @@ class InsightsProvider extends SafeChangeNotifier {
     }
   }
 
+  Future<List<SmartCardEntity>> _trySmartCards(
+    String uid,
+    ({DateTime from, DateTime to}) bounds,
+  ) async {
+    try {
+      return await _repository.getSmartCards(
+        uid,
+        from: bounds.from,
+        to: bounds.to,
+      );
+    } catch (_) {
+      return const [];
+    }
+  }
+
   void _clearCaches() {
     _summaryCache.clear();
     _previousSummaryCache.clear();
     _extrasCache.clear();
     _narrativeCache.clear();
+    _smartCardsCache.clear();
     _narrativeRangeKey = null;
   }
 

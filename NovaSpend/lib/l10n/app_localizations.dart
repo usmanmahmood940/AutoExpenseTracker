@@ -226,6 +226,36 @@ abstract class AppLocalizations {
   /// **'Spending answers are temporarily unavailable.'**
   String get askErrorUnavailable;
 
+  /// No description provided for @askErrorRangeMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'That day is outside the selected period.'**
+  String get askErrorRangeMismatch;
+
+  /// No description provided for @askClearThread.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get askClearThread;
+
+  /// No description provided for @askMoreQuestions.
+  ///
+  /// In en, this message translates to:
+  /// **'More questions'**
+  String get askMoreQuestions;
+
+  /// No description provided for @askLowConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a best guess from the transactions in range.'**
+  String get askLowConfidence;
+
+  /// No description provided for @askLast12Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 12 months'**
+  String get askLast12Months;
+
   /// No description provided for @searchPlaceholder.
   ///
   /// In en, this message translates to:
@@ -1905,6 +1935,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'What changed'**
   String get insightsWhatChanged;
+
+  /// No description provided for @insightsSmartCards.
+  ///
+  /// In en, this message translates to:
+  /// **'Worth a look'**
+  String get insightsSmartCards;
+
+  /// No description provided for @insightsAskThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about this'**
+  String get insightsAskThis;
+
+  /// No description provided for @insightsSectionSmartCardsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No extra insights for this period.'**
+  String get insightsSectionSmartCardsEmpty;
 
   /// No description provided for @insightsNarrativeHeadlineSpendUp.
   ///

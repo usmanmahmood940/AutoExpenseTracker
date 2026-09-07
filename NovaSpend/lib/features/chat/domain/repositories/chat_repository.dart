@@ -13,5 +13,6 @@ abstract class ChatRepository {
     required String question,
     DateTime? from,
     DateTime? to,
+    List<({String question, String answer})> history = const [],
   });
 }

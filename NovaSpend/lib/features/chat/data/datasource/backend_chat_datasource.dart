@@ -28,6 +28,7 @@ class BackendChatDatasource {
     required String question,
     DateTime? from,
     DateTime? to,
+    List<({String question, String answer})> history = const [],
   }) async {
     try {
       final json = await _api.post(
@@ -36,6 +37,14 @@ class BackendChatDatasource {
           'question': question,
           if (from != null) 'from': isoDate(from),
           if (to != null) 'to': isoDate(to),
+          if (history.isNotEmpty)
+            'history': [
+              for (final turn in history.take(3))
+                {
+                  'question': _clipHistory(turn.question),
+                  'answer': _clipHistory(turn.answer),
+                },
+            ],
         },
         requireAuth: true,
         timeout: ApiClient.chatTimeout,
@@ -45,4 +54,10 @@ class BackendChatDatasource {
       throw e.toDataException();
     }
   }
+}
+
+String _clipHistory(String value) {
+  final text = value.trim();
+  if (text.length <= 500) return text;
+  return text.substring(0, 500);
 }

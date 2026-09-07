@@ -4,6 +4,7 @@ import 'package:nova_spend/core/widgets/app_bottom_nav.dart';
 import 'package:nova_spend/features/analytics/presentation/pages/insights_page.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/chat/presentation/pages/ask_page.dart';
+import 'package:nova_spend/features/chat/presentation/provider/ask_provider.dart';
 import 'package:nova_spend/features/search/presentation/pages/search_page.dart';
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
@@ -51,6 +52,13 @@ class _MainShellPageState extends State<MainShellPage> {
             final search = sl<SearchProvider>();
             if (uid != null) search.start(uid);
             return search;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final ask = sl<AskProvider>();
+            if (uid != null) ask.start(uid);
+            return ask;
           },
         ),
       ],
