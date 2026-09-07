@@ -1,7 +1,10 @@
 """Gemini embeddings for RAG documents.
 
 Falls back to a deterministic hash vector when GEMINI_API_KEY is unset so
-local tests and ingest hooks still produce comparable vectors.
+local tests and ingest hooks still produce comparable vectors. A configured
+key that then fails raises `EmbeddingError` instead: hash vectors live in a
+different space than Gemini vectors, so writing them into a real index makes
+those documents permanently unretrievable.
 """
 
 from __future__ import annotations
@@ -26,6 +29,20 @@ _BATCH_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:batchEmbedContents"
 )
 _BATCH_SIZE = 16
+
+HASH_EMBEDDING_MODEL = "hash-fallback"
+
+
+class EmbeddingError(RuntimeError):
+    """Gemini embedding failed after retries with a key configured."""
+
+
+def active_embedding_model() -> str:
+    """Model name that `embed_texts` will attribute its vectors to."""
+    settings = get_settings()
+    if not (settings.gemini_api_key or ""):
+        return HASH_EMBEDDING_MODEL
+    return settings.gemini_embedding_model
 
 
 def hash_embed(text: str) -> list[float]:
@@ -113,5 +130,4 @@ async def _embed_chunk(
                 continue
             logger.warning("embed failed: %s", exc)
             break
-    logger.warning("embed falling back to hash vectors: %s", last_error)
-    return [hash_embed(text) for text in texts]
+    raise EmbeddingError(f"gemini embedding failed: {last_error}")

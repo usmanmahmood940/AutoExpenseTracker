@@ -70,6 +70,10 @@ class RagDocument(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     period_from: Mapped[date | None] = mapped_column(Date, nullable=True)
     period_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Which embedding model produced `embedding`. Rows written before this
+    # column existed are NULL and count as stale, since a vector from another
+    # model (or the hash fallback) is not comparable to current queries.
+    embedding_model: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
     def __repr__(self) -> str:
         return f"<RagDocument {self.doc_type} ref={self.ref_id!r}>"

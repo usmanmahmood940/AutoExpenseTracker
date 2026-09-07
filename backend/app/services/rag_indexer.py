@@ -16,7 +16,11 @@ from app.db.models.rag_document import RagDocument
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services import analytics as analytics_service
-from app.services.embeddings import embed_texts
+from app.services.embeddings import (
+    EmbeddingError,
+    active_embedding_model,
+    embed_texts,
+)
 from app.services.money import as_money
 from app.services.rag_documents import (
     MerchantStats,
@@ -41,6 +45,18 @@ class ReindexStats:
     periods: int = 0
     skipped: int = 0
     deleted: int = 0
+
+
+def _is_stale(row: RagDocument, fingerprint: str) -> bool:
+    """A row needs re-embedding on content change or model change.
+
+    The model check catches rows written before `embedding_model` existed and
+    rows embedded by a different model, whose vectors are not comparable to
+    vectors produced for today's queries.
+    """
+    if row.fingerprint != fingerprint:
+        return True
+    return row.embedding_model != active_embedding_model()
 
 
 async def _get_existing(
@@ -72,11 +88,12 @@ async def _upsert_row(
     embedding: list[float],
     period_from: date | None,
     period_to: date | None,
+    embedding_model: str,
 ) -> bool:
     row = await _get_existing(
         session, user_id=user_id, doc_type=doc_type, ref_id=ref_id
     )
-    if row is not None and row.fingerprint == fingerprint:
+    if row is not None and not _is_stale(row, fingerprint):
         return False
     if row is not None:
         row.content_text = content_text
@@ -84,26 +101,33 @@ async def _upsert_row(
         row.embedding = embedding
         row.period_from = period_from
         row.period_to = period_to
+        row.embedding_model = embedding_model
         await session.flush()
         return True
-    stmt = pg_insert(RagDocument).values(
-        user_id=user_id,
-        doc_type=doc_type.value,
-        ref_id=ref_id,
-        content_text=content_text,
-        fingerprint=fingerprint,
-        embedding=embedding,
-        period_from=period_from,
-        period_to=period_to,
-    ).on_conflict_do_update(
-        constraint="uq_rag_documents_user_type_ref",
-        set_={
-            "content_text": content_text,
-            "fingerprint": fingerprint,
-            "embedding": embedding,
-            "period_from": period_from,
-            "period_to": period_to,
-        },
+    stmt = (
+        pg_insert(RagDocument)
+        .values(
+            user_id=user_id,
+            doc_type=doc_type.value,
+            ref_id=ref_id,
+            content_text=content_text,
+            fingerprint=fingerprint,
+            embedding=embedding,
+            period_from=period_from,
+            period_to=period_to,
+            embedding_model=embedding_model,
+        )
+        .on_conflict_do_update(
+            constraint="uq_rag_documents_user_type_ref",
+            set_={
+                "content_text": content_text,
+                "fingerprint": fingerprint,
+                "embedding": embedding,
+                "period_from": period_from,
+                "period_to": period_to,
+                "embedding_model": embedding_model,
+            },
+        )
     )
     await session.execute(stmt)
     return True
@@ -122,7 +146,7 @@ async def upsert_transaction_doc(
         doc_type=RagDocType.transaction,
         ref_id=str(tx.id),
     )
-    if existing is not None and existing.fingerprint == fingerprint:
+    if existing is not None and not _is_stale(existing, fingerprint):
         return False
     content = build_transaction_doc(tx)
     embedding = (await embed_texts([content]))[0]
@@ -136,6 +160,7 @@ async def upsert_transaction_doc(
         embedding=embedding,
         period_from=tx.transaction_date,
         period_to=tx.transaction_date,
+        embedding_model=active_embedding_model(),
     )
 
 
@@ -201,7 +226,7 @@ async def rebuild_merchant_doc(
     existing = await _get_existing(
         session, user_id=user.id, doc_type=RagDocType.merchant, ref_id=key
     )
-    if existing is not None and existing.fingerprint == fingerprint:
+    if existing is not None and not _is_stale(existing, fingerprint):
         return False
     embedding = (await embed_texts([content]))[0]
     return await _upsert_row(
@@ -214,6 +239,7 @@ async def rebuild_merchant_doc(
         embedding=embedding,
         period_from=None,
         period_to=None,
+        embedding_model=active_embedding_model(),
     )
 
 
@@ -237,7 +263,7 @@ async def rebuild_period_doc(
     existing = await _get_existing(
         session, user_id=user.id, doc_type=RagDocType.period, ref_id=parsed
     )
-    if existing is not None and existing.fingerprint == fingerprint:
+    if existing is not None and not _is_stale(existing, fingerprint):
         return False
     start = date.fromisoformat(summary["date_from"])
     end = date.fromisoformat(summary["date_to"])
@@ -252,6 +278,7 @@ async def rebuild_period_doc(
         embedding=embedding,
         period_from=start,
         period_to=end,
+        embedding_model=active_embedding_model(),
     )
 
 
@@ -282,7 +309,14 @@ async def reindex_user(
             )
             stats.deleted += removed
             continue
-        changed = await upsert_transaction_doc(session, user=user, tx=tx)
+        try:
+            changed = await upsert_transaction_doc(session, user=user, tx=tx)
+        except EmbeddingError:
+            # Leave the row stale rather than storing a non-comparable vector;
+            # the next reindex retries it.
+            logger.warning("embed failed, skipping tx", extra={"tx_id": str(tx.id)})
+            stats.skipped += 1
+            continue
         if changed:
             stats.transactions += 1
             pending += 1
@@ -294,11 +328,21 @@ async def reindex_user(
             stats.skipped += 1
     if full:
         for key in merchants:
-            if await rebuild_merchant_doc(session, user=user, merchant_normalized=key):
-                stats.merchants += 1
+            try:
+                if await rebuild_merchant_doc(
+                    session, user=user, merchant_normalized=key
+                ):
+                    stats.merchants += 1
+            except EmbeddingError:
+                logger.warning("embed failed, skipping merchant", extra={"key": key})
         for year_month in months:
-            if await rebuild_period_doc(session, user=user, year_month=year_month):
-                stats.periods += 1
+            try:
+                if await rebuild_period_doc(session, user=user, year_month=year_month):
+                    stats.periods += 1
+            except EmbeddingError:
+                logger.warning(
+                    "embed failed, skipping period", extra={"period": year_month}
+                )
     await session.commit()
     return stats
 

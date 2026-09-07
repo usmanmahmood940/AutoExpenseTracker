@@ -8,7 +8,7 @@ import re
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -17,13 +17,16 @@ from app.db.models.enums import TransactionStatus, TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services import analytics as analytics_service
+from app.services.chat_query_plan import plan_merchants
 from app.services.chat_question_range import resolve_ask_window
 from app.services.insights_narrative import generate_spend_narrative_text
+from app.services.merchant_keywords import terms_from_question
 from app.services.money import as_money, money_float
 from app.services.rag_documents import build_transaction_doc
-from app.services.rag_retrieval import RagHit, retrieve
+from app.services.rag_retrieval import RagHit, retrieve, retrieve_lexical
 from app.services.rate_limit import enforce_rate_limit
 from app.services.spending_signals import detect_signals
+from app.services.sql_like import contains_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +34,16 @@ _MAX_SUGGESTIONS = 5
 _DEFAULT_ASK_DAYS = 365
 _SHORT_WINDOW_DAYS = 3
 _LONG_WINDOW_DAYS = 45
-_TX_RETRIEVE_LIMIT = 12
+_TX_RETRIEVE_LIMIT = 8
+_LEXICAL_RETRIEVE_LIMIT = 6
+_MERCHANT_RETRIEVE_LIMIT = 3
 _PERIOD_RETRIEVE_LIMIT = 3
 _LARGEST_DEBITS = 5
 _SHORT_WINDOW_TX_LIMIT = 40
 _HISTORY_TURNS = 3
 _HISTORY_CHARS = 500
+_MATCHED_TOTALS_LIMIT = 20
+_PLANNER_MERCHANT_POOL = 80
 
 _OFF_TOPIC = re.compile(
     r"\b(weather|forecast|stock market|invest(?:ing|ment)?s?|crypto|"
@@ -72,12 +79,18 @@ Answer using this window: {eff_from} to {eff_to}.
 Relative words like today, yesterday, and this week refer to the calendar dates above.
 Do not say there is no data for today if tools or documents include {today}.
 Currency: {currency}.
+Tool outputs are exact SQL aggregates over the whole window; trust them.
+When matched_totals is present it is the complete total for what was asked,
+covering every matching transaction, so quote its numbers directly.
+Retrieved documents are only examples for context. They are a partial sample,
+so never add them up and never treat them as a complete list.
+If matched_totals is present but empty, say you found no matching spending.
 {history_block}Question: {question}
 
 Tool outputs (exact numbers):
 {tools}
 
-Retrieved documents:
+Retrieved documents (examples only, do not sum):
 {docs}
 """
 
@@ -204,6 +217,119 @@ async def _largest_debits(
     return list(result.scalars().all())
 
 
+def _term_clause(terms: list[str]):
+    """Match a term against merchant name, grouping key, or category."""
+    clauses = []
+    for term in terms:
+        pattern = contains_pattern(term)
+        clauses.extend(
+            [
+                Transaction.merchant.ilike(pattern, escape="\\"),
+                Transaction.merchant_normalized.ilike(pattern, escape="\\"),
+                Transaction.category.ilike(pattern, escape="\\"),
+            ]
+        )
+    return or_(*clauses)
+
+
+async def _matched_totals(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    terms: list[str],
+) -> dict:
+    """Exact per-merchant debit totals for every row matching `terms`.
+
+    Uncapped by design: this is what lets "how much on electricity" answer
+    correctly even when the merchant is nowhere near the top-5 by spend.
+    """
+    rows = (
+        await session.execute(
+            select(
+                Transaction.merchant,
+                func.coalesce(func.sum(Transaction.amount), 0),
+                func.count(Transaction.id),
+                func.min(Transaction.transaction_date),
+                func.max(Transaction.transaction_date),
+            )
+            .where(
+                *_tx_filters(user.id, start, end),
+                Transaction.type == TransactionType.debit,
+                _term_clause(terms),
+            )
+            .group_by(Transaction.merchant)
+            .order_by(func.coalesce(func.sum(Transaction.amount), 0).desc())
+            .limit(_MATCHED_TOTALS_LIMIT)
+        )
+    ).all()
+    by_merchant = [
+        {
+            "merchant": merchant,
+            "total_debit": money_float(as_money(total)),
+            "transaction_count": int(count),
+            "first_date": first.isoformat() if first else None,
+            "last_date": last.isoformat() if last else None,
+        }
+        for merchant, total, count, first, last in rows
+    ]
+    grand = as_money(sum(as_money(row[1]) for row in rows) if rows else 0)
+    return {
+        "terms": terms,
+        "grand_total_debit": money_float(grand),
+        "transaction_count": sum(item["transaction_count"] for item in by_merchant),
+        "by_merchant": by_merchant,
+    }
+
+
+async def _merchant_pool(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    limit: int = _PLANNER_MERCHANT_POOL,
+) -> list[str]:
+    """Distinct merchants in the window, biggest spenders first."""
+    rows = (
+        await session.execute(
+            select(Transaction.merchant)
+            .where(*_tx_filters(user.id, start, end))
+            .group_by(Transaction.merchant)
+            .order_by(func.coalesce(func.sum(Transaction.amount), 0).desc())
+            .limit(limit)
+        )
+    ).all()
+    return [row[0] for row in rows if row[0]]
+
+
+async def _resolve_terms(
+    session: AsyncSession,
+    *,
+    user: User,
+    question: str,
+    start: date,
+    end: date,
+    api_key: str,
+) -> list[str]:
+    """Search terms for a question: deterministic aliases, then LLM fallback."""
+    terms = terms_from_question(question)
+    if terms:
+        return terms
+    if not api_key or not _ANALYTICS_HINT.search(question):
+        return []
+    pool = await _merchant_pool(session, user=user, start=start, end=end)
+    if not pool:
+        return []
+    try:
+        return await plan_merchants(api_key=api_key, question=question, merchants=pool)
+    except Exception:
+        # The planner is an optimisation; never let it fail the answer.
+        logger.warning("query planner failed", exc_info=True)
+        return []
+
+
 async def _day_totals(
     session: AsyncSession,
     *,
@@ -264,6 +390,7 @@ async def _tool_payload(
     date_to: str,
     start: date,
     end: date,
+    terms: list[str] | None = None,
 ) -> dict:
     summary = await analytics_service.get_range_summary(
         session, user=user, date_from=date_from, date_to=date_to
@@ -283,9 +410,27 @@ async def _tool_payload(
         "top_merchants_spent": summary.get("top_merchants_spent") or [],
         "largest_debits": [_citation_from_tx(tx) for tx in largest],
     }
+    if terms:
+        payload["matched_totals"] = await _matched_totals(
+            session, user=user, start=start, end=end, terms=terms
+        )
     if start == end:
         payload["day_totals"] = await _day_totals(session, user=user, day=start)
     return payload
+
+
+def _dedupe_hits(*groups: list[RagHit]) -> list[RagHit]:
+    """Concatenate hit groups, keeping the first occurrence of each document."""
+    out: list[RagHit] = []
+    seen: set[tuple[str, str]] = set()
+    for group in groups:
+        for hit in group:
+            key = (hit.doc_type, hit.ref_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(hit)
+    return out
 
 
 async def _ask_docs(
@@ -295,12 +440,26 @@ async def _ask_docs(
     question: str,
     start: date,
     end: date,
+    terms: list[str] | None = None,
 ) -> list[RagHit]:
     span = (end - start).days + 1
     if span <= _SHORT_WINDOW_DAYS:
         txs = await _transactions_in_range(session, user=user, start=start, end=end)
         return [_hit_from_tx(tx) for tx in txs]
-    hits = await retrieve(
+
+    # Lexical first: an explicitly named merchant must never be missed because
+    # cosine ranked a sibling utility higher.
+    lexical = await retrieve_lexical(
+        session,
+        user_id=user.id,
+        terms=terms or [],
+        limit=_LEXICAL_RETRIEVE_LIMIT,
+        doc_types=["transaction"],
+        date_from=start,
+        date_to=end,
+        strict_period=True,
+    )
+    vector = await retrieve(
         session,
         user_id=user.id,
         query_text=question,
@@ -310,19 +469,37 @@ async def _ask_docs(
         date_to=end,
         strict_period=True,
     )
-    if span > _LONG_WINDOW_DAYS:
-        period_hits = await retrieve(
-            session,
-            user_id=user.id,
-            query_text=question,
-            limit=_PERIOD_RETRIEVE_LIMIT,
-            doc_types=["period"],
-            date_from=start,
-            date_to=end,
-            strict_period=True,
+    groups = [lexical, vector]
+    if terms:
+        # Merchant rollups are lifetime totals with no period, so they stay
+        # eligible under strict period filtering.
+        groups.append(
+            await retrieve_lexical(
+                session,
+                user_id=user.id,
+                terms=terms,
+                limit=_MERCHANT_RETRIEVE_LIMIT,
+                doc_types=["merchant"],
+                date_from=start,
+                date_to=end,
+                strict_period=True,
+                periodless_doc_types=["merchant"],
+            )
         )
-        hits = [*hits, *period_hits]
-    return hits
+    if span > _LONG_WINDOW_DAYS:
+        groups.append(
+            await retrieve(
+                session,
+                user_id=user.id,
+                query_text=question,
+                limit=_PERIOD_RETRIEVE_LIMIT,
+                doc_types=["period"],
+                date_from=start,
+                date_to=end,
+                strict_period=True,
+            )
+        )
+    return _dedupe_hits(*groups)
 
 
 async def _citations_from_hits(
@@ -464,8 +641,20 @@ async def ask(
     ui_from, ui_to = _resolve_range(date_from, date_to)
     selected_from, selected_to = analytics_service.parse_range(ui_from, ui_to)
     today = date.today()
-    eff_from, eff_to = resolve_ask_window(
-        selected_from, selected_to, text, today=today
+    eff_from, eff_to = resolve_ask_window(selected_from, selected_to, text, today=today)
+    api_key = settings.gemini_api_key or ""
+    if not api_key:
+        raise ServiceUnavailableError(
+            "Chat is unavailable.",
+            code="gemini_unconfigured",
+        )
+    terms = await _resolve_terms(
+        session,
+        user=user,
+        question=text,
+        start=eff_from,
+        end=eff_to,
+        api_key=api_key,
     )
     tools = await _tool_payload(
         session,
@@ -474,9 +663,15 @@ async def ask(
         date_to=eff_to.isoformat(),
         start=eff_from,
         end=eff_to,
+        terms=terms,
     )
     hits = await _ask_docs(
-        session, user=user, question=text, start=eff_from, end=eff_to
+        session,
+        user=user,
+        question=text,
+        start=eff_from,
+        end=eff_to,
+        terms=terms,
     )
     sql_citations = list(tools.get("largest_debits") or [])
     rag_citations = await _citations_from_hits(session, user=user, hits=hits)
@@ -496,12 +691,6 @@ async def ask(
         docs=docs,
     )
 
-    api_key = settings.gemini_api_key or ""
-    if not api_key:
-        raise ServiceUnavailableError(
-            "Chat is unavailable.",
-            code="gemini_unconfigured",
-        )
     answer, model = await generate_chat_answer(api_key, prompt)
     if not answer:
         raise ServiceUnavailableError(
