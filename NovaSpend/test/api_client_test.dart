@@ -53,6 +53,31 @@ void main() {
     client.dispose();
   });
 
+  test('encodes merchant path keys with spaces once', () async {
+    late http.Request captured;
+    final client = ApiClient(
+      client: MockClient((request) async {
+        captured = request;
+        return http.Response('{"items":[]}', 200);
+      }),
+      baseUrl: 'https://api.example.com',
+      idTokenFetcher: () async => 'tok',
+    );
+
+    final key = Uri.encodeComponent('cursor ai power');
+    await client.get(
+      '/merchants/$key/transactions',
+      query: {'limit': '50'},
+      requireAuth: true,
+    );
+
+    expect(
+      captured.url.toString(),
+      'https://api.example.com/merchants/cursor%20ai%20power/transactions?limit=50',
+    );
+    client.dispose();
+  });
+
   test('put sends JSON body', () async {
     late http.Request captured;
     final client = ApiClient(

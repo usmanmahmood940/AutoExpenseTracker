@@ -47,6 +47,7 @@ class TransactionDetailPage extends StatelessWidget {
           repository: sl<TransactionRepository>(),
         );
         unawaited(provider.loadMerchantRememberState());
+        unawaited(provider.loadFullTransaction());
         return provider;
       },
       child: const _DetailView(),

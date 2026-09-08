@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nova_spend/core/currency/app_currency_controller.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
-import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/widgets/adaptive_scaffold.dart';
@@ -19,7 +18,7 @@ import 'package:nova_spend/features/chat/presentation/widgets/ask_turn_views.dar
 import 'package:nova_spend/features/search/presentation/provider/search_provider.dart';
 import 'package:nova_spend/features/settings/presentation/main_shell_scope.dart';
 import 'package:nova_spend/features/settings/presentation/widgets/shell_glass_header_bar.dart';
-import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
@@ -79,6 +78,7 @@ class _AskViewState extends State<_AskView> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   var _draft = '';
+  var _openingCitation = false;
 
   @override
   void didChangeDependencies() {
@@ -124,23 +124,25 @@ class _AskViewState extends State<_AskView> {
   }
 
   Future<void> _openCitation(ChatCitationEntity citation) async {
+    if (_openingCitation) return;
     final id = citation.transactionId;
     final uid = context.read<AuthProvider>().uid;
     if (id == null || id.isEmpty || uid == null) return;
-    final l10n = context.l10n;
+
+    _openingCitation = true;
+    final preview = _transactionPreviewFromCitation(
+      uid: uid,
+      citation: citation,
+      currency: AppCurrencyScope.of(context).currency,
+    );
     try {
-      final tx = await sl<TransactionRepository>().getTransaction(uid, id);
-      if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => TransactionDetailPage(transaction: tx),
+          builder: (_) => TransactionDetailPage(transaction: preview),
         ),
       );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.errorLoadFailed)));
+    } finally {
+      _openingCitation = false;
     }
   }
 
@@ -299,4 +301,38 @@ class _AskViewState extends State<_AskView> {
       },
     );
   }
+}
+
+/// Enough of a transaction for Ask citations to open detail immediately.
+/// [TransactionDetailPage] then loads the full record (SMS, bank, etc.).
+TransactionEntity _transactionPreviewFromCitation({
+  required String uid,
+  required ChatCitationEntity citation,
+  required String currency,
+}) {
+  return TransactionEntity(
+    id: citation.transactionId ?? '',
+    userId: uid,
+    amount: citation.amount ?? 0,
+    currency: currency,
+    type: 'debit',
+    merchant: citation.merchant?.trim() ?? '',
+    category: citation.category?.trim() ?? '',
+    categorySource: '',
+    paymentMethod: '',
+    bank: '',
+    accountId: '',
+    accountIdMasked: '',
+    transactionTime: '',
+    transactionDate: citation.date ?? '',
+    day: '',
+    externalIdType: 'unknown',
+    dedupKey: '',
+    smsSource: const SmsSourceEntity(raw: '', source: ''),
+    parseConfidence: 1,
+    isAutoDetected: false,
+    isEdited: false,
+    isDuplicate: false,
+    status: 'active',
+  );
 }

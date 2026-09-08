@@ -54,11 +54,32 @@ class TransactionDetailProvider extends ChangeNotifier {
   /// Normalized merchant key of an existing override, if any.
   String? _activeOverrideKey;
   Future<void>? _rememberStateFuture;
+  Future<void>? _detailFuture;
 
   TransactionEntity get transaction => _transaction;
 
   Future<void> loadMerchantRememberState() {
     return _rememberStateFuture ??= _fetchMerchantRememberState();
+  }
+
+  /// List payloads omit decrypted SMS. Detail GET includes it.
+  Future<void> loadFullTransaction() {
+    return _detailFuture ??= _fetchFullTransaction();
+  }
+
+  Future<void> _fetchFullTransaction() async {
+    if (_transaction.smsSource.raw.trim().isNotEmpty) return;
+    try {
+      final full = await _repository.getTransaction(uid, _transaction.id);
+      if (saved) {
+        _transaction = _transaction.copyWith(smsSource: full.smsSource);
+      } else {
+        _transaction = full;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('loadFullTransaction failed: $e');
+    }
   }
 
   Future<void> _fetchMerchantRememberState() async {

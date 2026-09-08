@@ -34,8 +34,14 @@ class ApiClient {
   final IdTokenFetcher _idTokenFetcher;
 
   Uri _uri(String path, [Map<String, String>? query]) {
-    final normalized = path.startsWith('/') ? path : '/$path';
-    return Uri.parse('$baseUrl$normalized').replace(queryParameters: query);
+    final base = Uri.parse(baseUrl);
+    final rawPath = path.startsWith('/') ? path.substring(1) : path;
+    final extra = rawPath.split('/').map(Uri.decodeComponent);
+    final segments = [...base.pathSegments, ...extra];
+    if (query == null || query.isEmpty) {
+      return base.replace(pathSegments: segments);
+    }
+    return base.replace(pathSegments: segments, queryParameters: query);
   }
 
   Future<Map<String, dynamic>> get(

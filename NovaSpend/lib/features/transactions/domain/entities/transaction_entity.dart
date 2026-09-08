@@ -175,6 +175,7 @@ class TransactionEntity extends Equatable {
     String? status,
     DateTime? reviewedAt,
     DateTime? updatedAt,
+    SmsSourceEntity? smsSource,
   }) {
     return TransactionEntity(
       id: id,
@@ -202,7 +203,7 @@ class TransactionEntity extends Equatable {
       externalId: externalId,
       externalIdType: externalIdType,
       dedupKey: dedupKey,
-      smsSource: smsSource,
+      smsSource: smsSource ?? this.smsSource,
       parseConfidence: parseConfidence,
       isAutoDetected: isAutoDetected,
       isEdited: isEdited ?? this.isEdited,
