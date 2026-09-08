@@ -11,12 +11,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError
-from app.db.models.enums import TransactionStatus, TransactionType
+from app.db.models.enums import TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services.merchant_key import normalize_merchant_key
 from app.services.money import as_money, money_float
-from app.services.transactions import parse_iso_date
+from app.services.transactions import SUMMABLE_STATUSES, parse_iso_date
 
 YEAR_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 SIMILAR_AMOUNT_RATIO = Decimal("0.05")
@@ -65,7 +65,7 @@ def default_trend_bucket(start: date, end: date) -> str:
 def _base_filters(user_id, start: date, end: date):
     return (
         Transaction.user_id == user_id,
-        Transaction.status != TransactionStatus.deleted,
+        Transaction.status.in_(SUMMABLE_STATUSES),
         Transaction.transaction_date >= start,
         Transaction.transaction_date <= end,
     )
@@ -454,7 +454,7 @@ async def list_recent_summaries(
             select(month_col)
             .where(
                 Transaction.user_id == user.id,
-                Transaction.status != TransactionStatus.deleted,
+                Transaction.status.in_(SUMMABLE_STATUSES),
             )
             .group_by(month_col)
             .order_by(month_col.desc())

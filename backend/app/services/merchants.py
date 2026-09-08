@@ -15,7 +15,7 @@ from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services.merchant_key import decode_merchant_path_key
 from app.services.money import as_money, money_float
-from app.services.transactions import VISIBLE_STATUSES, get_owned
+from app.services.transactions import LIST_STATUSES, SUMMABLE_STATUSES, get_owned
 
 
 def _display_merchant_key():
@@ -24,10 +24,21 @@ def _display_merchant_key():
     )
 
 
-def _merchant_filter(user_id: uuid.UUID, key: str):
+def _merchant_list_filter(user_id: uuid.UUID, key: str):
     return (
         Transaction.user_id == user_id,
-        Transaction.status.in_(VISIBLE_STATUSES),
+        Transaction.status.in_(LIST_STATUSES),
+        or_(
+            Transaction.merchant_normalized == key,
+            _display_merchant_key() == key,
+        ),
+    )
+
+
+def _merchant_summable_filter(user_id: uuid.UUID, key: str):
+    return (
+        Transaction.user_id == user_id,
+        Transaction.status.in_(SUMMABLE_STATUSES),
         or_(
             Transaction.merchant_normalized == key,
             _display_merchant_key() == key,
@@ -41,7 +52,7 @@ async def get_merchant_summary(
     key = decode_merchant_path_key(merchant_key)
     this_month = date.today().strftime("%Y-%m")
     month_start = date.fromisoformat(f"{this_month}-01")
-    merchant_filter = _merchant_filter(user.id, key)
+    merchant_filter = _merchant_summable_filter(user.id, key)
     is_debit = Transaction.type == TransactionType.debit
     this_month_filter = Transaction.transaction_date >= month_start
 
@@ -91,7 +102,7 @@ async def list_merchant_transactions(
     key = decode_merchant_path_key(merchant_key)
     stmt = (
         select(Transaction)
-        .where(*_merchant_filter(user_id, key))
+        .where(*_merchant_list_filter(user_id, key))
         .order_by(Transaction.transaction_date.desc(), Transaction.id.desc())
     )
     if cursor is not None:

@@ -11,7 +11,7 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models.enums import RagDocType, TransactionStatus, TransactionType
+from app.db.models.enums import RagDocType, TransactionType
 from app.db.models.rag_document import RagDocument
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
@@ -32,6 +32,7 @@ from app.services.rag_documents import (
     period_fingerprint,
     should_index_transaction,
 )
+from app.services.transactions import SUMMABLE_STATUSES
 
 logger = logging.getLogger(__name__)
 _REINDEX_COMMIT_EVERY = 15
@@ -194,7 +195,7 @@ async def rebuild_merchant_doc(
             ).where(
                 Transaction.user_id == user.id,
                 Transaction.merchant_normalized == key,
-                Transaction.status != TransactionStatus.deleted,
+                Transaction.status.in_(SUMMABLE_STATUSES),
                 Transaction.type == TransactionType.debit,
             )
         )

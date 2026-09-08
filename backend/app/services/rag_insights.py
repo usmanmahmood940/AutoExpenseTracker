@@ -13,7 +13,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.db.models.enums import TransactionStatus
 from app.db.models.rag_insight_cache import RagInsightCache
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
@@ -22,7 +21,7 @@ from app.services.insights_narrative import generate_spend_narrative_text
 from app.services.money import money_float
 from app.services.rag_retrieval import retrieve
 from app.services.spending_signals import SpendingSignal, detect_signals
-from app.services.transactions import parse_iso_date
+from app.services.transactions import SUMMABLE_STATUSES, parse_iso_date
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +119,7 @@ async def _citations_for_signal(
         if (
             tx is not None
             and tx.user_id == user.id
-            and tx.status != TransactionStatus.deleted
+            and tx.status in SUMMABLE_STATUSES
         ):
             citations.append(
                 {
@@ -152,7 +151,7 @@ async def _citations_for_signal(
         if (
             tx is None
             or tx.user_id != user.id
-            or tx.status == TransactionStatus.deleted
+            or tx.status not in SUMMABLE_STATUSES
         ):
             continue
         citations.append(

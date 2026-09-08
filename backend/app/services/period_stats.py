@@ -14,11 +14,12 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError
-from app.db.models.enums import PeriodKind, TransactionStatus, TransactionType
+from app.db.models.enums import PeriodKind, TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services.merchant_key import normalize_merchant_key
 from app.services.money import as_money, money_float
+from app.services.transactions import SUMMABLE_STATUSES
 
 
 def previous_range(
@@ -54,7 +55,7 @@ def percent_change(previous: Decimal, current: Decimal) -> float:
 def _countable(user_id: uuid.UUID, from_date: date, to_date: date):
     return (
         Transaction.user_id == user_id,
-        Transaction.status != TransactionStatus.deleted,
+        Transaction.status.in_(SUMMABLE_STATUSES),
         Transaction.transaction_date >= from_date,
         Transaction.transaction_date <= to_date,
     )
@@ -162,7 +163,7 @@ async def get_period_stats(
             func.coalesce(func.sum(Transaction.amount).filter(credit & prev_range), 0),
         ).where(
             Transaction.user_id == user.id,
-            Transaction.status != TransactionStatus.deleted,
+            Transaction.status.in_(SUMMABLE_STATUSES),
             or_(current_range, prev_range),
         )
         spent_raw, received_raw, prev_spent, prev_received = (

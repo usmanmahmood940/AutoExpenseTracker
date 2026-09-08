@@ -14,11 +14,12 @@ from app.db.models.enums import TransactionStatus
 from app.db.models.transaction import Transaction
 from app.services.merchant_keywords import keyword_suffix
 from app.services.money import as_money
+from app.services.transactions import SUMMABLE_STATUSES
 
 # Bump whenever the document text format changes. Folded into every
 # fingerprint so a reindex re-embeds existing rows instead of skipping them
 # on an unchanged fingerprint.
-DOC_SCHEMA_VERSION = 2
+DOC_SCHEMA_VERSION = 3
 
 
 def _enum_value(value: Any) -> str:
@@ -32,15 +33,22 @@ def build_transaction_doc(tx: Transaction) -> str:
         f"{tx.currency} {amount} | {tx.merchant} | {tx.category} | "
         f"{tx.payment_method}"
     )
+    if _enum_value(tx.status) == TransactionStatus.settled.value:
+        original_amount = getattr(tx, "original_amount", None)
+        original = as_money(original_amount) if original_amount is not None else amount
+        doc = f"{doc} | settled net {amount} original {original}"
     keywords = keyword_suffix(tx.merchant or "")
     return f"{doc} | {keywords}" if keywords else doc
 
 
 def doc_fingerprint(tx: Transaction) -> str:
+    original_amount = getattr(tx, "original_amount", None)
+    original = str(as_money(original_amount)) if original_amount is not None else ""
     payload = "|".join(
         [
             str(DOC_SCHEMA_VERSION),
             str(as_money(tx.amount)),
+            original,
             tx.merchant_normalized or "",
             tx.category or "",
             tx.transaction_date.isoformat(),
@@ -52,7 +60,8 @@ def doc_fingerprint(tx: Transaction) -> str:
 
 
 def should_index_transaction(tx: Transaction) -> bool:
-    return _enum_value(tx.status) != TransactionStatus.deleted.value
+    status = _enum_value(tx.status)
+    return status in {item.value for item in SUMMABLE_STATUSES}
 
 
 @dataclass(frozen=True)

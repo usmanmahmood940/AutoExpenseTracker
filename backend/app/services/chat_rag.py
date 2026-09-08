@@ -13,9 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.errors import BadRequestError, ServiceUnavailableError
-from app.db.models.enums import TransactionStatus, TransactionType
+from app.db.models.enums import TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
+from app.services.transactions import SUMMABLE_STATUSES
 from app.services import analytics as analytics_service
 from app.services.chat_query_plan import plan_merchants
 from app.services.chat_question_range import resolve_ask_window
@@ -138,7 +139,7 @@ async def _active_transaction_count(
                 .select_from(Transaction)
                 .where(
                     Transaction.user_id == user_id,
-                    Transaction.status == TransactionStatus.active,
+                    Transaction.status.in_(SUMMABLE_STATUSES),
                 )
             )
         ).scalar_one()
@@ -174,7 +175,7 @@ def _navigation_reply(question: str) -> tuple[str, str] | None:
 def _tx_filters(user_id: uuid.UUID, start: date, end: date):
     return (
         Transaction.user_id == user_id,
-        Transaction.status == TransactionStatus.active,
+        Transaction.status.in_(SUMMABLE_STATUSES),
         Transaction.transaction_date >= start,
         Transaction.transaction_date <= end,
     )
@@ -606,7 +607,7 @@ async def _citations_from_hits(
         if (
             tx is None
             or tx.user_id != user.id
-            or tx.status == TransactionStatus.deleted
+            or tx.status not in SUMMABLE_STATUSES
         ):
             continue
         citations.append(_citation_from_tx(tx))

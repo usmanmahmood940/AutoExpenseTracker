@@ -19,6 +19,8 @@ class TransactionStatus(StrEnum):
     active = "active"
     deleted = "deleted"
     needs_review = "needs_review"
+    settled = "settled"
+    merged = "merged"
 
 
 class ExternalIdType(StrEnum):

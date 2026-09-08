@@ -10,11 +10,12 @@ from statistics import median
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models.enums import TransactionStatus, TransactionType
+from app.db.models.enums import TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.services import analytics as analytics_service
 from app.services.money import as_money, money_float
+from app.services.transactions import SUMMABLE_STATUSES
 
 CATEGORY_SPIKE_RATIO = Decimal("1.3")
 MERCHANT_SHARE = Decimal("0.25")
@@ -147,7 +148,7 @@ async def _new_recurring(
                 select(func.min(Transaction.transaction_date)).where(
                     Transaction.user_id == user.id,
                     Transaction.merchant_normalized == key,
-                    Transaction.status != TransactionStatus.deleted,
+                    Transaction.status.in_(SUMMABLE_STATUSES),
                     Transaction.type == TransactionType.debit,
                 )
             )
@@ -212,7 +213,7 @@ async def _weekend_skew(
             select(Transaction.transaction_date, func.sum(Transaction.amount))
             .where(
                 Transaction.user_id == user.id,
-                Transaction.status != TransactionStatus.deleted,
+                Transaction.status.in_(SUMMABLE_STATUSES),
                 Transaction.type == TransactionType.debit,
                 Transaction.transaction_date >= start,
                 Transaction.transaction_date <= end,
@@ -266,7 +267,7 @@ async def _large_one_off(
             await session.execute(
                 select(Transaction.amount).where(
                     Transaction.user_id == user.id,
-                    Transaction.status != TransactionStatus.deleted,
+                    Transaction.status.in_(SUMMABLE_STATUSES),
                     Transaction.type == TransactionType.debit,
                 )
             )
@@ -289,7 +290,7 @@ async def _large_one_off(
             )
             .where(
                 Transaction.user_id == user.id,
-                Transaction.status != TransactionStatus.deleted,
+                Transaction.status.in_(SUMMABLE_STATUSES),
                 Transaction.type == TransactionType.debit,
                 Transaction.transaction_date >= start,
                 Transaction.transaction_date <= end,

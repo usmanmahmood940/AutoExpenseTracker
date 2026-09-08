@@ -166,6 +166,16 @@ class Transaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Settle / merge: primary keeps original_amount + settlement_groups;
+    # absorbed rows point back via merged_into_id + settlement_group_id.
+    original_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(14, 2), nullable=True
+    )
+    settlement_groups: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), nullable=True, index=True
+    )
+    settlement_group_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     def __repr__(self) -> str:
         return f"<Transaction id={self.id} merchant={self.merchant!r}>"

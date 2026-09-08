@@ -137,6 +137,19 @@ class TransactionUpdateRequest(BaseModel):
     status: TransactionStatus | None = None
 
 
+class SettleRequest(BaseModel):
+    primary_id: uuid.UUID = Field(alias="primaryId")
+    source_ids: list[uuid.UUID] = Field(alias="sourceIds", min_length=1)
+
+    model_config = {"populate_by_name": True}
+
+
+class UnsettleRequest(BaseModel):
+    group_id: str = Field(alias="groupId", min_length=1)
+
+    model_config = {"populate_by_name": True}
+
+
 @router.get("/payment-methods", response_model=PaymentMethodListOut)
 async def list_payment_methods(_user: CurrentUser) -> PaymentMethodListOut:
     return PaymentMethodListOut(items=list(PAYMENT_METHODS))
@@ -311,6 +324,51 @@ async def parse_transaction_text(
         transaction_time=None if parsed is None else parsed.transaction_time,
         transaction_date=None if parsed is None else parsed.transaction_date,
     )
+
+
+@router.post("/transactions/settle", response_model=TransactionOut)
+async def settle_transactions(
+    body: SettleRequest,
+    user: CurrentUser,
+    session: DbSession,
+) -> TransactionOut:
+    tx = await tx_service.settle(
+        session,
+        user_id=user.id,
+        primary_id=body.primary_id,
+        source_ids=body.source_ids,
+    )
+    return transaction_to_out(tx, include_raw=True)
+
+
+@router.post("/transactions/{transaction_id}/unsettle", response_model=TransactionOut)
+async def unsettle_transaction(
+    transaction_id: uuid.UUID,
+    body: UnsettleRequest,
+    user: CurrentUser,
+    session: DbSession,
+) -> TransactionOut:
+    tx = await tx_service.unsettle(
+        session,
+        user_id=user.id,
+        primary_id=transaction_id,
+        group_id=body.group_id,
+    )
+    return transaction_to_out(tx, include_raw=True)
+
+
+@router.post("/transactions/{transaction_id}/unmerge", response_model=TransactionOut)
+async def unmerge_transaction(
+    transaction_id: uuid.UUID,
+    user: CurrentUser,
+    session: DbSession,
+) -> TransactionOut:
+    tx = await tx_service.unmerge(
+        session,
+        user_id=user.id,
+        transaction_id=transaction_id,
+    )
+    return transaction_to_out(tx, include_raw=True)
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionOut)

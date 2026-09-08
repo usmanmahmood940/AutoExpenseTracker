@@ -62,6 +62,10 @@ class TransactionOut(BaseModel):
     is_duplicate: bool
     status: TransactionStatus
     reviewed_at: datetime | None
+    original_amount: Decimal | None = None
+    settlement_groups: list[dict[str, Any]] | None = None
+    merged_into_id: uuid.UUID | None = None
+    settlement_group_id: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -72,8 +76,17 @@ class TransactionOut(BaseModel):
             return {}
         return value
 
-    @field_serializer("amount", "parse_confidence")
-    def _money(self, value: Decimal) -> float:
+    @field_validator("settlement_groups", mode="before")
+    @classmethod
+    def _coerce_settlement_groups(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        return value
+
+    @field_serializer("amount", "parse_confidence", "original_amount")
+    def _money(self, value: Decimal | None) -> float | None:
+        if value is None:
+            return None
         return money_float(value)
 
     @field_serializer("transaction_date")

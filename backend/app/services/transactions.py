@@ -31,7 +31,21 @@ from app.services.money import as_money, money_float
 from app.services.sms_source import build_sms_source, decrypt_ingestion_raw
 from app.services.sql_like import contains_pattern
 
-VISIBLE_STATUSES = (TransactionStatus.active, TransactionStatus.needs_review)
+# Shown in home/search/merchant lists (includes absorbed merge rows).
+LIST_STATUSES = (
+    TransactionStatus.active,
+    TransactionStatus.needs_review,
+    TransactionStatus.settled,
+    TransactionStatus.merged,
+)
+# Included in spend/receive totals, analytics, period stats, Ask SQL.
+SUMMABLE_STATUSES = (
+    TransactionStatus.active,
+    TransactionStatus.needs_review,
+    TransactionStatus.settled,
+)
+# Back-compat alias for callers that still import VISIBLE_STATUSES.
+VISIBLE_STATUSES = LIST_STATUSES
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -51,7 +65,14 @@ def weekday_name(value: date) -> str:
 def _visible(user_id: uuid.UUID) -> list[Any]:
     return [
         Transaction.user_id == user_id,
-        Transaction.status.in_(VISIBLE_STATUSES),
+        Transaction.status.in_(LIST_STATUSES),
+    ]
+
+
+def _summable(user_id: uuid.UUID) -> list[Any]:
+    return [
+        Transaction.user_id == user_id,
+        Transaction.status.in_(SUMMABLE_STATUSES),
     ]
 
 
@@ -248,12 +269,9 @@ async def list_transactions(
     total_count: int | None = None
     total_amount: float | None = None
     if include_aggregates:
-        agg = select(
-            func.count(Transaction.id),
-            func.coalesce(func.sum(Transaction.amount), 0),
-        ).where(*_visible(user_id))
-        agg = _apply_list_filters(
-            agg,
+        count_stmt = select(func.count(Transaction.id)).where(*_visible(user_id))
+        count_stmt = _apply_list_filters(
+            count_stmt,
             date_from=date_from,
             date_to=date_to,
             tx_type=tx_type,
@@ -264,9 +282,23 @@ async def list_transactions(
             amount_min=amount_min,
             amount_max=amount_max,
         )
-        count, total = (await session.execute(agg)).one()
-        total_count = int(count)
-        total_amount = money_float(total)
+        sum_stmt = select(func.coalesce(func.sum(Transaction.amount), 0)).where(
+            *_summable(user_id)
+        )
+        sum_stmt = _apply_list_filters(
+            sum_stmt,
+            date_from=date_from,
+            date_to=date_to,
+            tx_type=tx_type,
+            category=category,
+            bank=bank,
+            account_id_masked=account_id_masked,
+            merchant_query=merchant_query,
+            amount_min=amount_min,
+            amount_max=amount_max,
+        )
+        total_count = int((await session.execute(count_stmt)).scalar_one())
+        total_amount = money_float((await session.execute(sum_stmt)).scalar_one())
 
     return {
         "items": items,
@@ -345,8 +377,9 @@ async def search_transactions(
     total_spent: float | None = None
     total_received: float | None = None
     if include_aggregates:
-        agg = select(
-            func.count(Transaction.id),
+        count_stmt = select(func.count(Transaction.id)).where(*_visible(user_id))
+        count_stmt = _apply_search_filters(count_stmt, **filter_kwargs)
+        sum_stmt = select(
             func.coalesce(
                 func.sum(Transaction.amount).filter(
                     Transaction.type == TransactionType.debit
@@ -359,10 +392,10 @@ async def search_transactions(
                 ),
                 0,
             ),
-        ).where(*_visible(user_id))
-        agg = _apply_search_filters(agg, **filter_kwargs)
-        count, spent, received = (await session.execute(agg)).one()
-        total_count = int(count)
+        ).where(*_summable(user_id))
+        sum_stmt = _apply_search_filters(sum_stmt, **filter_kwargs)
+        total_count = int((await session.execute(count_stmt)).scalar_one())
+        spent, received = (await session.execute(sum_stmt)).one()
         total_spent = money_float(spent)
         total_received = money_float(received)
 
@@ -476,6 +509,32 @@ async def update_transaction(
     tx = await get_owned(session, user_id=user_id, transaction_id=transaction_id)
     if tx.status is TransactionStatus.deleted:
         raise NotFoundError("Transaction not found.", code="transaction_not_found")
+    if tx.status is TransactionStatus.merged:
+        raise BadRequestError(
+            "Unmerge this transaction before editing it.",
+            code="merged_locked",
+        )
+    if tx.status is TransactionStatus.settled and "amount" in updates:
+        raise BadRequestError(
+            "Unsettle this transaction before changing its amount.",
+            code="settled_amount_locked",
+        )
+    # Never let PATCH clobber settle/merge lifecycle statuses.
+    if "status" in updates and updates["status"] is not None:
+        requested = updates["status"]
+        if isinstance(requested, str):
+            requested = TransactionStatus(requested)
+        if tx.status in (TransactionStatus.settled, TransactionStatus.merged):
+            if requested is not tx.status:
+                raise BadRequestError(
+                    "Use settle/unsettle/unmerge endpoints to change this status.",
+                    code="status_locked",
+                )
+        if requested in (TransactionStatus.settled, TransactionStatus.merged):
+            raise BadRequestError(
+                "Use settle/unsettle/unmerge endpoints to change this status.",
+                code="status_locked",
+            )
 
     if "amount" in updates and updates["amount"] is not None:
         tx.amount = as_money(updates["amount"])
@@ -538,6 +597,16 @@ async def soft_delete(
     session: AsyncSession, *, user_id: uuid.UUID, transaction_id: uuid.UUID
 ) -> None:
     tx = await get_owned(session, user_id=user_id, transaction_id=transaction_id)
+    if tx.status is TransactionStatus.settled:
+        raise BadRequestError(
+            "Unsettle this transaction before deleting it.",
+            code="settled_locked",
+        )
+    if tx.status is TransactionStatus.merged:
+        raise BadRequestError(
+            "Unmerge this transaction before deleting it.",
+            code="merged_locked",
+        )
     tx.status = TransactionStatus.deleted
     await session.commit()
     await _index_after_commit(
@@ -551,12 +620,270 @@ async def mark_reviewed(
     tx = await get_owned(session, user_id=user_id, transaction_id=transaction_id)
     if tx.status is TransactionStatus.deleted:
         raise NotFoundError("Transaction not found.", code="transaction_not_found")
+    if tx.status in (TransactionStatus.settled, TransactionStatus.merged):
+        raise BadRequestError(
+            "Cannot mark a settled or merged transaction as reviewed.",
+            code="status_locked",
+        )
     tx.reviewed_at = datetime.now(UTC)
     tx.status = TransactionStatus.active
     await session.commit()
     await session.refresh(tx)
     await _index_after_commit(session, user_id=user_id, transaction_id=tx.id)
     return tx
+
+
+def _source_contribution(tx: Transaction) -> Decimal:
+    """How much this source reduces the primary amount (credits reduce, debits increase)."""
+    amount = as_money(tx.amount)
+    if tx.type is TransactionType.credit:
+        return amount
+    return -amount
+
+
+def _groups_list(primary: Transaction) -> list[dict[str, Any]]:
+    raw = primary.settlement_groups
+    if not raw:
+        return []
+    return [dict(item) for item in raw]
+
+
+def _clear_primary_settlement(primary: Transaction) -> None:
+    primary.status = TransactionStatus.active
+    primary.original_amount = None
+    primary.settlement_groups = None
+
+
+def _apply_remaining_groups(primary: Transaction, groups: list[dict[str, Any]]) -> None:
+    if not groups:
+        base = as_money(
+            primary.original_amount
+            if primary.original_amount is not None
+            else primary.amount
+        )
+        primary.amount = base
+        _clear_primary_settlement(primary)
+        return
+    base = as_money(
+        primary.original_amount if primary.original_amount is not None else primary.amount
+    )
+    applied = sum(
+        (as_money(group.get("amountApplied") or 0) for group in groups),
+        Decimal("0"),
+    )
+    primary.amount = as_money(base - applied)
+    primary.settlement_groups = groups
+    primary.status = TransactionStatus.settled
+
+
+async def settle(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    primary_id: uuid.UUID,
+    source_ids: list[uuid.UUID],
+) -> Transaction:
+    if not source_ids:
+        raise BadRequestError(
+            "Select at least one transaction to settle.",
+            code="settle_sources_required",
+        )
+    unique_sources = list(dict.fromkeys(source_ids))
+    if primary_id in unique_sources:
+        raise BadRequestError(
+            "Primary transaction cannot be settled into itself.",
+            code="settle_primary_in_sources",
+        )
+
+    primary = await get_owned(session, user_id=user_id, transaction_id=primary_id)
+    if primary.status not in (TransactionStatus.active, TransactionStatus.settled):
+        raise BadRequestError(
+            "Primary must be an active or settled transaction.",
+            code="settle_primary_invalid",
+        )
+
+    result = await session.execute(
+        select(Transaction).where(
+            Transaction.user_id == user_id,
+            Transaction.id.in_(unique_sources),
+        )
+    )
+    sources = list(result.scalars().all())
+    if len(sources) != len(unique_sources):
+        raise NotFoundError(
+            "One or more source transactions were not found.",
+            code="settle_source_not_found",
+        )
+
+    for source in sources:
+        if source.status is not TransactionStatus.active:
+            raise BadRequestError(
+                "Only active transactions can be settled into a primary.",
+                code="settle_source_invalid",
+            )
+        if source.currency.upper() != primary.currency.upper():
+            raise BadRequestError(
+                "All transactions in a settle must share the same currency.",
+                code="settle_currency_mismatch",
+            )
+
+    amount_applied = sum(
+        (_source_contribution(source) for source in sources),
+        Decimal("0"),
+    )
+    new_amount = as_money(primary.amount) - as_money(amount_applied)
+    if new_amount <= 0:
+        raise BadRequestError(
+            "Settle would reduce the primary amount to zero or below.",
+            code="settle_amount_invalid",
+        )
+
+    if primary.original_amount is None:
+        primary.original_amount = as_money(primary.amount)
+
+    group_id = str(uuid.uuid4())
+    group = {
+        "groupId": group_id,
+        "mergedTransactionIds": [str(source.id) for source in sources],
+        "createdAt": datetime.now(UTC).isoformat(),
+        "amountApplied": money_float(amount_applied),
+    }
+    groups = _groups_list(primary)
+    groups.append(group)
+    primary.settlement_groups = groups
+    primary.amount = new_amount
+    primary.status = TransactionStatus.settled
+    primary.is_edited = True
+
+    for source in sources:
+        source.status = TransactionStatus.merged
+        source.merged_into_id = primary.id
+        source.settlement_group_id = group_id
+        source.is_edited = True
+
+    await session.commit()
+    await session.refresh(primary)
+
+    await _index_after_commit(session, user_id=user_id, transaction_id=primary.id)
+    for source in sources:
+        await _index_after_commit(session, user_id=user_id, transaction_id=source.id)
+    return primary
+
+
+async def unsettle(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    primary_id: uuid.UUID,
+    group_id: str,
+) -> Transaction:
+    primary = await get_owned(session, user_id=user_id, transaction_id=primary_id)
+    if primary.status is not TransactionStatus.settled:
+        raise BadRequestError(
+            "Only settled transactions can be unsettled.",
+            code="unsettle_not_settled",
+        )
+
+    groups = _groups_list(primary)
+    target = next((group for group in groups if group.get("groupId") == group_id), None)
+    if target is None:
+        raise NotFoundError("Settlement group not found.", code="settle_group_not_found")
+
+    member_ids = [
+        uuid.UUID(str(item)) for item in (target.get("mergedTransactionIds") or [])
+    ]
+    if member_ids:
+        result = await session.execute(
+            select(Transaction).where(
+                Transaction.user_id == user_id,
+                Transaction.id.in_(member_ids),
+            )
+        )
+        for member in result.scalars().all():
+            member.status = TransactionStatus.active
+            member.merged_into_id = None
+            member.settlement_group_id = None
+            member.is_edited = True
+
+    remaining = [group for group in groups if group.get("groupId") != group_id]
+    _apply_remaining_groups(primary, remaining)
+    primary.is_edited = True
+
+    await session.commit()
+    await session.refresh(primary)
+
+    await _index_after_commit(session, user_id=user_id, transaction_id=primary.id)
+    for member_id in member_ids:
+        await _index_after_commit(session, user_id=user_id, transaction_id=member_id)
+    return primary
+
+
+async def unmerge(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+) -> Transaction:
+    merged = await get_owned(session, user_id=user_id, transaction_id=transaction_id)
+    if merged.status is not TransactionStatus.merged:
+        raise BadRequestError(
+            "Only merged transactions can be unmerged.",
+            code="unmerge_not_merged",
+        )
+    if merged.merged_into_id is None or not merged.settlement_group_id:
+        raise BadRequestError(
+            "Merged transaction is missing primary linkage.",
+            code="unmerge_missing_link",
+        )
+
+    primary = await get_owned(
+        session, user_id=user_id, transaction_id=merged.merged_into_id
+    )
+    groups = _groups_list(primary)
+    group_id = merged.settlement_group_id
+    target_idx = next(
+        (i for i, group in enumerate(groups) if group.get("groupId") == group_id),
+        None,
+    )
+    if target_idx is None:
+        raise NotFoundError("Settlement group not found.", code="settle_group_not_found")
+
+    contribution = _source_contribution(merged)
+    target = dict(groups[target_idx])
+    member_ids = [
+        str(item) for item in (target.get("mergedTransactionIds") or []) if str(item)
+    ]
+    merged_id_str = str(merged.id)
+    if merged_id_str not in member_ids:
+        raise BadRequestError(
+            "Merged transaction is not listed on its settlement group.",
+            code="unmerge_not_in_group",
+        )
+    member_ids = [item for item in member_ids if item != merged_id_str]
+    if member_ids:
+        target["mergedTransactionIds"] = member_ids
+        target["amountApplied"] = money_float(
+            as_money(target.get("amountApplied") or 0) - contribution
+        )
+        groups[target_idx] = target
+    else:
+        groups.pop(target_idx)
+
+    merged.status = TransactionStatus.active
+    merged.merged_into_id = None
+    merged.settlement_group_id = None
+    merged.is_edited = True
+
+    _apply_remaining_groups(primary, groups)
+    primary.is_edited = True
+
+    await session.commit()
+    await session.refresh(merged)
+    await session.refresh(primary)
+
+    await _index_after_commit(session, user_id=user_id, transaction_id=primary.id)
+    await _index_after_commit(session, user_id=user_id, transaction_id=merged.id)
+    return merged
 
 
 async def _index_after_commit(
