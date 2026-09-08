@@ -71,9 +71,21 @@ _TOPICS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     ),
 }
 
-# Aliases that are safe as exact merchant tokens but far too generic as a
-# `%LIKE%` search term (`ke` would match "market", "bakery", ...).
-_UNSAFE_AS_TERM = frozenset({"ke"})
+# Fine on a LESCO document as extra embedding text; disastrous as `%LIKE%`
+# against merchant names (`CURSOR AI POWER`, `Bills & Utilities`, ...).
+_UNSAFE_AS_TERM = frozenset(
+    {
+        "ke",
+        "power",
+        "electric",
+        "utility",
+        "phone",
+        "mobile",
+        "pump",
+        "gas",
+        "water",
+    }
+)
 
 
 def _tokens(text: str) -> list[str]:
@@ -123,13 +135,34 @@ def keyword_suffix(merchant: str) -> str:
     return " ".join(keywords_for_merchant(merchant))
 
 
+def topics_from_question(question: str) -> list[str]:
+    """Topics a question is asking about. Detection may use generic words."""
+    tokens = _tokens(question)
+    if not tokens:
+        return []
+    found: list[str] = []
+    for topic, (aliases, keywords) in _TOPICS.items():
+        probes = (topic, *keywords, *aliases)
+        if any(_has_phrase(tokens, probe) for probe in probes):
+            found.append(topic)
+    return found
+
+
+def merchant_belongs_to_topics(merchant: str, topics: list[str]) -> bool:
+    """True when the merchant is a known member of at least one topic."""
+    if not topics:
+        return True
+    owned = set(topics_for_merchant(merchant))
+    return bool(owned.intersection(topics))
+
+
 def terms_from_question(question: str) -> list[str]:
-    """Lexical/SQL search terms implied by a question.
+    """Search terms implied by a question.
 
     A question mentioning a topic ("electricity") yields that topic's merchant
-    aliases so SQL reaches LESCO rows, plus the plain-language keywords so the
-    lexical document search reaches the enriched `content_text`. Naming a
-    merchant outright ("sngpl") resolves through the same path.
+    aliases so SQL reaches LESCO rows, plus the topic name so lexical search
+    can hit enriched `content_text`. Generic cue words (`power`, `utility`)
+    detect the topic but are never used as `%LIKE%` patterns.
     """
     tokens = _tokens(question)
     if not tokens:
@@ -140,10 +173,8 @@ def terms_from_question(question: str) -> list[str]:
         if value and value not in terms and value not in _UNSAFE_AS_TERM:
             terms.append(value)
 
-    for topic, (aliases, keywords) in _TOPICS.items():
-        probes = (topic, *keywords, *aliases)
-        if not any(_has_phrase(tokens, probe) for probe in probes):
-            continue
+    for topic in topics_from_question(question):
+        aliases, keywords = _TOPICS[topic]
         add(topic)
         for alias in aliases:
             add(alias)

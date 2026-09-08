@@ -5,8 +5,10 @@ from __future__ import annotations
 from app.services.merchant_keywords import (
     keyword_suffix,
     keywords_for_merchant,
+    merchant_belongs_to_topics,
     terms_from_question,
     topics_for_merchant,
+    topics_from_question,
 )
 
 
@@ -59,12 +61,27 @@ def test_question_about_gas_reaches_gas_merchants() -> None:
 def test_question_naming_merchant_resolves_directly() -> None:
     terms = terms_from_question("total spent at sngpl")
     assert "sngpl" in terms
-    assert "gas" in terms
+    assert topics_from_question("total spent at sngpl") == ["gas"]
 
 
 def test_generic_alias_never_becomes_a_search_term() -> None:
     # `%ke%` as a LIKE pattern would match half the merchant table.
     assert "ke" not in terms_from_question("how much on electricity")
+
+
+def test_generic_cue_words_are_not_search_terms() -> None:
+    """`power` matching CURSOR AI POWER is how electricity totals went wrong."""
+    terms = terms_from_question("how much i spend on electricity till now")
+    for word in ("power", "electric", "utility"):
+        assert word not in terms
+    assert "electricity" in terms
+    assert "lesco" in terms
+
+
+def test_cursor_ai_power_is_not_an_electricity_merchant() -> None:
+    assert topics_for_merchant("CURSOR AI POWER") == []
+    assert not merchant_belongs_to_topics("CURSOR AI POWER", ["electricity"])
+    assert merchant_belongs_to_topics("LESCO", ["electricity"])
 
 
 def test_question_without_topic_yields_no_terms() -> None:

@@ -20,7 +20,11 @@ from app.services import analytics as analytics_service
 from app.services.chat_query_plan import plan_merchants
 from app.services.chat_question_range import resolve_ask_window
 from app.services.insights_narrative import generate_spend_narrative_text
-from app.services.merchant_keywords import terms_from_question
+from app.services.merchant_keywords import (
+    merchant_belongs_to_topics,
+    terms_from_question,
+    topics_from_question,
+)
 from app.services.money import as_money, money_float
 from app.services.rag_documents import build_transaction_doc
 from app.services.rag_retrieval import RagHit, retrieve, retrieve_lexical
@@ -82,6 +86,7 @@ Currency: {currency}.
 Tool outputs are exact SQL aggregates over the whole window; trust them.
 When matched_totals is present it is the complete total for what was asked,
 covering every matching transaction, so quote its numbers directly.
+Only mention merchants that appear in matched_totals.by_merchant.
 Retrieved documents are only examples for context. They are a partial sample,
 so never add them up and never treat them as a complete list.
 If matched_totals is present but empty, say you found no matching spending.
@@ -218,7 +223,11 @@ async def _largest_debits(
 
 
 def _term_clause(terms: list[str]):
-    """Match a term against merchant name, grouping key, or category."""
+    """Match a term against the merchant only.
+
+    Category is too coarse (one `Bills & Utilities` slug covers gas and
+    electricity) and must never be part of a `%LIKE%` expansion.
+    """
     clauses = []
     for term in terms:
         pattern = contains_pattern(term)
@@ -226,7 +235,6 @@ def _term_clause(terms: list[str]):
             [
                 Transaction.merchant.ilike(pattern, escape="\\"),
                 Transaction.merchant_normalized.ilike(pattern, escape="\\"),
-                Transaction.category.ilike(pattern, escape="\\"),
             ]
         )
     return or_(*clauses)
@@ -239,11 +247,14 @@ async def _matched_totals(
     start: date,
     end: date,
     terms: list[str],
+    question: str = "",
 ) -> dict:
     """Exact per-merchant debit totals for every row matching `terms`.
 
     Uncapped by design: this is what lets "how much on electricity" answer
     correctly even when the merchant is nowhere near the top-5 by spend.
+    Merchants that only matched a generic substring (CURSOR AI POWER vs
+    `power`) are dropped when the question maps to a known topic.
     """
     rows = (
         await session.execute(
@@ -264,6 +275,7 @@ async def _matched_totals(
             .limit(_MATCHED_TOTALS_LIMIT)
         )
     ).all()
+    topics = topics_from_question(question)
     by_merchant = [
         {
             "merchant": merchant,
@@ -273,14 +285,51 @@ async def _matched_totals(
             "last_date": last.isoformat() if last else None,
         }
         for merchant, total, count, first, last in rows
+        if merchant_belongs_to_topics(merchant, topics)
     ]
-    grand = as_money(sum(as_money(row[1]) for row in rows) if rows else 0)
+    grand = as_money(sum(as_money(item["total_debit"]) for item in by_merchant))
     return {
         "terms": terms,
+        "topics": topics,
         "grand_total_debit": money_float(grand),
         "transaction_count": sum(item["transaction_count"] for item in by_merchant),
         "by_merchant": by_merchant,
     }
+
+
+async def _matched_transactions(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    terms: list[str],
+    question: str = "",
+    limit: int = 8,
+) -> list[Transaction]:
+    """Individual rows behind matched_totals, newest first.
+
+    These are the only citations the UI should show for a topic question.
+    """
+    topics = topics_from_question(question)
+    result = await session.execute(
+        select(Transaction)
+        .where(
+            *_tx_filters(user.id, start, end),
+            Transaction.type == TransactionType.debit,
+            _term_clause(terms),
+        )
+        .order_by(Transaction.transaction_date.desc(), Transaction.amount.desc())
+        .limit(limit * 3)
+    )
+    out: list[Transaction] = []
+    for tx in result.scalars():
+        if not merchant_belongs_to_topics(tx.merchant, topics):
+            continue
+        out.append(tx)
+        if len(out) >= limit:
+            break
+    return out
 
 
 async def _merchant_pool(
@@ -391,6 +440,7 @@ async def _tool_payload(
     start: date,
     end: date,
     terms: list[str] | None = None,
+    question: str = "",
 ) -> dict:
     summary = await analytics_service.get_range_summary(
         session, user=user, date_from=date_from, date_to=date_to
@@ -412,8 +462,19 @@ async def _tool_payload(
     }
     if terms:
         payload["matched_totals"] = await _matched_totals(
-            session, user=user, start=start, end=end, terms=terms
+            session,
+            user=user,
+            start=start,
+            end=end,
+            terms=terms,
+            question=question,
         )
+        payload["matched_transactions"] = [
+            _citation_from_tx(tx)
+            for tx in await _matched_transactions(
+                session, user=user, start=start, end=end, terms=terms, question=question
+            )
+        ]
     if start == end:
         payload["day_totals"] = await _day_totals(session, user=user, day=start)
     return payload
@@ -499,7 +560,30 @@ async def _ask_docs(
                 strict_period=True,
             )
         )
-    return _dedupe_hits(*groups)
+    return _filter_hits(_dedupe_hits(*groups), terms or [], question)
+
+
+def _filter_hits(hits: list[RagHit], terms: list[str], question: str) -> list[RagHit]:
+    """Drop retrieved docs that do not belong to the question's topic.
+
+    Cosine search still returns ATM / transfers as "similar spend". Those must
+    not reach the prompt or the Related transactions list.
+    """
+    if not terms:
+        return hits
+    topics = topics_from_question(question)
+    needles = [term.lower() for term in terms]
+    out: list[RagHit] = []
+    for hit in hits:
+        text = (hit.content_text or "").lower()
+        if not any(needle in text for needle in needles):
+            continue
+        if hit.doc_type == "merchant" and topics:
+            name = (hit.ref_id or "").replace("_", " ")
+            if not merchant_belongs_to_topics(name, topics):
+                continue
+        out.append(hit)
+    return out
 
 
 async def _citations_from_hits(
@@ -664,6 +748,7 @@ async def ask(
         start=eff_from,
         end=eff_to,
         terms=terms,
+        question=text,
     )
     hits = await _ask_docs(
         session,
@@ -673,9 +758,13 @@ async def ask(
         end=eff_to,
         terms=terms,
     )
-    sql_citations = list(tools.get("largest_debits") or [])
-    rag_citations = await _citations_from_hits(session, user=user, hits=hits)
-    citations = _merge_citations(sql_citations, rag_citations)
+    matched_citations = list(tools.get("matched_transactions") or [])
+    if matched_citations:
+        citations = matched_citations
+    else:
+        sql_citations = list(tools.get("largest_debits") or [])
+        rag_citations = await _citations_from_hits(session, user=user, hits=hits)
+        citations = _merge_citations(sql_citations, rag_citations)
     docs = "\n".join(f"- {hit.content_text}" for hit in hits) or "none"
     prompt = _ASK_PROMPT.format(
         currency=tools["range"].get("currency") or user.default_currency,

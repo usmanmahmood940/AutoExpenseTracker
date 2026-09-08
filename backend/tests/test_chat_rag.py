@@ -299,6 +299,14 @@ def _seed_utility_bills(api_client: TestClient) -> None:
             tx_date=f"2026-03-{day}",
             category="Bills & Utilities",
         )
+    # Looks like electricity if `power` is used as a LIKE term; must not be.
+    _post_tx(
+        api_client,
+        merchant="CURSOR AI POWER",
+        amount=5864.71,
+        tx_date="2026-03-04",
+        category="Software",
+    )
     # Bulk unrelated spend so LESCO is nowhere near the top-5 by amount.
     for i in range(6):
         _post_tx(
@@ -344,6 +352,10 @@ def test_ask_electricity_totals_lesco_not_sngpl(
     assert matched["transaction_count"] == 3
     # Gas must not be folded into an electricity total.
     assert "SNGPL" not in merchants
+    # Generic `power` must not pull in an AI subscription.
+    assert "CURSOR AI POWER" not in merchants
+    citations = {item["merchant"] for item in response.json()["citations"]}
+    assert citations == {"LESCO"}
 
 
 def test_ask_gas_totals_sngpl_not_lesco(api_client: TestClient, monkeypatch) -> None:
