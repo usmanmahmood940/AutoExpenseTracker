@@ -322,7 +322,9 @@ async def reindex_user(
             pending += 1
             if pending >= _REINDEX_COMMIT_EVERY:
                 await session.commit()
-                session.expire_all()
+                # Do not expire_all(): the remaining Transaction objects are
+                # still in this loop, and a lazy refresh after commit hits
+                # MissingGreenlet on asyncpg.
                 pending = 0
         else:
             stats.skipped += 1
