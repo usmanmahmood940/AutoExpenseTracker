@@ -29,10 +29,10 @@ from app.db.seeds.categories import FALLBACK_CATEGORY_NAME
 from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money, money_float
 from app.services.sms_source import build_sms_source, decrypt_ingestion_raw
+from app.services.sql_like import contains_pattern
 
 VISIBLE_STATUSES = (TransactionStatus.active, TransactionStatus.needs_review)
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_LIKE_SPECIAL = re.compile(r"([\\%_])")
 
 
 def parse_iso_date(value: str, field_name: str) -> date:
@@ -46,10 +46,6 @@ def parse_iso_date(value: str, field_name: str) -> date:
 
 def weekday_name(value: date) -> str:
     return value.strftime("%A")
-
-
-def _escape_like(value: str) -> str:
-    return _LIKE_SPECIAL.sub(r"\\\1", value)
 
 
 def _visible(user_id: uuid.UUID) -> list[Any]:
@@ -99,8 +95,11 @@ def _apply_list_filters[T](
     if account_id_masked:
         stmt = stmt.where(Transaction.account_id_masked == account_id_masked)
     if merchant_query:
-        escaped = _escape_like(merchant_query.strip())
-        stmt = stmt.where(Transaction.merchant.ilike(f"%{escaped}%", escape="\\"))
+        stmt = stmt.where(
+            Transaction.merchant.ilike(
+                contains_pattern(merchant_query.strip()), escape="\\"
+            )
+        )
     if amount_min is not None:
         stmt = stmt.where(Transaction.amount >= amount_min)
     if amount_max is not None:
@@ -146,20 +145,7 @@ def _apply_search_filters[T](
     amount_max: Decimal | None,
     payment_methods: list[str],
     sources: list[str],
-) -> tuple[Select[T], bool]:
-    """Apply Activity search filters. Returns (stmt, use_prefix)."""
-    use_prefix = (
-        bool(needle)
-        and not subscriptions_only
-        and tx_type is None
-        and date_from is None
-        and date_to is None
-        and not category_names
-        and amount_min is None
-        and amount_max is None
-        and not payment_methods
-        and not sources
-    )
+) -> Select[T]:
     if date_from is not None:
         stmt = stmt.where(Transaction.transaction_date >= date_from)
     if date_to is not None:
@@ -183,22 +169,18 @@ def _apply_search_filters[T](
         )
         stmt = stmt.where(source_col.in_(sources))
 
-    if use_prefix:
-        escaped = _escape_like(normalize_merchant_key(needle))
-        stmt = stmt.where(
-            Transaction.merchant_normalized.like(escaped + "%", escape="\\")
-        )
-    elif needle:
-        escaped = _escape_like(needle)
-        pattern = f"%{escaped}%"
+    if needle:
+        raw_pattern = contains_pattern(needle.strip())
+        norm_pattern = contains_pattern(normalize_merchant_key(needle))
         stmt = stmt.where(
             or_(
-                Transaction.merchant.ilike(pattern, escape="\\"),
-                Transaction.merchant_normalized.ilike(pattern, escape="\\"),
-                Transaction.category.ilike(pattern, escape="\\"),
+                Transaction.merchant.ilike(raw_pattern, escape="\\"),
+                Transaction.merchant_normalized.ilike(norm_pattern, escape="\\"),
+                Transaction.merchant_details.ilike(raw_pattern, escape="\\"),
+                Transaction.category.ilike(raw_pattern, escape="\\"),
             )
         )
-    return stmt, use_prefix
+    return stmt
 
 
 def _after_cursor(
@@ -348,7 +330,7 @@ async def search_transactions(
     }
 
     stmt = select(Transaction).where(*_visible(user_id))
-    stmt, _use_prefix = _apply_search_filters(stmt, **filter_kwargs)
+    stmt = _apply_search_filters(stmt, **filter_kwargs)
 
     if cursor is not None:
         cursor_row = await get_owned(session, user_id=user_id, transaction_id=cursor)
@@ -378,7 +360,7 @@ async def search_transactions(
                 0,
             ),
         ).where(*_visible(user_id))
-        agg, _ = _apply_search_filters(agg, **filter_kwargs)
+        agg = _apply_search_filters(agg, **filter_kwargs)
         count, spent, received = (await session.execute(agg)).one()
         total_count = int(count)
         total_spent = money_float(spent)

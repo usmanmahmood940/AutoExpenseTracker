@@ -167,13 +167,34 @@ def test_cash_withdrawal_unknown_merchant_becomes_atm(api_client: TestClient) ->
     assert patched.json()["merchant_normalized"] == "atm"
 
 
-def test_search_prefix_and_scan(api_client: TestClient) -> None:
+def test_search_contains_merchant_not_just_prefix(api_client: TestClient) -> None:
     _post_tx(api_client, merchant="KFC", amount=100, tx_date="2026-03-01")
     _post_tx(api_client, merchant="Khaadi", amount=200, tx_date="2026-03-02")
     _post_tx(api_client, merchant="Daraz", amount=300, tx_date="2026-03-03")
 
     prefix = api_client.get("/transactions/search", params={"q": "kf"}).json()
     assert [item["merchant"] for item in prefix["items"]] == ["KFC"]
+
+    _post_tx(
+        api_client,
+        merchant="WWW CURSOR COM",
+        amount=400,
+        tx_date="2026-03-04",
+        category="Subscriptions",
+    )
+    _post_tx(
+        api_client,
+        merchant="Cursor AI Power",
+        amount=500,
+        tx_date="2026-03-05",
+        category="Subscriptions",
+    )
+
+    cursor_hits = api_client.get("/transactions/search", params={"q": "cursor"}).json()
+    assert {item["merchant"] for item in cursor_hits["items"]} == {
+        "WWW CURSOR COM",
+        "Cursor AI Power",
+    }
 
     scan = api_client.get(
         "/transactions/search",
@@ -187,13 +208,35 @@ def test_search_prefix_and_scan(api_client: TestClient) -> None:
         "/transactions/search",
         params={"q": "Food", "date_from": "2026-03-01", "date_to": "2026-03-31"},
     ).json()
-    assert len(by_category["items"]) == 3
+    assert {item["merchant"] for item in by_category["items"]} == {
+        "KFC",
+        "Khaadi",
+        "Daraz",
+    }
 
     by_bank = api_client.get(
         "/transactions/search",
         params={"q": "HBL", "date_from": "2026-03-01", "date_to": "2026-03-31"},
     ).json()
     assert by_bank["items"] == []
+
+
+def test_search_matches_merchant_details(api_client: TestClient) -> None:
+    response = api_client.post(
+        "/transactions",
+        json={
+            "merchant": "Stripe",
+            "merchant_details": "Cursor AI Power",
+            "amount": 2200,
+            "transaction_date": "2026-03-08",
+            "type": "debit",
+            "category": "Subscriptions",
+        },
+    )
+    assert response.status_code == 201, response.text
+
+    hits = api_client.get("/transactions/search", params={"q": "cursor"}).json()
+    assert [item["merchant"] for item in hits["items"]] == ["Stripe"]
 
 
 def test_search_aggregates_cover_full_match_set(api_client: TestClient) -> None:
@@ -318,11 +361,14 @@ def test_search_sort_applies_to_full_match_set(api_client: TestClient) -> None:
     ).json()
     assert [item["merchant"] for item in az["items"]] == ["Cheap", "Mid", "Pricey"]
 
-    prefix_amount = api_client.get(
+    contains_amount = api_client.get(
         "/transactions/search",
         params={"q": "p", "sort_by": "amount", "order_by": "desc"},
     ).json()
-    assert [item["merchant"] for item in prefix_amount["items"]] == ["Pricey"]
+    assert [item["merchant"] for item in contains_amount["items"]] == [
+        "Pricey",
+        "Cheap",
+    ]
 
 
 def test_search_amount_type_payment_and_source(api_client: TestClient) -> None:
