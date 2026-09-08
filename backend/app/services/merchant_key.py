@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import unquote_plus
 
 _WS = re.compile(r"\s+")
 
@@ -25,6 +26,18 @@ def normalize_merchant(merchant: str) -> str:
 
 def normalize_merchant_key(merchant: str) -> str:
     return _WS.sub(" ", merchant.strip().lower())
+
+
+def decode_merchant_path_key(raw: str) -> str:
+    """Normalize a merchant key that arrived as a URL path segment.
+
+    Clients and proxies may plus-encode spaces (`cursor+ai+power`) or
+    percent-encode an already-encoded key (`cursor%2520ai%20power`).
+    """
+    decoded = unquote_plus(raw or "")
+    if "%" in decoded:
+        decoded = unquote_plus(decoded)
+    return normalize_merchant_key(decoded)
 
 
 def resolve_merchant(

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, NotFoundError
@@ -13,23 +13,32 @@ from app.db.models.enums import TransactionType
 from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
-from app.services.merchant_key import normalize_merchant_key
+from app.services.merchant_key import decode_merchant_path_key
 from app.services.money import as_money, money_float
 from app.services.transactions import VISIBLE_STATUSES, get_owned
+
+
+def _display_merchant_key():
+    return func.lower(
+        func.regexp_replace(func.trim(Transaction.merchant), r"\s+", " ", "g")
+    )
 
 
 def _merchant_filter(user_id: uuid.UUID, key: str):
     return (
         Transaction.user_id == user_id,
         Transaction.status.in_(VISIBLE_STATUSES),
-        Transaction.merchant_normalized == key,
+        or_(
+            Transaction.merchant_normalized == key,
+            _display_merchant_key() == key,
+        ),
     )
 
 
 async def get_merchant_summary(
     session: AsyncSession, *, user: User, merchant_key: str
 ) -> dict:
-    key = normalize_merchant_key(merchant_key)
+    key = decode_merchant_path_key(merchant_key)
     this_month = date.today().strftime("%Y-%m")
     month_start = date.fromisoformat(f"{this_month}-01")
     merchant_filter = _merchant_filter(user.id, key)
@@ -53,7 +62,7 @@ async def get_merchant_summary(
     ).one()
     visit_count = int(totals[0])
     total_spent = as_money(totals[1])
-    display_name = totals[2] or merchant_key
+    display_name = totals[2] or key
     currency = totals[3] or user.default_currency
     this_month_spent = as_money(totals[4])
     this_month_visits = int(totals[5])
@@ -79,7 +88,7 @@ async def list_merchant_transactions(
     limit: int,
     cursor: uuid.UUID | None,
 ) -> dict:
-    key = normalize_merchant_key(merchant_key)
+    key = decode_merchant_path_key(merchant_key)
     stmt = (
         select(Transaction)
         .where(*_merchant_filter(user_id, key))
@@ -103,7 +112,7 @@ async def list_merchant_transactions(
 
 
 def _normalized_key(merchant_key: str) -> str:
-    key = normalize_merchant_key(merchant_key)
+    key = decode_merchant_path_key(merchant_key)
     if not key:
         raise BadRequestError("merchant_key is required.", code="merchant_required")
     return key

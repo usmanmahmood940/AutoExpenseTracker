@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.services.merchant_key import normalize_merchant_key, resolve_merchant
+from app.services.merchant_key import (
+    decode_merchant_path_key,
+    normalize_merchant_key,
+    resolve_merchant,
+)
 
 _CASES = json.loads(
     (
@@ -25,6 +29,14 @@ _RESOLVE_CASES = json.loads(
 def test_normalize_merchant_key_matches_shared_vectors() -> None:
     for case in _CASES:
         assert normalize_merchant_key(case["input"]) == case["expected"], case
+
+
+def test_decode_merchant_path_key_handles_space_encodings() -> None:
+    assert decode_merchant_path_key("cursor ai power") == "cursor ai power"
+    assert decode_merchant_path_key("cursor%20ai%20power") == "cursor ai power"
+    assert decode_merchant_path_key("cursor%2520ai%2520power") == "cursor ai power"
+    assert decode_merchant_path_key("cursor+ai+power") == "cursor ai power"
+    assert decode_merchant_path_key("Cursor AI Power") == "cursor ai power"
 
 
 def test_resolve_merchant_matches_shared_vectors() -> None:
