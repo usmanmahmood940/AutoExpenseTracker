@@ -37,6 +37,7 @@ import 'package:nova_spend/features/transactions/presentation/widgets/day_group_
 import 'package:nova_spend/features/transactions/presentation/widgets/home_skeleton.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/manual_log_sheet.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/review_banner.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/settle_transactions_sheet.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -391,10 +392,49 @@ class _ReviewBannerSlot extends StatelessWidget {
 }
 
 /// Highlights + transaction list for the selected period.
-class _HomeBody extends StatelessWidget {
+class _HomeBody extends StatefulWidget {
   const _HomeBody();
 
+  @override
+  State<_HomeBody> createState() => _HomeBodyState();
+}
+
+class _HomeBodyState extends State<_HomeBody> {
   static const _sectionGap = AppSpacing.lg;
+  final Set<String> _selectedIds = {};
+  bool get _selectionMode => _selectedIds.isNotEmpty;
+
+  void _toggle(TransactionEntity tx) {
+    if (tx.isMerged) return;
+    setState(() {
+      if (_selectedIds.contains(tx.id)) {
+        _selectedIds.remove(tx.id);
+      } else {
+        _selectedIds.add(tx.id);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() => _selectedIds.clear());
+  }
+
+  Future<void> _openSettle() async {
+    final home = context.read<HomeProvider>();
+    final selected = home.periodItems
+        .where((tx) => _selectedIds.contains(tx.id))
+        .toList();
+    if (selected.length < 2) return;
+    final settled = await SettleTransactionsSheet.show(
+      context,
+      selected: selected,
+    );
+    if (!mounted) return;
+    _clearSelection();
+    if (settled == true) {
+      await home.refresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -467,15 +507,54 @@ class _HomeBody extends StatelessWidget {
         ],
         const _Highlights(),
         const SizedBox(height: _sectionGap),
-        SectionHeader(
-          title: l10n.homeRecentTransactions,
-          actionLabel: hasMore ? l10n.homeViewAll : null,
-          onActionTap: hasMore
-              ? () => _openActivityForPeriod(context, period)
-              : null,
-        ),
+        if (_selectionMode)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.transactionSettleSelectedCount(_selectedIds.length),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _clearSelection,
+                  child: Text(l10n.transactionSettleCancel),
+                ),
+                FilledButton(
+                  onPressed: _selectedIds.length >= 2 ? _openSettle : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primaryStrong,
+                  ),
+                  child: Text(l10n.transactionSettle),
+                ),
+              ],
+            ),
+          )
+        else
+          SectionHeader(
+            title: l10n.homeRecentTransactions,
+            actionLabel: hasMore ? l10n.homeViewAll : null,
+            onActionTap: hasMore
+                ? () => _openActivityForPeriod(context, period)
+                : null,
+          ),
         const SizedBox(height: _Highlights._headerGap),
-        _dayGroups(context, l10n, home),
+        _dayGroups(
+          context,
+          l10n,
+          home,
+          selectionMode: _selectionMode,
+          selectedIds: _selectedIds,
+          onToggle: _toggle,
+          onStartSelect: (tx) {
+            if (tx.isMerged) return;
+            setState(() => _selectedIds.add(tx.id));
+          },
+        ),
         if (periodHasMore) ...[
           const SizedBox(height: AppSpacing.lg),
           _ShowMoreButton(
@@ -619,8 +698,12 @@ void _openActivityForPeriod(BuildContext context, HomePeriod period) {
 Widget _dayGroups(
   BuildContext context,
   AppLocalizations l10n,
-  HomeProvider home,
-) {
+  HomeProvider home, {
+  bool selectionMode = false,
+  Set<String> selectedIds = const {},
+  void Function(TransactionEntity tx)? onToggle,
+  void Function(TransactionEntity tx)? onStartSelect,
+}) {
   final grouped = home.groupByDay();
   final days = grouped.keys.toList();
   if (days.isEmpty) return const SizedBox.shrink();
@@ -630,7 +713,17 @@ Widget _dayGroups(
   return TransactionGroupCard.grouped(
     sections: [
       for (final day in days)
-        _daySection(context, l10n, day: day, txs: grouped[day]!, money: money),
+        _daySection(
+          context,
+          l10n,
+          day: day,
+          txs: grouped[day]!,
+          money: money,
+          selectionMode: selectionMode,
+          selectedIds: selectedIds,
+          onToggle: onToggle,
+          onStartSelect: onStartSelect,
+        ),
     ],
   );
 }
@@ -641,11 +734,16 @@ TransactionGroupSection _daySection(
   required String day,
   required List<TransactionEntity> txs,
   required AppCurrencyController money,
+  bool selectionMode = false,
+  Set<String> selectedIds = const {},
+  void Function(TransactionEntity tx)? onToggle,
+  void Function(TransactionEntity tx)? onStartSelect,
 }) {
-  final spent = txs
+  final countable = txs.where((t) => !t.isMerged);
+  final spent = countable
       .where((t) => t.type != 'credit')
       .fold<double>(0, (sum, t) => sum + t.amount);
-  final received = txs
+  final received = countable
       .where((t) => t.type == 'credit')
       .fold<double>(0, (sum, t) => sum + t.amount);
   final summary = dayGroupSummary(
@@ -672,8 +770,17 @@ TransactionGroupSection _daySection(
       for (final tx in txs)
         TransactionListTile(
           transaction: tx,
-          onTap: () => _openDetail(context, tx),
-          onMerchantTap: tx.displayMerchant.isEmpty
+          selectionMode: selectionMode,
+          selected: selectedIds.contains(tx.id),
+          onTap: () {
+            if (selectionMode) {
+              onToggle?.call(tx);
+            } else {
+              _openDetail(context, tx);
+            }
+          },
+          onLongPress: selectionMode ? null : () => onStartSelect?.call(tx),
+          onMerchantTap: selectionMode || tx.displayMerchant.isEmpty
               ? null
               : () => _openMerchant(context, tx),
         ),

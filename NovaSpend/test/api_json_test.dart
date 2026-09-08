@@ -37,6 +37,87 @@ void main() {
     expect(tx.amount, 99.5);
     expect(tx.transactionDate, '2026-07-06');
     expect(tx.smsSource.raw, 'PKR 99');
+    expect(tx.isSettled, isFalse);
+    expect(tx.isMerged, isFalse);
+  });
+
+  test('transactionFromApi maps settled and merged settlement fields', () {
+    final settled = transactionFromApi({
+      'id': '11111111-1111-1111-1111-111111111111',
+      'user_id': '22222222-2222-2222-2222-222222222222',
+      'amount': 1000,
+      'currency': 'PKR',
+      'type': 'debit',
+      'merchant': 'Cafe',
+      'merchant_normalized': 'cafe',
+      'is_recurring': false,
+      'category': 'Food & Dining',
+      'category_source': 'user',
+      'payment_method': 'card',
+      'bank': 'HBL',
+      'account_id': '',
+      'account_id_masked': '',
+      'transaction_time': '',
+      'transaction_date': '2026-09-01',
+      'day': 'Tuesday',
+      'external_id_type': 'unknown',
+      'dedup_key': 'cafe',
+      'sms_source': {},
+      'parse_confidence': 1,
+      'is_auto_detected': false,
+      'is_edited': true,
+      'is_duplicate': false,
+      'status': 'settled',
+      'original_amount': 4000,
+      'settlement_groups': [
+        {
+          'groupId': 'g1',
+          'mergedTransactionIds': ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+          'createdAt': '2026-09-02T10:00:00Z',
+          'amountApplied': 3000,
+        },
+      ],
+    });
+
+    expect(settled.isSettled, isTrue);
+    expect(settled.originalAmount, 4000);
+    expect(settled.settlementGroups, isNotNull);
+    expect(settled.settlementGroups!.single.groupId, 'g1');
+    expect(settled.settlementGroups!.single.amountApplied, 3000);
+
+    final merged = transactionFromApi({
+      'id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      'user_id': '22222222-2222-2222-2222-222222222222',
+      'amount': 1000,
+      'currency': 'PKR',
+      'type': 'credit',
+      'merchant': 'Friend',
+      'merchant_normalized': 'friend',
+      'is_recurring': false,
+      'category': 'Transfer',
+      'category_source': 'user',
+      'payment_method': 'bank_transfer',
+      'bank': '',
+      'account_id': '',
+      'account_id_masked': '',
+      'transaction_time': '',
+      'transaction_date': '2026-09-02',
+      'day': 'Wednesday',
+      'external_id_type': 'unknown',
+      'dedup_key': 'friend',
+      'sms_source': {},
+      'parse_confidence': 1,
+      'is_auto_detected': false,
+      'is_edited': true,
+      'is_duplicate': false,
+      'status': 'merged',
+      'merged_into_id': '11111111-1111-1111-1111-111111111111',
+      'settlement_group_id': 'g1',
+    });
+
+    expect(merged.isMerged, isTrue);
+    expect(merged.mergedIntoId, '11111111-1111-1111-1111-111111111111');
+    expect(merged.settlementGroupId, 'g1');
   });
 
   test('periodStatsFromApi maps comparison and highlights', () {

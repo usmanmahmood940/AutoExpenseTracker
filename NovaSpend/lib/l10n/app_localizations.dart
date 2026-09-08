@@ -1672,6 +1672,114 @@ abstract class AppLocalizations {
   /// **'Needs review'**
   String get transactionStatusNeedsReview;
 
+  /// No description provided for @transactionStatusSettled.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled'**
+  String get transactionStatusSettled;
+
+  /// No description provided for @transactionStatusMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'Merged'**
+  String get transactionStatusMerged;
+
+  /// No description provided for @transactionOriginalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Original amount'**
+  String get transactionOriginalAmount;
+
+  /// No description provided for @transactionSettlementGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlements'**
+  String get transactionSettlementGroups;
+
+  /// No description provided for @transactionSettlementGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlement · {count} transactions'**
+  String transactionSettlementGroupTitle(int count);
+
+  /// No description provided for @transactionUnsettle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsettle'**
+  String get transactionUnsettle;
+
+  /// No description provided for @transactionUnmerge.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmerge'**
+  String get transactionUnmerge;
+
+  /// No description provided for @transactionMergedInto.
+  ///
+  /// In en, this message translates to:
+  /// **'Merged into'**
+  String get transactionMergedInto;
+
+  /// No description provided for @transactionSettle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settle'**
+  String get transactionSettle;
+
+  /// No description provided for @transactionSettleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settle transactions'**
+  String get transactionSettleTitle;
+
+  /// No description provided for @transactionSettlePickPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the primary transaction'**
+  String get transactionSettlePickPrimary;
+
+  /// No description provided for @transactionSettleConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Settle into primary'**
+  String get transactionSettleConfirm;
+
+  /// No description provided for @transactionSettlePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary becomes {amount}'**
+  String transactionSettlePreview(String amount);
+
+  /// No description provided for @transactionSettleSelectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a transaction to start settling'**
+  String get transactionSettleSelectHint;
+
+  /// No description provided for @transactionSettleSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String transactionSettleSelectedCount(int count);
+
+  /// No description provided for @transactionSettleCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get transactionSettleCancel;
+
+  /// No description provided for @transactionSettleLockedEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsettle or unmerge before editing this transaction'**
+  String get transactionSettleLockedEdit;
+
+  /// No description provided for @transactionSettleLockedDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsettle or unmerge before deleting this transaction'**
+  String get transactionSettleLockedDelete;
+
   /// No description provided for @transactionEdited.
   ///
   /// In en, this message translates to:

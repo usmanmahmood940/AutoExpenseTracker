@@ -20,6 +20,24 @@ class SmsSourceEntity extends Equatable {
   List<Object?> get props => [raw, source, receivedAt, messageId, idempotencyKey];
 }
 
+class SettlementGroupEntity extends Equatable {
+  const SettlementGroupEntity({
+    required this.groupId,
+    required this.mergedTransactionIds,
+    required this.createdAt,
+    required this.amountApplied,
+  });
+
+  final String groupId;
+  final List<String> mergedTransactionIds;
+  final String createdAt;
+  final double amountApplied;
+
+  @override
+  List<Object?> get props =>
+      [groupId, mergedTransactionIds, createdAt, amountApplied];
+}
+
 class TransactionEntity extends Equatable {
   const TransactionEntity({
     required this.id,
@@ -52,6 +70,10 @@ class TransactionEntity extends Equatable {
     required this.isDuplicate,
     required this.status,
     this.reviewedAt,
+    this.originalAmount,
+    this.settlementGroups,
+    this.mergedIntoId,
+    this.settlementGroupId,
     this.createdAt,
     this.updatedAt,
   });
@@ -87,11 +109,22 @@ class TransactionEntity extends Equatable {
   final bool isDuplicate;
   final String status;
   final DateTime? reviewedAt;
+  final double? originalAmount;
+  final List<SettlementGroupEntity>? settlementGroups;
+  final String? mergedIntoId;
+  final String? settlementGroupId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  bool get isSettled => status == 'settled';
+  bool get isMerged => status == 'merged';
+  bool get isSettlementLocked => isSettled || isMerged;
+
   bool get needsConfidenceReview =>
-      parseConfidence < 0.8 && reviewedAt == null && status != 'deleted';
+      parseConfidence < 0.8 &&
+      reviewedAt == null &&
+      status != 'deleted' &&
+      !isSettlementLocked;
 
   /// Instant this transaction occurred, used to sort newest-first.
   /// Prefers [transactionTime] (ISO or `HH:mm`), then [transactionDate], then [createdAt].
@@ -174,6 +207,14 @@ class TransactionEntity extends Equatable {
     bool? isEdited,
     String? status,
     DateTime? reviewedAt,
+    double? originalAmount,
+    bool clearOriginalAmount = false,
+    List<SettlementGroupEntity>? settlementGroups,
+    bool clearSettlementGroups = false,
+    String? mergedIntoId,
+    bool clearMergedIntoId = false,
+    String? settlementGroupId,
+    bool clearSettlementGroupId = false,
     DateTime? updatedAt,
     SmsSourceEntity? smsSource,
   }) {
@@ -210,6 +251,17 @@ class TransactionEntity extends Equatable {
       isDuplicate: isDuplicate,
       status: status ?? this.status,
       reviewedAt: reviewedAt ?? this.reviewedAt,
+      originalAmount: clearOriginalAmount
+          ? null
+          : (originalAmount ?? this.originalAmount),
+      settlementGroups: clearSettlementGroups
+          ? null
+          : (settlementGroups ?? this.settlementGroups),
+      mergedIntoId:
+          clearMergedIntoId ? null : (mergedIntoId ?? this.mergedIntoId),
+      settlementGroupId: clearSettlementGroupId
+          ? null
+          : (settlementGroupId ?? this.settlementGroupId),
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -247,6 +299,10 @@ class TransactionEntity extends Equatable {
         isDuplicate,
         status,
         reviewedAt,
+        originalAmount,
+        settlementGroups,
+        mergedIntoId,
+        settlementGroupId,
         createdAt,
         updatedAt,
       ];

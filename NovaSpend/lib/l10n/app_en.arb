@@ -357,6 +357,39 @@
   "transactionStatusCleared": "Cleared",
   "transactionStatusDeleted": "Deleted",
   "transactionStatusNeedsReview": "Needs review",
+  "transactionStatusSettled": "Settled",
+  "transactionStatusMerged": "Merged",
+  "transactionOriginalAmount": "Original amount",
+  "transactionSettlementGroups": "Settlements",
+  "transactionSettlementGroupTitle": "Settlement · {count} transactions",
+  "@transactionSettlementGroupTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "transactionUnsettle": "Unsettle",
+  "transactionUnmerge": "Unmerge",
+  "transactionMergedInto": "Merged into",
+  "transactionSettle": "Settle",
+  "transactionSettleTitle": "Settle transactions",
+  "transactionSettlePickPrimary": "Choose the primary transaction",
+  "transactionSettleConfirm": "Settle into primary",
+  "transactionSettlePreview": "Primary becomes {amount}",
+  "@transactionSettlePreview": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "transactionSettleSelectHint": "Long-press a transaction to start settling",
+  "transactionSettleSelectedCount": "{count} selected",
+  "@transactionSettleSelectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "transactionSettleCancel": "Cancel selection",
+  "transactionSettleLockedEdit": "Unsettle or unmerge before editing this transaction",
+  "transactionSettleLockedDelete": "Unsettle or unmerge before deleting this transaction",
   "transactionEdited": "Edited",
   "transactionDuplicate": "Possible duplicate",
   "transactionRecurring": "Recurring",

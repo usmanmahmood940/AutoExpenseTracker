@@ -194,8 +194,18 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                       muted: muted,
                       fieldFill: fieldFill,
                       border: border,
+                      readOnly: provider.transaction.isSettled,
                       onChanged: (_) => setState(() {}),
                     ),
+                    if (provider.transaction.isSettled) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        l10n.transactionSettleLockedEdit,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.lg),
                     TransactionFormLabeledField(
                       label: l10n.transactionMerchant,

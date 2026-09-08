@@ -19,23 +19,32 @@ class TransactionListTile extends StatelessWidget {
   const TransactionListTile({
     required this.transaction,
     this.onTap,
+    this.onLongPress,
     this.onMerchantTap,
     this.showTime = true,
+    this.selected = false,
+    this.selectionMode = false,
     super.key,
   });
 
   final TransactionEntity transaction;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback? onMerchantTap;
   final bool showTime;
+  final bool selected;
+  final bool selectionMode;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final money = AppCurrencyScope.of(context);
+    final brightness = theme.brightness;
     final isCredit = transaction.type == 'credit';
-    final amountColor =
-        isCredit
+    final mutedMerged = transaction.isMerged;
+    final amountColor = mutedMerged
+        ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)
+        : isCredit
             ? AppColors.positiveAmount(theme.brightness)
             : theme.colorScheme.onSurface;
     final sign = isCredit ? '+' : '−';
@@ -48,7 +57,9 @@ class TransactionListTile extends StatelessWidget {
       fontSize: 13,
       fontWeight: FontWeight.w600,
       letterSpacing: -0.01 * 15,
-      color: theme.colorScheme.onSurface,
+      color: mutedMerged
+          ? theme.colorScheme.onSurfaceVariant
+          : theme.colorScheme.onSurface,
     );
     final categoryLabel = transaction.category.isEmpty
         ? transaction.bank
@@ -71,15 +82,40 @@ class TransactionListTile extends StatelessWidget {
     final timeIconColor =
         theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55);
 
+    String? statusChip;
+    if (transaction.isSettled) {
+      statusChip = context.l10n.transactionStatusSettled;
+    } else if (transaction.isMerged) {
+      statusChip = context.l10n.transactionStatusMerged;
+    }
+
     return Material(
-      color: Colors.transparent,
+      color: selected
+          ? AppColors.navActiveFill(brightness)
+          : Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal:AppSpacing.md, vertical: AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              if (selectionMode) ...[
+                Icon(
+                  selected
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  size: 22,
+                  color: selected
+                      ? AppColors.primaryStrong
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
               CategoryAvatar(category: transaction.category),
               const SizedBox(width: AppSpacing.smPlus),
               Expanded(
@@ -87,7 +123,7 @@ class TransactionListTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    onMerchantTap == null
+                    onMerchantTap == null || selectionMode
                         ? Text(
                             merchantLabel,
                             style: merchantStyle,
@@ -104,11 +140,28 @@ class TransactionListTile extends StatelessWidget {
                             ),
                           ),
                     const SizedBox(height: 1),
-                    Text(
-                      categoryLabel,
-                      style: categoryStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            categoryLabel,
+                            style: categoryStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (statusChip != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            statusChip,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryInk(brightness),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (time.isNotEmpty) ...[
                       const SizedBox(height: 2),
@@ -145,6 +198,7 @@ class TransactionListTile extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.01 * 15,
                   color: amountColor,
+                  decoration: mutedMerged ? TextDecoration.lineThrough : null,
                 ),
               ),
             ],

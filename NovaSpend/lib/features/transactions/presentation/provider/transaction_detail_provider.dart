@@ -208,7 +208,6 @@ class TransactionDetailProvider extends ChangeNotifier {
       final fields = <String, dynamic>{
         'merchant': trimmedMerchant,
         'merchantDetails': trimmedDetails.isEmpty ? null : trimmedDetails,
-        'amount': amount,
         'category': category,
         'type': type,
         'bank': resolvedBank,
@@ -220,8 +219,11 @@ class TransactionDetailProvider extends ChangeNotifier {
         'isEdited': true,
         'categorySource': 'user',
       };
+      if (!_transaction.isSettled) {
+        fields['amount'] = amount;
+      }
 
-      if (needsReview) {
+      if (needsReview && !_transaction.isSettlementLocked) {
         fields['status'] = 'active';
       }
 
@@ -265,8 +267,12 @@ class TransactionDetailProvider extends ChangeNotifier {
         day: day,
         categorySource: 'user',
         isEdited: true,
-        status: needsReview ? 'active' : _transaction.status,
-        reviewedAt: needsReview ? DateTime.now() : _transaction.reviewedAt,
+        status: (needsReview && !_transaction.isSettlementLocked)
+            ? 'active'
+            : _transaction.status,
+        reviewedAt: (needsReview && !_transaction.isSettlementLocked)
+            ? DateTime.now()
+            : _transaction.reviewedAt,
       );
       rememberForMerchant = _activeOverrideKey != null;
       saved = true;
@@ -281,6 +287,11 @@ class TransactionDetailProvider extends ChangeNotifier {
   }
 
   Future<bool> deleteTransaction() async {
+    if (_transaction.isSettlementLocked) {
+      error = 'settlement_locked';
+      notifyListeners();
+      return false;
+    }
     isSaving = true;
     error = null;
     notifyListeners();
@@ -293,6 +304,60 @@ class TransactionDetailProvider extends ChangeNotifier {
     } finally {
       isSaving = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> unsettleGroup(String groupId) async {
+    isSaving = true;
+    error = null;
+    notifyListeners();
+    try {
+      final updated = await _repository.unsettle(
+        uid: uid,
+        primaryId: _transaction.id,
+        groupId: groupId,
+      );
+      _transaction = updated;
+      amount = updated.amount;
+      saved = true;
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> unmergeTransaction() async {
+    isSaving = true;
+    error = null;
+    notifyListeners();
+    try {
+      final updated = await _repository.unmerge(
+        uid: uid,
+        transactionId: _transaction.id,
+      );
+      _transaction = updated;
+      amount = updated.amount;
+      saved = true;
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<TransactionEntity?> loadLinkedTransaction(String id) async {
+    try {
+      return await _repository.getTransaction(uid, id);
+    } catch (e) {
+      debugPrint('loadLinkedTransaction failed: $e');
+      return null;
     }
   }
 

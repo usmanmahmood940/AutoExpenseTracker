@@ -167,6 +167,44 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<TransactionEntity> settle({
+    required String uid,
+    required String primaryId,
+    required List<String> sourceIds,
+  }) async {
+    try {
+      return await _backend.settle(primaryId: primaryId, sourceIds: sourceIds);
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
+  Future<TransactionEntity> unsettle({
+    required String uid,
+    required String primaryId,
+    required String groupId,
+  }) async {
+    try {
+      return await _backend.unsettle(primaryId: primaryId, groupId: groupId);
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
+  Future<TransactionEntity> unmerge({
+    required String uid,
+    required String transactionId,
+  }) async {
+    try {
+      return await _backend.unmerge(transactionId);
+    } catch (e) {
+      throwAsFailure(e);
+    }
+  }
+
+  @override
   Future<void> upsertMerchantCategoryOverride({
     required String uid,
     required String merchantKey,

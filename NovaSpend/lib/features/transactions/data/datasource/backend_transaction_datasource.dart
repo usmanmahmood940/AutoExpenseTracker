@@ -121,6 +121,53 @@ class BackendTransactionDatasource {
     }
   }
 
+  Future<TransactionEntity> settle({
+    required String primaryId,
+    required List<String> sourceIds,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/transactions/settle',
+        body: {
+          'primaryId': primaryId,
+          'sourceIds': sourceIds,
+        },
+        requireAuth: true,
+      );
+      return transactionFromApi(response);
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<TransactionEntity> unsettle({
+    required String primaryId,
+    required String groupId,
+  }) async {
+    try {
+      final response = await _api.post(
+        '/transactions/$primaryId/unsettle',
+        body: {'groupId': groupId},
+        requireAuth: true,
+      );
+      return transactionFromApi(response);
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<TransactionEntity> unmerge(String transactionId) async {
+    try {
+      final response = await _api.post(
+        '/transactions/$transactionId/unmerge',
+        requireAuth: true,
+      );
+      return transactionFromApi(response);
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
   Future<String> createManualFromIngestion({
     required String ingestionId,
     required Map<String, dynamic> transactionFields,

@@ -857,6 +857,69 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionStatusNeedsReview => 'Needs review';
 
   @override
+  String get transactionStatusSettled => 'Settled';
+
+  @override
+  String get transactionStatusMerged => 'Merged';
+
+  @override
+  String get transactionOriginalAmount => 'Original amount';
+
+  @override
+  String get transactionSettlementGroups => 'Settlements';
+
+  @override
+  String transactionSettlementGroupTitle(int count) {
+    return 'Settlement · $count transactions';
+  }
+
+  @override
+  String get transactionUnsettle => 'Unsettle';
+
+  @override
+  String get transactionUnmerge => 'Unmerge';
+
+  @override
+  String get transactionMergedInto => 'Merged into';
+
+  @override
+  String get transactionSettle => 'Settle';
+
+  @override
+  String get transactionSettleTitle => 'Settle transactions';
+
+  @override
+  String get transactionSettlePickPrimary => 'Choose the primary transaction';
+
+  @override
+  String get transactionSettleConfirm => 'Settle into primary';
+
+  @override
+  String transactionSettlePreview(String amount) {
+    return 'Primary becomes $amount';
+  }
+
+  @override
+  String get transactionSettleSelectHint =>
+      'Long-press a transaction to start settling';
+
+  @override
+  String transactionSettleSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get transactionSettleCancel => 'Cancel selection';
+
+  @override
+  String get transactionSettleLockedEdit =>
+      'Unsettle or unmerge before editing this transaction';
+
+  @override
+  String get transactionSettleLockedDelete =>
+      'Unsettle or unmerge before deleting this transaction';
+
+  @override
   String get transactionEdited => 'Edited';
 
   @override

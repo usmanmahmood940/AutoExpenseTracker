@@ -82,9 +82,42 @@ TransactionEntity transactionFromApi(Map<String, dynamic> json) {
     isDuplicate: json['is_duplicate'] as bool? ?? false,
     status: json['status'] as String? ?? 'active',
     reviewedAt: parseApiDateTime(json['reviewed_at']),
+    originalAmount: (json['original_amount'] as num?)?.toDouble(),
+    settlementGroups: settlementGroupsFromApi(json['settlement_groups']),
+    mergedIntoId: json['merged_into_id']?.toString(),
+    settlementGroupId: json['settlement_group_id'] as String?,
     createdAt: parseApiDateTime(json['created_at']),
     updatedAt: parseApiDateTime(json['updated_at']),
   );
+}
+
+List<SettlementGroupEntity>? settlementGroupsFromApi(dynamic raw) {
+  if (raw is! List) return null;
+  final groups = <SettlementGroupEntity>[];
+  for (final item in raw) {
+    if (item is! Map) continue;
+    final map = Map<String, dynamic>.from(item);
+    final groupId = map['groupId']?.toString() ?? map['group_id']?.toString();
+    if (groupId == null || groupId.isEmpty) continue;
+    final idsRaw = map['mergedTransactionIds'] ?? map['merged_transaction_ids'];
+    final ids = idsRaw is List
+        ? idsRaw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList()
+        : <String>[];
+    groups.add(
+      SettlementGroupEntity(
+        groupId: groupId,
+        mergedTransactionIds: ids,
+        createdAt: map['createdAt']?.toString() ??
+            map['created_at']?.toString() ??
+            '',
+        amountApplied:
+            (map['amountApplied'] as num?)?.toDouble() ??
+            (map['amount_applied'] as num?)?.toDouble() ??
+            0,
+      ),
+    );
+  }
+  return groups;
 }
 
 RawIngestionEntity ingestionFromApi(Map<String, dynamic> json) {

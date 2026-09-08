@@ -65,6 +65,23 @@ abstract class TransactionRepository {
 
   Future<void> softDelete(String uid, String transactionId);
 
+  Future<TransactionEntity> settle({
+    required String uid,
+    required String primaryId,
+    required List<String> sourceIds,
+  });
+
+  Future<TransactionEntity> unsettle({
+    required String uid,
+    required String primaryId,
+    required String groupId,
+  });
+
+  Future<TransactionEntity> unmerge({
+    required String uid,
+    required String transactionId,
+  });
+
   Future<void> upsertMerchantCategoryOverride({
     required String uid,
     required String merchantKey,

@@ -51,6 +51,7 @@ class TransactionAmountField extends StatelessWidget {
     required this.border,
     required this.onChanged,
     this.hintText,
+    this.readOnly = false,
     super.key,
   });
 
@@ -62,6 +63,7 @@ class TransactionAmountField extends StatelessWidget {
   final Color border;
   final ValueChanged<String> onChanged;
   final String? hintText;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +116,8 @@ class TransactionAmountField extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: controller,
+                  readOnly: readOnly,
+                  enabled: !readOnly,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
