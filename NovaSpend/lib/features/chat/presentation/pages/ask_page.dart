@@ -154,20 +154,11 @@ class _AskViewState extends State<_AskView> {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     final asking = provider.isAsking;
     final canSend = _draft.trim().isNotEmpty && !asking;
-    final clearColor = AppColors.primaryInk(Theme.of(context).brightness);
 
     return _AskChrome(
       leadingActions: [
         if (provider.hasConversation)
-          TextButton(
-            onPressed: provider.clearThread,
-            style: TextButton.styleFrom(
-              foregroundColor: clearColor,
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            ),
-            child: Text(l10n.askClearThread),
-          ),
+          _AskClearButton(onPressed: provider.clearThread),
       ],
       body: Padding(
         padding: EdgeInsets.only(bottom: keyboardInset),
@@ -299,6 +290,40 @@ class _AskViewState extends State<_AskView> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Header "Clear" control sized to the 20px settings icon beside it.
+class _AskClearButton extends StatelessWidget {
+  const _AskClearButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final color = AppColors.primaryInk(Theme.of(context).brightness);
+
+    return Semantics(
+      button: true,
+      label: l10n.askClearThread,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.sm),
+          child: Text(
+            l10n.askClearThread,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              height: 1.25,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
