@@ -18,7 +18,21 @@ export type TransactionType = 'debit' | 'credit';
 /** 'user', 'rule', or the Gemini model id that categorized the transaction */
 export type CategorySource = 'user' | 'rule' | string;
 
-export type TransactionStatus = 'active' | 'deleted' | 'needs_review';
+export type TransactionStatus =
+  | 'active'
+  | 'deleted'
+  | 'needs_review'
+  | 'settled'
+  | 'merged';
+
+/** One settle batch on a primary transaction. */
+export interface SettlementGroup {
+  groupId: string;
+  mergedTransactionIds: string[];
+  createdAt: FirebaseTimestamp | string;
+  /** Net amount applied to primary by this group (credits reduce, debits increase). */
+  amountApplied: number;
+}
 
 export type IngestionSource = 'ios_shortcut' | 'gmail' | 'manual';
 
@@ -351,6 +365,14 @@ export interface Transaction {
   status: TransactionStatus;
   /** Set when user confirms / dismisses a low-confidence parse in Review */
   reviewedAt?: FirebaseTimestamp | null;
+  /** Bank/true amount before first settle; set on primary when first settled. */
+  originalAmount?: number | null;
+  /** Settle batches on a primary (`settled`) transaction. */
+  settlementGroups?: SettlementGroup[] | null;
+  /** When status is `merged`, id of the primary this row was absorbed into. */
+  mergedIntoId?: string | null;
+  /** When status is `merged`, settlement group id on the primary. */
+  settlementGroupId?: string | null;
   createdAt: FirebaseTimestamp;
   updatedAt: FirebaseTimestamp;
 }
