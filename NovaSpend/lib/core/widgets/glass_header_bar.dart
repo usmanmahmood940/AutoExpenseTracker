@@ -31,7 +31,7 @@ class GlassHeaderBar extends StatelessWidget {
   final List<Widget>? actions;
   final double barHeight;
 
-  static const double defaultBarHeight = 40;
+  static const double defaultBarHeight = 52;
 
   /// Space under the title inside the bar. Kept independent of [barHeight]
   /// so shrinking the bar only trims space above the title.
