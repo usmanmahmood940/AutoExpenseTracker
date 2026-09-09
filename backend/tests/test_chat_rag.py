@@ -510,3 +510,122 @@ def test_ask_planner_failure_still_answers(api_client: TestClient, monkeypatch) 
         },
     )
     assert response.status_code == 200, response.text
+
+
+def test_ask_settled_lists_primary_not_largest_debits(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """Settle is a status, not a merchant — cosine/largest_debits cannot answer it."""
+    from app.services import chat_rag
+
+    captured: dict[str, str] = {}
+
+    async def fake_generate(api_key: str, prompt: str) -> tuple[str, str]:
+        captured["prompt"] = prompt
+        return "Yes — Cafe is settled (net PKR 1,000.00).", "fake-model"
+
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "test-key")
+    monkeypatch.setattr(chat_rag, "generate_chat_answer", fake_generate)
+    _offline_embeddings(monkeypatch)
+
+    _seed_ten(api_client)
+    cafe = _post_tx(api_client, merchant="Cafe", amount=4000, tx_date="2026-09-01")
+    friend = _post_tx(
+        api_client,
+        merchant="Friend A",
+        amount=3000,
+        tx_date="2026-09-01",
+        tx_type="credit",
+        category="Transfer",
+    )
+    settled = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": cafe["id"], "sourceIds": [friend["id"]]},
+    )
+    assert settled.status_code == 200, settled.text
+
+    response = api_client.post(
+        "/chat/ask",
+        json={
+            "question": "give me settle transaction if any",
+            "from": "2026-01-01",
+            "to": "2026-12-31",
+        },
+    )
+    assert response.status_code == 200, response.text
+    tools = _tools_json(captured["prompt"])
+    settled_rows = tools["settled_transactions"]
+    assert {row["merchant"] for row in settled_rows} == {"Cafe"}
+    assert all(row.get("status") == "settled" for row in settled_rows)
+    citations = {item["merchant"] for item in response.json()["citations"]}
+    assert citations == {"Cafe"}
+    assert "Daraz" not in citations
+    assert "KFC" not in citations
+    assert "matched_totals" not in tools
+
+
+def test_ask_settled_includes_just_settled_outside_receipt_window(
+    api_client: TestClient, monkeypatch
+) -> None:
+    """A settlement today must surface even when the receipt is years old."""
+    from app.services import chat_rag
+
+    captured: dict[str, str] = {}
+
+    async def fake_generate(api_key: str, prompt: str) -> tuple[str, str]:
+        captured["prompt"] = prompt
+        return "Cafe was just settled.", "fake-model"
+
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "test-key")
+    monkeypatch.setattr(chat_rag, "generate_chat_answer", fake_generate)
+    _offline_embeddings(monkeypatch)
+
+    _seed_ten(api_client)
+    cafe = _post_tx(api_client, merchant="Cafe", amount=4000, tx_date="2024-01-15")
+    friend = _post_tx(
+        api_client,
+        merchant="Friend A",
+        amount=3000,
+        tx_date="2024-01-15",
+        tx_type="credit",
+        category="Transfer",
+    )
+    settled = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": cafe["id"], "sourceIds": [friend["id"]]},
+    )
+    assert settled.status_code == 200, settled.text
+
+    today = date.today().isoformat()
+    response = api_client.post(
+        "/chat/ask",
+        json={"question": "any settled transactions?", "from": today, "to": today},
+    )
+    assert response.status_code == 200, response.text
+    tools = _tools_json(captured["prompt"])
+    assert {row["merchant"] for row in tools["settled_transactions"]} == {"Cafe"}
+
+
+def test_ask_show_settled_is_not_navigation(
+    api_client: TestClient, monkeypatch
+) -> None:
+    from app.services import chat_rag
+
+    async def fake_generate(api_key: str, prompt: str) -> tuple[str, str]:
+        return "No settlements in this window.", "fake-model"
+
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "test-key")
+    monkeypatch.setattr(chat_rag, "generate_chat_answer", fake_generate)
+    _offline_embeddings(monkeypatch)
+
+    _seed_ten(api_client)
+    response = api_client.post(
+        "/chat/ask",
+        json={
+            "question": "show me settled transactions",
+            "from": "2026-03-01",
+            "to": "2026-03-31",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["source"] == "gemini"

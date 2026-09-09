@@ -8,15 +8,14 @@ import re
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Date, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.errors import BadRequestError, ServiceUnavailableError
-from app.db.models.enums import TransactionType
+from app.db.models.enums import TransactionStatus, TransactionType
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
-from app.services.transactions import SUMMABLE_STATUSES
 from app.services import analytics as analytics_service
 from app.services.chat_query_plan import plan_merchants
 from app.services.chat_question_range import resolve_ask_window
@@ -32,6 +31,7 @@ from app.services.rag_retrieval import RagHit, retrieve, retrieve_lexical
 from app.services.rate_limit import enforce_rate_limit
 from app.services.spending_signals import detect_signals
 from app.services.sql_like import contains_pattern
+from app.services.transactions import SUMMABLE_STATUSES
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,12 @@ _NAV = re.compile(
 )
 _ANALYTICS_HINT = re.compile(
     r"\b(why|how much|total|spent|spend|compare|increase|jump|trend|"
-    r"average|net|received|category|merchant)\b",
+    r"average|net|received|category|merchant|"
+    r"settled?|unsettled?|merged?|reimburse(?:ment|d)?)\b",
+    re.I,
+)
+_SETTLEMENT_HINT = re.compile(
+    r"\b(settled?|unsettled?|merged?|reimburse(?:ment|d)?)\b",
     re.I,
 )
 
@@ -90,7 +95,9 @@ covering every matching transaction, so quote its numbers directly.
 Only mention merchants that appear in matched_totals.by_merchant.
 Retrieved documents are only examples for context. They are a partial sample,
 so never add them up and never treat them as a complete list.
-If matched_totals is present but empty, say you found no matching spending.
+When settled_transactions is present it is the complete list of settlements
+in the window. Merged source rows are absorbed into that primary and are not
+separate spends. Do not say there are no settlements if the list is non-empty.
 {history_block}Question: {question}
 
 Tool outputs (exact numbers):
@@ -156,8 +163,12 @@ def _guardrail(question: str) -> None:
         )
 
 
+def _is_settlement_question(question: str) -> bool:
+    return bool(_SETTLEMENT_HINT.search(question or ""))
+
+
 def _navigation_reply(question: str) -> tuple[str, str] | None:
-    if _ANALYTICS_HINT.search(question):
+    if _ANALYTICS_HINT.search(question) or _is_settlement_question(question):
         return None
     match = _NAV.match(question.strip())
     if match is None:
@@ -188,6 +199,7 @@ def _citation_from_tx(tx: Transaction) -> dict:
         "amount": money_float(tx.amount),
         "merchant": tx.merchant,
         "category": tx.category,
+        "status": tx.status.value if hasattr(tx.status, "value") else str(tx.status),
     }
 
 
@@ -333,6 +345,47 @@ async def _matched_transactions(
     return out
 
 
+async def _settled_transactions(
+    session: AsyncSession,
+    *,
+    user: User,
+    start: date,
+    end: date,
+    limit: int = 20,
+) -> list[Transaction]:
+    """Settled primaries in the window. Merged sources are not listed.
+
+    Include rows whose original spend date is outside the selected range when
+    they were settled (updated) inside it — "I just settled X" is about the
+    settlement, not the receipt date.
+    """
+    in_window = or_(
+        and_(
+            Transaction.transaction_date >= start,
+            Transaction.transaction_date <= end,
+        ),
+        and_(
+            cast(Transaction.updated_at, Date) >= start,
+            cast(Transaction.updated_at, Date) <= end,
+        ),
+    )
+    result = await session.execute(
+        select(Transaction)
+        .where(
+            Transaction.user_id == user.id,
+            Transaction.status == TransactionStatus.settled,
+            in_window,
+        )
+        .order_by(
+            Transaction.updated_at.desc(),
+            Transaction.transaction_date.desc(),
+            Transaction.amount.desc(),
+        )
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
 async def _merchant_pool(
     session: AsyncSession,
     *,
@@ -367,6 +420,10 @@ async def _resolve_terms(
     terms = terms_from_question(question)
     if terms:
         return terms
+    # Status questions are answered by SQL, not merchant guessing. "settle"
+    # matching analytics would otherwise send the planner looking for Cafe.
+    if _is_settlement_question(question):
+        return []
     if not api_key or not _ANALYTICS_HINT.search(question):
         return []
     pool = await _merchant_pool(session, user=user, start=start, end=end)
@@ -476,6 +533,13 @@ async def _tool_payload(
                 session, user=user, start=start, end=end, terms=terms, question=question
             )
         ]
+    if _is_settlement_question(question):
+        payload["settled_transactions"] = [
+            _citation_from_tx(tx)
+            for tx in await _settled_transactions(
+                session, user=user, start=start, end=end
+            )
+        ]
     if start == end:
         payload["day_totals"] = await _day_totals(session, user=user, day=start)
     return payload
@@ -504,6 +568,9 @@ async def _ask_docs(
     end: date,
     terms: list[str] | None = None,
 ) -> list[RagHit]:
+    lexical_terms = list(terms or [])
+    if _is_settlement_question(question) and "settled" not in lexical_terms:
+        lexical_terms.append("settled")
     span = (end - start).days + 1
     if span <= _SHORT_WINDOW_DAYS:
         txs = await _transactions_in_range(session, user=user, start=start, end=end)
@@ -514,7 +581,7 @@ async def _ask_docs(
     lexical = await retrieve_lexical(
         session,
         user_id=user.id,
-        terms=terms or [],
+        terms=lexical_terms,
         limit=_LEXICAL_RETRIEVE_LIMIT,
         doc_types=["transaction"],
         date_from=start,
@@ -561,7 +628,7 @@ async def _ask_docs(
                 strict_period=True,
             )
         )
-    return _filter_hits(_dedupe_hits(*groups), terms or [], question)
+    return _filter_hits(_dedupe_hits(*groups), lexical_terms, question)
 
 
 def _filter_hits(hits: list[RagHit], terms: list[str], question: str) -> list[RagHit]:
@@ -604,11 +671,7 @@ async def _citations_from_hits(
             tx = await session.get(Transaction, uuid.UUID(hit.ref_id))
         except ValueError:
             continue
-        if (
-            tx is None
-            or tx.user_id != user.id
-            or tx.status not in SUMMABLE_STATUSES
-        ):
+        if tx is None or tx.user_id != user.id or tx.status not in SUMMABLE_STATUSES:
             continue
         citations.append(_citation_from_tx(tx))
         seen.add(hit.ref_id)
@@ -760,7 +823,9 @@ async def ask(
         terms=terms,
     )
     matched_citations = list(tools.get("matched_transactions") or [])
-    if matched_citations:
+    if "settled_transactions" in tools:
+        citations = list(tools.get("settled_transactions") or [])
+    elif matched_citations:
         citations = matched_citations
     else:
         sql_citations = list(tools.get("largest_debits") or [])

@@ -228,6 +228,7 @@ class ChatCitationOut(BaseModel):
     amount: float | None = None
     merchant: str | None = None
     category: str | None = None
+    status: str | None = None
 
 
 class ChatSuggestionOut(BaseModel):
