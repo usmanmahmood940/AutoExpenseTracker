@@ -40,6 +40,7 @@ class SearchProvider extends SafeChangeNotifier {
   String? _uid;
   Timer? _debounce;
   Future<void>? _paymentMethodsFuture;
+  bool _refreshing = false;
 
   /// Last item in server page order (before client-side sort).
   TransactionEntity? _pageCursor;
@@ -56,6 +57,18 @@ class SearchProvider extends SafeChangeNotifier {
   void reloadIfLoaded() {
     if (_uid == null || !hasSearched) return;
     unawaited(runSearch(saveRecent: false));
+  }
+
+  /// Pull-to-refresh: reloads the current query without replacing the list
+  /// with a skeleton.
+  Future<void> refresh() async {
+    if (_uid == null || _refreshing) return;
+    _refreshing = true;
+    try {
+      await runSearch(saveRecent: false, keepVisible: true);
+    } finally {
+      _refreshing = false;
+    }
   }
 
   /// Loads the Activity list once if it has never been fetched.
@@ -251,11 +264,14 @@ class SearchProvider extends SafeChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> runSearch({required bool saveRecent}) async {
+  Future<void> runSearch({
+    required bool saveRecent,
+    bool keepVisible = false,
+  }) async {
     final uid = _uid;
     if (uid == null) return;
 
-    isLoading = true;
+    isLoading = !keepVisible;
     hasSearched = true;
     error = null;
     notifyListeners();
@@ -281,12 +297,14 @@ class SearchProvider extends SafeChangeNotifier {
       }
     } catch (e) {
       error = e.toString();
-      results = [];
-      _pageCursor = null;
-      hasMore = false;
-      matchCount = 0;
-      matchSpent = 0;
-      matchReceived = 0;
+      if (!keepVisible) {
+        results = [];
+        _pageCursor = null;
+        hasMore = false;
+        matchCount = 0;
+        matchSpent = 0;
+        matchReceived = 0;
+      }
     } finally {
       isLoading = false;
       notifyListeners();
@@ -299,6 +317,7 @@ class SearchProvider extends SafeChangeNotifier {
     if (uid == null ||
         isLoading ||
         isLoadingMore ||
+        _refreshing ||
         !hasMore ||
         cursor == null) {
       return;

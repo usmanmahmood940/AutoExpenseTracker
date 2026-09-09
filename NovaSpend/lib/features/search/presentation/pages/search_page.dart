@@ -316,128 +316,136 @@ class _SearchViewState extends State<_SearchView> {
                   ),
                 ),
                 Expanded(
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    slivers: [
-                      if (provider.recentSearches.isNotEmpty &&
-                          !provider.hasSearched)
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.md,
-                            0,
-                            AppSpacing.md,
-                            AppSpacing.lg,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SectionHeader(
-                                  title: l10n.searchRecent,
-                                  actionLabel: l10n.searchClearRecent,
-                                  onActionTap: provider.clearRecent,
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Wrap(
-                                  spacing: AppSpacing.sm,
-                                  runSpacing: AppSpacing.sm,
+                  child: ClipRect(
+                    child: RefreshIndicator(
+                      onRefresh: provider.refresh,
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          if (provider.recentSearches.isNotEmpty &&
+                              !provider.hasSearched)
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                0,
+                                AppSpacing.md,
+                                AppSpacing.lg,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
-                                    for (final term
-                                        in provider.recentSearches.take(5))
-                                      _RecentSearchChip(
-                                        label: term,
-                                        onTap: () {
-                                          _controller.text = term;
-                                          provider.applyRecent(term);
-                                          setState(() {});
-                                        },
-                                      ),
+                                    SectionHeader(
+                                      title: l10n.searchRecent,
+                                      actionLabel: l10n.searchClearRecent,
+                                      onActionTap: provider.clearRecent,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Wrap(
+                                      spacing: AppSpacing.sm,
+                                      runSpacing: AppSpacing.sm,
+                                      children: [
+                                        for (final term
+                                            in provider.recentSearches.take(5))
+                                          _RecentSearchChip(
+                                            label: term,
+                                            onTap: () {
+                                              _controller.text = term;
+                                              provider.applyRecent(term);
+                                              setState(() {});
+                                            },
+                                          ),
+                                      ],
+                                    ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      if (provider.isLoading)
-                        const SliverPadding(
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.md,
-                            0,
-                            AppSpacing.md,
-                            AppSpacing.xxl,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: SkeletonTransactionList(),
-                          ),
-                        )
-                      else if (provider.error != null &&
-                          provider.results.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: ErrorStateView(
-                            error: provider.error,
-                            onRetry: () =>
-                                provider.runSearch(saveRecent: false),
-                          ),
-                        )
-                      else if (!provider.hasSearched)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: EmptyStateView(
-                            title: l10n.searchEmptyTitle,
-                            message: l10n.searchEmptyHint,
-                          ),
-                        )
-                      else if (provider.results.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: EmptyStateView(
-                            title: provider.query.hasActiveFilters
-                                ? l10n.searchNoResultsTitle
-                                : l10n.feedEmpty,
-                            message: provider.query.hasActiveFilters
-                                ? l10n.searchNoResultsHint
-                                : l10n.feedEmptyHint,
-                          ),
-                        )
-                      else ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _ResultsCountRow(
-                                  count: provider.matchCount,
-                                  spent: provider.matchSpent,
-                                  received: provider.matchReceived,
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                provider.query.sort.groupsByDay
-                                    ? _ResultsDayGroups(
-                                        results: provider.results,
-                                      )
-                                    : _ResultsFlatList(
-                                        results: provider.results,
+                          if (provider.isLoading)
+                            const SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                0,
+                                AppSpacing.md,
+                                AppSpacing.xxl,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: SkeletonTransactionList(),
+                              ),
+                            )
+                          else if (provider.error != null &&
+                              provider.results.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: ErrorStateView(
+                                error: provider.error,
+                                onRetry: () =>
+                                    provider.runSearch(saveRecent: false),
+                              ),
+                            )
+                          else if (!provider.hasSearched)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: EmptyStateView(
+                                title: l10n.searchEmptyTitle,
+                                message: l10n.searchEmptyHint,
+                              ),
+                            )
+                          else if (provider.results.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: EmptyStateView(
+                                title: provider.query.hasActiveFilters
+                                    ? l10n.searchNoResultsTitle
+                                    : l10n.feedEmpty,
+                                message: provider.query.hasActiveFilters
+                                    ? l10n.searchNoResultsHint
+                                    : l10n.feedEmptyHint,
+                              ),
+                            )
+                          else ...[
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _ResultsCountRow(
+                                      count: provider.matchCount,
+                                      spent: provider.matchSpent,
+                                      received: provider.matchReceived,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    provider.query.sort.groupsByDay
+                                        ? _ResultsDayGroups(
+                                            results: provider.results,
+                                          )
+                                        : _ResultsFlatList(
+                                            results: provider.results,
+                                          ),
+                                    if (provider.error != null) ...[
+                                      const SizedBox(height: AppSpacing.md),
+                                      LoadErrorBanner(
+                                        error: provider.error,
+                                        onRetry: provider.loadMore,
                                       ),
-                                if (provider.error != null) ...[
-                                  const SizedBox(height: AppSpacing.md),
-                                  LoadErrorBanner(
-                                    error: provider.error,
-                                    onRetry: provider.loadMore,
-                                  ),
-                                ],
-                                if (provider.isLoadingMore)
-                                  const AppListFooterLoader(),
-                                const SizedBox(height: AppSpacing.xxl),
-                              ],
+                                    ],
+                                    if (provider.isLoadingMore)
+                                      const AppListFooterLoader(),
+                                    const SizedBox(height: AppSpacing.xxl),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
