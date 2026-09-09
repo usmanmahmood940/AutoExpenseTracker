@@ -676,6 +676,22 @@ class _FormBody extends StatelessWidget {
             onChanged: provider.setNote,
           ),
         ),
+        const SizedBox(height: AppSpacing.lg),
+        TransactionRememberMerchantToggle(
+          enabled: provider.rememberForMerchant,
+          isLoading: provider.isLoadingRememberState,
+          title: l10n.transactionRememberMerchant,
+          subtitle: l10n.transactionAutoCategorizeHint(
+            merchant.text.trim().isEmpty
+                ? l10n.transactionMerchant
+                : merchant.text.trim(),
+          ),
+          ink: ink,
+          muted: muted,
+          iconFill: fieldFill,
+          border: border,
+          onChanged: provider.setRememberForMerchant,
+        ),
       ],
     );
   }

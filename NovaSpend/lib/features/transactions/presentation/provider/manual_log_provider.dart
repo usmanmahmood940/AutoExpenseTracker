@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:intl/intl.dart';
 import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/core/utils/money_format.dart';
 import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
+import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/create_transaction.dart';
 import 'package:nova_spend/features/transactions/domain/usecases/parse_transaction_text.dart';
 
@@ -13,11 +16,14 @@ class ManualLogProvider extends SafeChangeNotifier {
   ManualLogProvider({
     required ParseTransactionText parseTransactionText,
     required CreateTransaction createTransaction,
+    required TransactionRepository transactionRepository,
   }) : _parseTransactionText = parseTransactionText,
-       _createTransaction = createTransaction;
+       _createTransaction = createTransaction,
+       _repository = transactionRepository;
 
   final ParseTransactionText _parseTransactionText;
   final CreateTransaction _createTransaction;
+  final TransactionRepository _repository;
 
   String uid = '';
   String currency = 'PKR';
@@ -47,6 +53,11 @@ class ManualLogProvider extends SafeChangeNotifier {
   Object? actionError;
   double? parseConfidence;
 
+  bool rememberForMerchant = false;
+  bool isLoadingRememberState = false;
+  String? _activeOverrideKey;
+  int _rememberLoadToken = 0;
+
   bool get canParse => pasteText.trim().isNotEmpty && !isParsing && !isSaving;
 
   bool get canSave => !isSaving && !isParsing;
@@ -66,6 +77,9 @@ class ManualLogProvider extends SafeChangeNotifier {
     mode = next;
     pasteError = null;
     notifyListeners();
+    if (next == ManualLogMode.form) {
+      unawaited(_loadRememberState());
+    }
   }
 
   void setPasteText(String value) {
@@ -115,6 +129,11 @@ class ManualLogProvider extends SafeChangeNotifier {
 
   void setNote(String value) {
     note = value;
+    notifyListeners();
+  }
+
+  void setRememberForMerchant(bool value) {
+    rememberForMerchant = value;
     notifyListeners();
   }
 
@@ -177,15 +196,18 @@ class ManualLogProvider extends SafeChangeNotifier {
         duplicateTransactionId = draft.transactionId;
         bannerMessage = 'duplicate';
         mode = ManualLogMode.form;
+        await _loadRememberState();
         return false;
       }
       if (!draft.ok) {
         bannerIsDuplicate = false;
         bannerMessage = 'parseFailed';
         mode = ManualLogMode.form;
+        await _loadRememberState();
         return false;
       }
       mode = ManualLogMode.form;
+      await _loadRememberState();
       return true;
     } catch (e) {
       actionError = e;
@@ -203,11 +225,13 @@ class ManualLogProvider extends SafeChangeNotifier {
     isSaving = true;
     notifyListeners();
     try {
+      final trimmedMerchant = merchant.trim();
+      final currentKey = normalizeMerchantKey(trimmedMerchant);
       await _createTransaction(
         uid: uid,
         fields: {
           'amount': amount,
-          'merchant': merchant.trim(),
+          'merchant': trimmedMerchant,
           'transactionDate': transactionDate,
           'type': type,
           'category': category.trim(),
@@ -217,6 +241,10 @@ class ManualLogProvider extends SafeChangeNotifier {
           'categorySource': 'user',
           if (note.trim().isNotEmpty) 'note': note.trim(),
         },
+      );
+      await _persistRememberState(
+        merchantKey: currentKey,
+        displayName: trimmedMerchant,
       );
       return true;
     } catch (e) {
@@ -259,5 +287,69 @@ class ManualLogProvider extends SafeChangeNotifier {
     if (time.isNotEmpty) transactionTime = time;
 
     paymentMethod = normalizePaymentMethod(draft.paymentMethod);
+  }
+
+  Future<void> _loadRememberState() async {
+    final token = ++_rememberLoadToken;
+    final key = normalizeMerchantKey(merchant);
+    if (uid.isEmpty || key.isEmpty) {
+      rememberForMerchant = false;
+      _activeOverrideKey = null;
+      isLoadingRememberState = false;
+      notifyListeners();
+      return;
+    }
+
+    isLoadingRememberState = true;
+    notifyListeners();
+    try {
+      final remembered = await _repository.getMerchantCategoryOverride(
+        uid: uid,
+        merchantKey: merchant,
+      );
+      if (isDisposed || token != _rememberLoadToken) return;
+      rememberForMerchant = remembered != null;
+      _activeOverrideKey = remembered != null ? key : null;
+      if (remembered != null &&
+          remembered.trim().isNotEmpty &&
+          remembered.toLowerCase() != 'uncategorized') {
+        category = remembered;
+        if (categoryError != null) categoryError = null;
+      }
+    } catch (_) {
+      if (isDisposed || token != _rememberLoadToken) return;
+      rememberForMerchant = false;
+      _activeOverrideKey = null;
+    } finally {
+      if (!isDisposed && token == _rememberLoadToken) {
+        isLoadingRememberState = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> _persistRememberState({
+    required String merchantKey,
+    required String displayName,
+  }) async {
+    if (rememberForMerchant && merchantKey.isNotEmpty) {
+      await _repository.upsertMerchantCategoryOverride(
+        uid: uid,
+        merchantKey: displayName,
+        displayName: displayName,
+        category: category.trim(),
+      );
+      _activeOverrideKey = merchantKey;
+      return;
+    }
+    if (!rememberForMerchant &&
+        _activeOverrideKey != null &&
+        _activeOverrideKey == merchantKey) {
+      await _repository.deleteMerchantCategoryOverride(
+        uid: uid,
+        merchantKey: _activeOverrideKey!,
+      );
+      _activeOverrideKey = null;
+    }
   }
 }

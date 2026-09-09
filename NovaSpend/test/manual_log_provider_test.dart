@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nova_spend/core/constants/app_constants.dart';
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/transactions/domain/entities/parsed_transaction_draft.dart';
 import 'package:nova_spend/features/transactions/domain/entities/period_stats_entity.dart';
@@ -16,6 +17,9 @@ class FakeManualLogRepo implements TransactionRepository {
   Object? parseError;
   Object? createError;
   Map<String, dynamic>? createdFields;
+  final Map<String, String> overrides = {};
+  Map<String, dynamic>? lastUpsert;
+  String? lastDeletedKey;
 
   @override
   Future<ParsedTransactionDraft> parseText({
@@ -98,24 +102,55 @@ class FakeManualLogRepo implements TransactionRepository {
       throw UnimplementedError();
 
   @override
+  Future<TransactionEntity> settle({
+    required String uid,
+    required String primaryId,
+    required List<String> sourceIds,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<TransactionEntity> unsettle({
+    required String uid,
+    required String primaryId,
+    required String groupId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<TransactionEntity> unmerge({
+    required String uid,
+    required String transactionId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<void> upsertMerchantCategoryOverride({
     required String uid,
     required String merchantKey,
     required String displayName,
     required String category,
-  }) => throw UnimplementedError();
+  }) async {
+    lastUpsert = {
+      'uid': uid,
+      'merchantKey': merchantKey,
+      'displayName': displayName,
+      'category': category,
+    };
+    overrides[normalizeMerchantKey(merchantKey)] = category;
+  }
 
   @override
   Future<String?> getMerchantCategoryOverride({
     required String uid,
     required String merchantKey,
-  }) => throw UnimplementedError();
+  }) async => overrides[normalizeMerchantKey(merchantKey)];
 
   @override
   Future<void> deleteMerchantCategoryOverride({
     required String uid,
     required String merchantKey,
-  }) => throw UnimplementedError();
+  }) async {
+    lastDeletedKey = merchantKey;
+    overrides.remove(normalizeMerchantKey(merchantKey));
+  }
 }
 
 void main() {
@@ -127,6 +162,7 @@ void main() {
     provider = ManualLogProvider(
       parseTransactionText: ParseTransactionText(repo),
       createTransaction: CreateTransaction(repo),
+      transactionRepository: repo,
     )..configure(uid: 'user-1', currency: 'PKR');
   });
 
@@ -222,5 +258,56 @@ void main() {
     expect(repo.createdFields?['merchant'], 'KFC');
     expect(repo.createdFields?['amount'], 199.5);
     expect(repo.createdFields?['transactionDate'], '2026-09-03');
+    expect(repo.lastUpsert, isNull);
+  });
+
+  test('parse applies a remembered merchant category', () async {
+    repo.overrides['kfc'] = 'Food & Dining';
+    repo.parseResult = const ParsedTransactionDraft(
+      ok: true,
+      amount: 200,
+      merchant: 'KFC',
+      category: 'Shopping',
+      type: 'debit',
+      transactionDate: '2026-09-03',
+    );
+    provider.setPasteText('spent 200 at KFC');
+
+    final ok = await provider.parse();
+    expect(ok, isTrue);
+    expect(provider.category, 'Food & Dining');
+    expect(provider.rememberForMerchant, isTrue);
+  });
+
+  test('save upserts a merchant override when remember is on', () async {
+    provider
+      ..setMode(ManualLogMode.form)
+      ..setMerchant('KFC')
+      ..setAmountText('200')
+      ..setCategory('Food & Dining')
+      ..setRememberForMerchant(true);
+
+    final ok = await provider.save();
+    expect(ok, isTrue);
+    expect(repo.lastUpsert?['merchantKey'], 'KFC');
+    expect(repo.lastUpsert?['category'], 'Food & Dining');
+  });
+
+  test('save deletes the override when remember is turned off', () async {
+    repo.overrides['kfc'] = 'Food & Dining';
+    repo.parseResult = const ParsedTransactionDraft(
+      ok: true,
+      amount: 200,
+      merchant: 'KFC',
+      category: 'Food & Dining',
+    );
+    provider.setPasteText('spent 200 at KFC');
+    await provider.parse();
+    provider.setRememberForMerchant(false);
+
+    final ok = await provider.save();
+    expect(ok, isTrue);
+    expect(repo.lastDeletedKey, 'kfc');
+    expect(repo.lastUpsert, isNull);
   });
 }

@@ -103,8 +103,11 @@ Future<void> configureDependencies({SharedPreferences? prefs}) async {
     ),
   );
   sl.registerFactory(
-    () =>
-        ManualLogProvider(parseTransactionText: sl(), createTransaction: sl()),
+    () => ManualLogProvider(
+      parseTransactionText: sl(),
+      createTransaction: sl(),
+      transactionRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<CategoryRepository>(

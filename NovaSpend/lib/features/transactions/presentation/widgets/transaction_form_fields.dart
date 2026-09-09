@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:nova_spend/core/constants/payment_methods.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 
 class TransactionFormLabeledField extends StatelessWidget {
@@ -577,6 +578,93 @@ class TransactionPickerField extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class TransactionRememberMerchantToggle extends StatelessWidget {
+  const TransactionRememberMerchantToggle({
+    required this.enabled,
+    required this.isLoading,
+    required this.title,
+    required this.subtitle,
+    required this.ink,
+    required this.muted,
+    required this.iconFill,
+    required this.border,
+    required this.onChanged,
+    super.key,
+  });
+
+  final bool enabled;
+  final bool isLoading;
+  final String title;
+  final String subtitle;
+  final Color ink;
+  final Color muted;
+  final Color iconFill;
+  final Color border;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: border)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: iconFill, shape: BoxShape.circle),
+            child: Icon(
+              Icons.auto_awesome,
+              size: 20,
+              color: AppColors.primaryInk(Theme.of(context).brightness),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    height: 1.38,
+                    letterSpacing: 0.13,
+                    color: ink,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    height: 1.5,
+                    color: muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: AppLoader(size: AppLoaderSize.small),
+            )
+          else
+            Switch.adaptive(
+              value: enabled,
+              activeTrackColor: AppColors.primaryStrong,
+              onChanged: onChanged,
+            ),
+        ],
       ),
     );
   }

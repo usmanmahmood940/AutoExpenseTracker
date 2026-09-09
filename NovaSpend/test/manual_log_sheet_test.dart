@@ -37,6 +37,7 @@ void main() {
               create: (_) => ManualLogProvider(
                 parseTransactionText: ParseTransactionText(repo),
                 createTransaction: CreateTransaction(repo),
+                transactionRepository: repo,
               )..configure(uid: 'user-1', currency: 'PKR'),
               child: const Scaffold(body: ManualLogSheet()),
             ),
