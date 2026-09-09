@@ -477,6 +477,12 @@ async def parse_manual_text(
     if field_error:
         return ParseManualResult(ok=False, error=field_error)
 
+    override = await _load_override(
+        session, user_id=user_id, merchant=parsed.merchant
+    )
+    if override is not None:
+        parsed = replace(parsed, category=override.category)
+
     dedup_key = compute_dedup_key(
         DedupFields(
             amount=parsed.amount,

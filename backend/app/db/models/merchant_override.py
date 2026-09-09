@@ -1,9 +1,9 @@
 """merchant_category_overrides — per-user "this merchant is always X".
 
-Applied on ingest (Phase D) after Gemini parse so user corrections compound.
-The transaction detail "Remember this merchant" toggle writes these rows
-explicitly (`PUT/DELETE /merchants/{key}/category-override`). A transaction
-PATCH does not create an override by itself.
+Applied on ingest and on in-app SMS paste parse after Gemini so user
+corrections compound. The "Remember for this merchant" toggle writes these
+rows explicitly (`PUT/DELETE /merchants/{key}/category-override`). A
+transaction PATCH does not create an override by itself.
 """
 
 from __future__ import annotations

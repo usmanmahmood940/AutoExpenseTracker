@@ -131,6 +131,33 @@ def test_parse_fail_returns_ok_false(
     assert body["merchant"] is None
 
 
+def test_parse_applies_merchant_category_override(
+    parse_client: tuple[TestClient, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _ = parse_client
+
+    async def fake_parse(*_args: object, **_kwargs: object) -> ParseOk:
+        return ParseOk(parsed=_parsed(category="Shopping"), model="gemini-test")
+
+    monkeypatch.setattr("app.services.ingest.parse_transaction", fake_parse)
+    saved = client.put(
+        "/merchants/pso%20rangers/category-override",
+        json={"category": "Fuel", "display_name": "PSO RANGERS"},
+    )
+    assert saved.status_code == 200, saved.text
+
+    response = client.post(
+        "/transactions/parse",
+        json={"raw": PSO_RAW, "source": "manual"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["ok"] is True
+    assert body["merchant"] == "PSO RANGERS"
+    assert body["category"] == "Fuel"
+
+
 def test_parse_duplicate_returns_existing_id(
     parse_client: tuple[TestClient, str],
 ) -> None:
