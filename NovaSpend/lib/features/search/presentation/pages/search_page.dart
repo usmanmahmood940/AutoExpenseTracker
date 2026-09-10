@@ -27,6 +27,7 @@ import 'package:nova_spend/features/search/presentation/widgets/sort_by_sheet.da
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/presentation/pages/transaction_detail_page.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/day_group_header.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/settle_transactions_sheet.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
@@ -59,6 +60,9 @@ class _SearchView extends StatefulWidget {
 class _SearchViewState extends State<_SearchView> {
   late final TextEditingController _controller;
   late final ScrollController _scrollController;
+  final Set<String> _selectedIds = {};
+
+  bool get _selectionMode => _selectedIds.isNotEmpty;
 
   @override
   void initState() {
@@ -83,6 +87,43 @@ class _SearchViewState extends State<_SearchView> {
     final position = _scrollController.position;
     if (position.pixels < position.maxScrollExtent - 200) return;
     context.read<SearchProvider>().loadMore();
+  }
+
+  void _toggle(TransactionEntity tx) {
+    if (tx.isMerged) return;
+    setState(() {
+      if (_selectedIds.contains(tx.id)) {
+        _selectedIds.remove(tx.id);
+      } else {
+        _selectedIds.add(tx.id);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() => _selectedIds.clear());
+  }
+
+  void _startSelect(TransactionEntity tx) {
+    if (tx.isMerged) return;
+    setState(() => _selectedIds.add(tx.id));
+  }
+
+  Future<void> _openSettle() async {
+    final provider = context.read<SearchProvider>();
+    final selected = provider.results
+        .where((tx) => _selectedIds.contains(tx.id))
+        .toList();
+    if (selected.length < 2) return;
+    final settled = await SettleTransactionsSheet.show(
+      context,
+      selected: selected,
+    );
+    if (!mounted) return;
+    _clearSelection();
+    if (settled == true) {
+      await provider.refresh();
+    }
   }
 
   @override
@@ -415,18 +456,70 @@ class _SearchViewState extends State<_SearchView> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    _ResultsCountRow(
-                                      count: provider.matchCount,
-                                      spent: provider.matchSpent,
-                                      received: provider.matchReceived,
-                                    ),
+                                    if (_selectionMode)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: AppSpacing.sm,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                l10n.transactionSettleSelectedCount(
+                                                  _selectedIds.length,
+                                                ),
+                                                style: theme
+                                                    .textTheme
+                                                    .titleSmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: _clearSelection,
+                                              child: Text(
+                                                l10n.transactionSettleCancel,
+                                              ),
+                                            ),
+                                            FilledButton(
+                                              onPressed:
+                                                  _selectedIds.length >= 2
+                                                  ? _openSettle
+                                                  : null,
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor:
+                                                    AppColors.primaryStrong,
+                                              ),
+                                              child: Text(
+                                                l10n.transactionSettle,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else
+                                      _ResultsCountRow(
+                                        count: provider.matchCount,
+                                        spent: provider.matchSpent,
+                                        received: provider.matchReceived,
+                                      ),
                                     const SizedBox(height: AppSpacing.sm),
                                     provider.query.sort.groupsByDay
                                         ? _ResultsDayGroups(
                                             results: provider.results,
+                                            selectionMode: _selectionMode,
+                                            selectedIds: _selectedIds,
+                                            onToggle: _toggle,
+                                            onStartSelect: _startSelect,
                                           )
                                         : _ResultsFlatList(
                                             results: provider.results,
+                                            selectionMode: _selectionMode,
+                                            selectedIds: _selectedIds,
+                                            onToggle: _toggle,
+                                            onStartSelect: _startSelect,
                                           ),
                                     if (provider.error != null) ...[
                                       const SizedBox(height: AppSpacing.md),
@@ -638,14 +731,34 @@ class _ResultsCountRow extends StatelessWidget {
 
 /// Flat results list (amount / merchant sorts — no day headers).
 class _ResultsFlatList extends StatelessWidget {
-  const _ResultsFlatList({required this.results});
+  const _ResultsFlatList({
+    required this.results,
+    this.selectionMode = false,
+    this.selectedIds = const {},
+    this.onToggle,
+    this.onStartSelect,
+  });
 
   final List<TransactionEntity> results;
+  final bool selectionMode;
+  final Set<String> selectedIds;
+  final void Function(TransactionEntity tx)? onToggle;
+  final void Function(TransactionEntity tx)? onStartSelect;
 
   @override
   Widget build(BuildContext context) {
     return TransactionGroupCard(
-      children: [for (final tx in results) _resultTile(context, tx)],
+      children: [
+        for (final tx in results)
+          _resultTile(
+            context,
+            tx,
+            selectionMode: selectionMode,
+            selected: selectedIds.contains(tx.id),
+            onToggle: onToggle,
+            onStartSelect: onStartSelect,
+          ),
+      ],
     );
   }
 }
@@ -653,9 +766,19 @@ class _ResultsFlatList extends StatelessWidget {
 /// Day-grouped results with Spent / Net summaries (same pattern as Home).
 /// Only used when sorting by date newest / oldest.
 class _ResultsDayGroups extends StatelessWidget {
-  const _ResultsDayGroups({required this.results});
+  const _ResultsDayGroups({
+    required this.results,
+    this.selectionMode = false,
+    this.selectedIds = const {},
+    this.onToggle,
+    this.onStartSelect,
+  });
 
   final List<TransactionEntity> results;
+  final bool selectionMode;
+  final Set<String> selectedIds;
+  final void Function(TransactionEntity tx)? onToggle;
+  final void Function(TransactionEntity tx)? onStartSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -674,23 +797,41 @@ class _ResultsDayGroups extends StatelessWidget {
             day: day,
             txs: grouped[day]!,
             money: money,
+            selectionMode: selectionMode,
+            selectedIds: selectedIds,
+            onToggle: onToggle,
+            onStartSelect: onStartSelect,
           ),
       ],
     );
   }
 }
 
-Widget _resultTile(BuildContext context, TransactionEntity tx) {
+Widget _resultTile(
+  BuildContext context,
+  TransactionEntity tx, {
+  bool selectionMode = false,
+  bool selected = false,
+  void Function(TransactionEntity tx)? onToggle,
+  void Function(TransactionEntity tx)? onStartSelect,
+}) {
   return TransactionListTile(
     transaction: tx,
+    selectionMode: selectionMode,
+    selected: selected,
     onTap: () {
+      if (selectionMode) {
+        onToggle?.call(tx);
+        return;
+      }
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => TransactionDetailPage(transaction: tx),
         ),
       );
     },
-    onMerchantTap: tx.displayMerchant.isEmpty
+    onLongPress: selectionMode ? null : () => onStartSelect?.call(tx),
+    onMerchantTap: selectionMode || tx.displayMerchant.isEmpty
         ? null
         : () {
             Navigator.of(context).push(
@@ -721,6 +862,7 @@ Map<String, List<TransactionEntity>> _groupByDayPreservingOrder(
   var spent = 0.0;
   var received = 0.0;
   for (final t in txs) {
+    if (t.isMerged) continue;
     if (t.type == 'credit') {
       received += t.amount;
     } else {
@@ -736,6 +878,10 @@ TransactionGroupSection _daySection(
   required String day,
   required List<TransactionEntity> txs,
   required AppCurrencyController money,
+  bool selectionMode = false,
+  Set<String> selectedIds = const {},
+  void Function(TransactionEntity tx)? onToggle,
+  void Function(TransactionEntity tx)? onStartSelect,
 }) {
   final totals = _spendTotals(txs);
   final summary = dayGroupSummary(
@@ -758,7 +904,17 @@ TransactionGroupSection _daySection(
       summaryAmountColor: summary.amountColor,
       embedded: true,
     ),
-    children: [for (final tx in txs) _resultTile(context, tx)],
+    children: [
+      for (final tx in txs)
+        _resultTile(
+          context,
+          tx,
+          selectionMode: selectionMode,
+          selected: selectedIds.contains(tx.id),
+          onToggle: onToggle,
+          onStartSelect: onStartSelect,
+        ),
+    ],
   );
 }
 
