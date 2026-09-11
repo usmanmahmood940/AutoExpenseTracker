@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nova_spend/core/errors/failures.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
@@ -45,6 +46,23 @@ class FakeChatRepository implements ChatRepository {
     if (askError != null) throw askError!;
     return answer!;
   }
+
+  @override
+  Future<AgentProposalEntity> confirmProposal({
+    required String proposalId,
+    required String idempotencyKey,
+  }) async {
+    return AgentProposalEntity(
+      proposalId: proposalId,
+      status: 'executed',
+      intent: '',
+      steps: const [],
+      summary: '',
+    );
+  }
+
+  @override
+  Future<void> rejectProposal({required String proposalId}) async {}
 }
 
 void main() {

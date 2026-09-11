@@ -9,9 +9,11 @@ import 'package:nova_spend/core/widgets/error_state_view.dart';
 import 'package:nova_spend/core/widgets/glass_header_bar.dart';
 import 'package:nova_spend/core/widgets/hero_wash.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
 import 'package:nova_spend/features/chat/presentation/ask_error_mapper.dart';
 import 'package:nova_spend/features/chat/presentation/provider/ask_provider.dart';
+import 'package:nova_spend/features/chat/presentation/widgets/agent_proposal_sheet.dart';
 import 'package:nova_spend/features/chat/presentation/widgets/ask_input_bar.dart';
 import 'package:nova_spend/features/chat/presentation/widgets/ask_suggestion_chips.dart';
 import 'package:nova_spend/features/chat/presentation/widgets/ask_turn_views.dart';
@@ -143,6 +145,34 @@ class _AskViewState extends State<_AskView> {
       );
     } finally {
       _openingCitation = false;
+    }
+  }
+
+  Future<void> _reviewProposal(
+    AskProvider provider,
+    AgentProposalEntity proposal,
+  ) async {
+    final confirmed = await showAgentProposalSheet(
+      context,
+      proposal: proposal,
+    );
+    if (!mounted || confirmed == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      if (confirmed) {
+        await provider.confirmProposal(proposal.proposalId);
+        messenger.showSnackBar(SnackBar(content: Text(l10n.askProposalApplied)));
+      } else {
+        await provider.rejectProposal(proposal.proposalId);
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.askProposalRejected)),
+        );
+      }
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(AskErrorMapper.message(l10n, error))),
+      );
     }
   }
 
@@ -286,6 +316,9 @@ class _AskViewState extends State<_AskView> {
                     )
                   : null,
               onCitationTap: _openCitation,
+              onReviewProposal: turn.answer?.hasProposal == true
+                  ? () => _reviewProposal(provider, turn.answer!.proposal!)
+                  : null,
             ),
           ],
         );

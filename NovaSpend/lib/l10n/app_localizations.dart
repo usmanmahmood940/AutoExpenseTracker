@@ -256,6 +256,42 @@ abstract class AppLocalizations {
   /// **'Last 12 months'**
   String get askLast12Months;
 
+  /// No description provided for @askProposalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review changes'**
+  String get askProposalTitle;
+
+  /// No description provided for @askProposalConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get askProposalConfirm;
+
+  /// No description provided for @askProposalCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get askProposalCancel;
+
+  /// No description provided for @askProposalReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review changes'**
+  String get askProposalReview;
+
+  /// No description provided for @askProposalApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes applied.'**
+  String get askProposalApplied;
+
+  /// No description provided for @askProposalRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes cancelled.'**
+  String get askProposalRejected;
+
   /// No description provided for @searchPlaceholder.
   ///
   /// In en, this message translates to:

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
 
 class ChatAnswerEntity extends Equatable {
@@ -11,6 +12,7 @@ class ChatAnswerEntity extends Equatable {
     this.filterTerm,
     this.windowFrom,
     this.windowTo,
+    this.proposal,
   });
 
   final String answer;
@@ -21,10 +23,13 @@ class ChatAnswerEntity extends Equatable {
   final String? filterTerm;
   final String? windowFrom;
   final String? windowTo;
+  final AgentProposalEntity? proposal;
 
   bool get isNavigation => source == 'navigation';
 
   bool get isLowConfidence => confidence == 'low';
+
+  bool get hasProposal => proposal != null && proposal!.isPending;
 
   @override
   List<Object?> get props => [
@@ -36,5 +41,6 @@ class ChatAnswerEntity extends Equatable {
     filterTerm,
     windowFrom,
     windowTo,
+    proposal,
   ];
 }

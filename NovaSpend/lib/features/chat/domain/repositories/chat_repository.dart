@@ -1,3 +1,4 @@
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
 
@@ -15,4 +16,11 @@ abstract class ChatRepository {
     DateTime? to,
     List<({String question, String answer})> history = const [],
   });
+
+  Future<AgentProposalEntity> confirmProposal({
+    required String proposalId,
+    required String idempotencyKey,
+  });
+
+  Future<void> rejectProposal({required String proposalId});
 }

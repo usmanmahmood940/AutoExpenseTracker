@@ -97,6 +97,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get askLast12Months => 'Last 12 months';
 
   @override
+  String get askProposalTitle => 'Review changes';
+
+  @override
+  String get askProposalConfirm => 'Confirm';
+
+  @override
+  String get askProposalCancel => 'Cancel';
+
+  @override
+  String get askProposalReview => 'Review changes';
+
+  @override
+  String get askProposalApplied => 'Changes applied.';
+
+  @override
+  String get askProposalRejected => 'Changes cancelled.';
+
+  @override
   String get searchPlaceholder =>
       'Search is coming soon. You\'ll be able to find transactions by merchant, category, and more.';
 

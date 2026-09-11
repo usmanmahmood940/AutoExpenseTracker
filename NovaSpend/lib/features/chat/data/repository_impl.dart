@@ -1,5 +1,6 @@
 import 'package:nova_spend/core/errors/failures.dart';
 import 'package:nova_spend/features/chat/data/datasource/backend_chat_datasource.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
 import 'package:nova_spend/features/chat/domain/repositories/chat_repository.dart';
@@ -30,6 +31,24 @@ class ChatRepositoryImpl implements ChatRepository {
     return _map(
       _backend.ask(question: question, from: from, to: to, history: history),
     );
+  }
+
+  @override
+  Future<AgentProposalEntity> confirmProposal({
+    required String proposalId,
+    required String idempotencyKey,
+  }) {
+    return _map(
+      _backend.confirmProposal(
+        proposalId: proposalId,
+        idempotencyKey: idempotencyKey,
+      ),
+    );
+  }
+
+  @override
+  Future<void> rejectProposal({required String proposalId}) {
+    return _map(_backend.rejectProposal(proposalId: proposalId));
   }
 
   Future<T> _map<T>(Future<T> future) async {

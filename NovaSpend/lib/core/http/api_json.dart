@@ -6,6 +6,7 @@ import 'package:nova_spend/features/analytics/domain/entities/smart_card_entity.
 import 'package:nova_spend/features/analytics/domain/entities/trend_point_entity.dart';
 import 'package:nova_spend/features/categories/domain/entities/category_entity.dart';
 import 'package:nova_spend/features/merchants/domain/entities/merchant_summary_entity.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
@@ -400,6 +401,10 @@ ChatAnswerEntity chatAnswerFromApi(Map<String, dynamic> json) {
             .map((item) => chatCitationFromApi(Map<String, dynamic>.from(item)))
             .toList()
       : const <ChatCitationEntity>[];
+  final proposalRaw = json['proposal'];
+  final proposal = proposalRaw is Map
+      ? AgentProposalEntity.fromJson(Map<String, dynamic>.from(proposalRaw))
+      : null;
   return ChatAnswerEntity(
     answer: json['answer']?.toString() ?? '',
     citations: citations,
@@ -409,6 +414,7 @@ ChatAnswerEntity chatAnswerFromApi(Map<String, dynamic> json) {
     filterTerm: json['filter_term']?.toString(),
     windowFrom: json['window_from']?.toString(),
     windowTo: json['window_to']?.toString(),
+    proposal: proposal,
   );
 }
 

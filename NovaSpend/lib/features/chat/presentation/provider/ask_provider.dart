@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:nova_spend/core/provider/safe_change_notifier.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
 import 'package:nova_spend/features/chat/domain/repositories/chat_repository.dart';
@@ -141,6 +142,73 @@ class AskProvider extends SafeChangeNotifier {
     } finally {
       if (token == _askToken) notifyListeners();
     }
+  }
+
+  Future<bool> confirmProposal(String proposalId) async {
+    final key =
+        'confirm-${proposalId}-${DateTime.now().microsecondsSinceEpoch}';
+    await _repository.confirmProposal(
+      proposalId: proposalId,
+      idempotencyKey: key,
+    );
+    turns = [
+      for (final turn in turns)
+        if (turn.answer?.proposal?.proposalId == proposalId)
+          AskTurn(
+            question: turn.question,
+            from: turn.from,
+            to: turn.to,
+            answer: ChatAnswerEntity(
+              answer: turn.answer!.answer,
+              citations: turn.answer!.citations,
+              confidence: turn.answer!.confidence,
+              source: turn.answer!.source,
+              model: turn.answer!.model,
+              filterTerm: turn.answer!.filterTerm,
+              windowFrom: turn.answer!.windowFrom,
+              windowTo: turn.answer!.windowTo,
+              proposal: AgentProposalEntity(
+                proposalId: proposalId,
+                status: 'executed',
+                intent: turn.answer!.proposal!.intent,
+                steps: turn.answer!.proposal!.steps,
+                summary: turn.answer!.proposal!.summary,
+                expiresAt: turn.answer!.proposal!.expiresAt,
+                model: turn.answer!.proposal!.model,
+              ),
+            ),
+          )
+        else
+          turn,
+    ];
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> rejectProposal(String proposalId) async {
+    await _repository.rejectProposal(proposalId: proposalId);
+    turns = [
+      for (final turn in turns)
+        if (turn.answer?.proposal?.proposalId == proposalId)
+          AskTurn(
+            question: turn.question,
+            from: turn.from,
+            to: turn.to,
+            answer: ChatAnswerEntity(
+              answer: turn.answer!.answer,
+              citations: turn.answer!.citations,
+              confidence: turn.answer!.confidence,
+              source: turn.answer!.source,
+              model: turn.answer!.model,
+              filterTerm: turn.answer!.filterTerm,
+              windowFrom: turn.answer!.windowFrom,
+              windowTo: turn.answer!.windowTo,
+            ),
+          )
+        else
+          turn,
+    ];
+    notifyListeners();
   }
 
   Future<void> retryLast() async {

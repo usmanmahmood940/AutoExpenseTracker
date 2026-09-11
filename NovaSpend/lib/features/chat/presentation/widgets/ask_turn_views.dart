@@ -64,6 +64,7 @@ class AskAssistantCard extends StatelessWidget {
     this.onRetry,
     this.onOpenActivity,
     this.onCitationTap,
+    this.onReviewProposal,
     super.key,
   });
 
@@ -73,6 +74,7 @@ class AskAssistantCard extends StatelessWidget {
   final VoidCallback? onRetry;
   final VoidCallback? onOpenActivity;
   final ValueChanged<ChatCitationEntity>? onCitationTap;
+  final VoidCallback? onReviewProposal;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +140,23 @@ class AskAssistantCard extends StatelessWidget {
                 ),
               ),
               child: Text(l10n.askOpenActivity),
+            ),
+          ],
+          if (answer != null &&
+              answer.hasProposal &&
+              onReviewProposal != null) ...[
+            const SizedBox(height: AppSpacing.smPlus2),
+            FilledButton(
+              onPressed: onReviewProposal,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryStrong,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+              child: Text(l10n.askProposalReview),
             ),
           ],
           if (answer != null && answer.citations.isNotEmpty) ...[

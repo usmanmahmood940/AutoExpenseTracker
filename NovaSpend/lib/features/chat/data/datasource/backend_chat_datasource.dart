@@ -1,5 +1,6 @@
 import 'package:nova_spend/core/http/api_client.dart';
 import 'package:nova_spend/core/http/api_json.dart';
+import 'package:nova_spend/features/chat/domain/entities/agent_proposal_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_answer_entity.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_suggestion_entity.dart';
 
@@ -50,6 +51,40 @@ class BackendChatDatasource {
         timeout: ApiClient.chatTimeout,
       );
       return chatAnswerFromApi(json);
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<AgentProposalEntity> confirmProposal({
+    required String proposalId,
+    required String idempotencyKey,
+  }) async {
+    try {
+      final json = await _api.post(
+        '/agent/proposals/$proposalId/confirm',
+        body: {'idempotency_key': idempotencyKey},
+        requireAuth: true,
+      );
+      return AgentProposalEntity.fromJson({
+        'proposal_id': json['proposal_id'] ?? proposalId,
+        'status': json['status'] ?? 'executed',
+        'intent': '',
+        'steps': const [],
+        'summary': '',
+      });
+    } on ApiException catch (e) {
+      throw e.toDataException();
+    }
+  }
+
+  Future<void> rejectProposal({required String proposalId}) async {
+    try {
+      await _api.post(
+        '/agent/proposals/$proposalId/reject',
+        body: const {},
+        requireAuth: true,
+      );
     } on ApiException catch (e) {
       throw e.toDataException();
     }
