@@ -79,6 +79,75 @@ async def test_aggregate_spending_electricity(session: AsyncSession) -> None:
     )
     assert result["grand_total"] == 1200.0
     assert result["transaction_count"] == 1
+    assert len(result["transactions"]) == 1
+    assert result["transactions"][0]["merchant"] == "LESCO"
+    assert result["filter_types"] == ["debit"]
+
+
+@pytest.mark.asyncio
+async def test_aggregate_spending_credit_samples_exclude_debit(
+    session: AsyncSession,
+) -> None:
+    user = User(
+        firebase_uid=f"uid-{uuid4().hex[:8]}",
+        email=f"{uuid4().hex[:8]}@example.com",
+    )
+    session.add(user)
+    await session.flush()
+    for amount, tx_type, day in (
+        (Decimal("552"), TransactionType.debit, date(2026, 8, 11)),
+        (Decimal("700"), TransactionType.debit, date(2026, 8, 7)),
+        (Decimal("800"), TransactionType.credit, date(2026, 8, 10)),
+        (Decimal("660"), TransactionType.credit, date(2026, 8, 5)),
+    ):
+        session.add(
+            Transaction(
+                user_id=user.id,
+                amount=amount,
+                currency="PKR",
+                type=tx_type,
+                merchant="W.ANJUM",
+                merchant_normalized="w.anjum",
+                category="Transfer",
+                payment_method="unknown",
+                transaction_date=day,
+                day=day.strftime("%A"),
+                dedup_key=f"eval-wa-{uuid4().hex[:8]}",
+                status=TransactionStatus.active,
+            )
+        )
+    await session.commit()
+
+    result = await aggregate_spending(
+        session,
+        user=user,
+        args={
+            "date_from": "2026-01-01",
+            "date_to": "2026-12-31",
+            "merchants": ["W.ANJUM"],
+            "types": ["credit"],
+        },
+    )
+    assert result["grand_total"] == 1460.0
+    assert result["filter_types"] == ["credit"]
+    assert {row["type"] for row in result["transactions"]} == {"credit"}
+    assert sum(row["amount"] for row in result["transactions"]) == 1460.0
+
+
+def test_finalize_citations_prefers_aggregate_samples() -> None:
+    from app.services.agent.orchestrator import _finalize_citations
+
+    aggregate = [
+        {"transaction_id": "c1", "amount": 800, "type": "credit"},
+        {"transaction_id": "c2", "amount": 660, "type": "credit"},
+    ]
+    other = [
+        {"transaction_id": "d1", "amount": 552, "type": "debit"},
+        {"transaction_id": "d2", "amount": 700, "type": "debit"},
+    ]
+    chosen = _finalize_citations(aggregate, other)
+    assert [row["transaction_id"] for row in chosen] == ["c1", "c2"]
+    assert _finalize_citations([], other) == other[:8]
 
 
 @pytest.mark.asyncio

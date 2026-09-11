@@ -58,6 +58,10 @@ You answer questions and propose actions about the user's personal transactions.
 Rules:
 - Use tools for all facts and numbers. Never invent totals or transactions.
 - Prefer aggregate_spending for "how much" questions.
+- Default types are debit (money you paid). Use types ["credit"] when the user
+  asks how much someone paid them / money received / income.
+- When listing with query_transactions for the same question, pass the same
+  types filter as the aggregate call.
 - Use concepts from the closed vocabulary (electricity, fast_food, fuel, …)
   when the user names a topic rather than a merchant.
 - For actions (create, settle, unsettle, unmerge), call propose_* tools only.
@@ -231,6 +235,7 @@ async def run_agent(
     tool_trace: list[dict[str, Any]] = []
     proposal_steps: list[dict[str, Any]] = []
     citations: list[dict[str, Any]] = []
+    aggregate_citations: list[dict[str, Any]] = []
     aggregate_numbers: list[float] = []
     final_answer = ""
 
@@ -289,8 +294,15 @@ async def run_agent(
                 except Exception as exc:
                     logger.warning("read tool %s failed: %s", name, exc)
                     result = {"error": str(exc)}
-                _collect_citations(result, citations)
-                _collect_totals(result, aggregate_numbers)
+                if name == "aggregate_spending":
+                    sample = _citation_rows(result.get("transactions"))
+                    if sample:
+                        # Prefer rows that match the answered total's type filter.
+                        aggregate_citations = sample
+                    _collect_totals(result, aggregate_numbers)
+                else:
+                    _collect_citations(result, citations)
+                    _collect_totals(result, aggregate_numbers)
             else:
                 result = {"error": f"unknown tool {name}"}
 
@@ -346,10 +358,15 @@ async def run_agent(
     )
     await session.commit()
 
-    confidence = "high" if citations or aggregate_numbers or proposal_payload else "medium"
+    # Totals from aggregate_spending must cite matching sample rows, not a
+    # separate query_transactions list that may use a different type filter.
+    final_citations = _finalize_citations(aggregate_citations, citations)
+    confidence = (
+        "high" if final_citations or aggregate_numbers or proposal_payload else "medium"
+    )
     return {
         "answer": final_answer,
-        "citations": citations[:8],
+        "citations": final_citations,
         "confidence": confidence,
         "source": "agent",
         "model": model,
@@ -363,13 +380,39 @@ async def run_agent(
     }
 
 
+def _citation_rows(rows: Any) -> list[dict[str, Any]]:
+    if not isinstance(rows, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        if isinstance(row, dict) and row.get("transaction_id"):
+            out.append(row)
+    return out
+
+
+def _finalize_citations(
+    aggregate_citations: list[dict[str, Any]],
+    other_citations: list[dict[str, Any]],
+    *,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    preferred = aggregate_citations or other_citations
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for row in preferred:
+        tx_id = str(row.get("transaction_id") or "")
+        if not tx_id or tx_id in seen:
+            continue
+        seen.add(tx_id)
+        out.append(row)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _collect_citations(result: dict[str, Any], out: list[dict[str, Any]]) -> None:
     for key in ("transactions", "settlements", "candidates"):
-        rows = result.get(key)
-        if isinstance(rows, list):
-            for row in rows:
-                if isinstance(row, dict) and row.get("transaction_id"):
-                    out.append(row)
+        out.extend(_citation_rows(result.get(key)))
     tx = result.get("transaction")
     if isinstance(tx, dict) and tx.get("transaction_id"):
         out.append(tx)

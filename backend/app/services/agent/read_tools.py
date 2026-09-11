@@ -21,6 +21,7 @@ from app.services.transactions import LIST_STATUSES, SUMMABLE_STATUSES, get_owne
 
 _DEFAULT_LIMIT = 20
 _MAX_LIMIT = 50
+_AGGREGATE_SAMPLE_LIMIT = 8
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -239,6 +240,19 @@ async def aggregate_spending(
                 "transaction_count": int(visits),
             }
         )
+
+    # Same filters as the total so Related transactions match debit vs credit.
+    sample_rows = list(
+        (
+            await session.execute(
+                select(Transaction)
+                .where(*filters)
+                .order_by(Transaction.transaction_date.desc(), Transaction.amount.desc())
+                .limit(_AGGREGATE_SAMPLE_LIMIT)
+            )
+        ).scalars()
+    )
+
     return {
         "date_from": start.isoformat(),
         "date_to": end.isoformat(),
@@ -249,6 +263,8 @@ async def aggregate_spending(
         "groups": groups,
         "filter_merchants": merchants,
         "filter_concepts": list(args.get("concepts") or []),
+        "filter_types": [t.value for t in types],
+        "transactions": [_tx_dict(tx) for tx in sample_rows],
     }
 
 

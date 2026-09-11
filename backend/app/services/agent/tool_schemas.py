@@ -30,7 +30,10 @@ READ_TOOL_DECLARATIONS: list[dict] = [
                 "types": {
                     "type": "ARRAY",
                     "items": {"type": "STRING"},
-                    "description": "debit and/or credit",
+                    "description": (
+                        "debit and/or credit. Match aggregate_spending types "
+                        "when listing support for a 'how much' answer."
+                    ),
                 },
                 "statuses": {
                     "type": "ARRAY",
@@ -50,8 +53,10 @@ READ_TOOL_DECLARATIONS: list[dict] = [
     {
         "name": "aggregate_spending",
         "description": (
-            "Exact SQL aggregates for spending. Always use this for totals, "
-            "comparisons, and 'how much' questions. Never invent numbers."
+            "Exact SQL aggregates for totals. Defaults to debit (spending). "
+            "Pass types: [\"credit\"] for money received / paid-to-me. "
+            "Always use this for totals, comparisons, and 'how much' questions. "
+            "Never invent numbers. Returns matching sample transactions for citations."
         ),
         "parameters": {
             "type": "OBJECT",
@@ -77,6 +82,10 @@ READ_TOOL_DECLARATIONS: list[dict] = [
                 "types": {
                     "type": "ARRAY",
                     "items": {"type": "STRING"},
+                    "description": (
+                        "debit (default) and/or credit. "
+                        "Use credit for received / paid-to-me totals."
+                    ),
                 },
                 "statuses": {
                     "type": "ARRAY",
