@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     confidence_review_threshold: float = 0.8
     chat_ask_limit_per_user: int = 20
     chat_min_transactions: int = 10
+    # Stricter than chat_ask because one turn may call Gemini multiple times.
+    agent_chat_limit_per_user: int = 10
+    # When true, /chat/ask delegates to the agent orchestrator (no RAG path).
+    chat_use_agent: bool = True
 
     # AES-256-GCM DEK for SMS payloads (raw_ingestions.raw, sms_source).
     # Base64-encoded 32 bytes. Required outside local; local generates an

@@ -1,4 +1,8 @@
-"""Chat suggestions and ask. Grounded in the caller's transactions only."""
+"""Chat suggestions and ask.
+
+Ask delegates to the agent orchestrator when `chat_use_agent` is enabled
+(default). Suggestions remain signal-based SQL.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.deps import AppSettings, CurrentUser, DbSession
 from app.api.product_schemas import ChatAskOut, ChatSuggestionsOut
+from app.core.logging import request_id_var
 from app.services import chat_rag
+from app.services.agent.orchestrator import run_agent
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -48,6 +54,31 @@ async def ask(
     settings: AppSettings,
     body: ChatAskRequest,
 ) -> ChatAskOut:
+    if settings.chat_use_agent:
+        payload = await run_agent(
+            session,
+            user=user,
+            settings=settings,
+            question=body.question,
+            date_from=body.date_from,
+            date_to=body.date_to,
+            history=[turn.model_dump() for turn in body.history],
+            request_id=request_id_var.get(),
+        )
+        return ChatAskOut.model_validate(
+            {
+                "answer": payload["answer"],
+                "citations": payload.get("citations") or [],
+                "confidence": payload.get("confidence") or "medium",
+                "source": payload.get("source") or "agent",
+                "model": payload.get("model"),
+                "filter_term": payload.get("filter_term"),
+                "window_from": payload.get("window_from"),
+                "window_to": payload.get("window_to"),
+                "proposal": payload.get("proposal"),
+            }
+        )
+
     payload = await chat_rag.ask(
         session,
         user=user,

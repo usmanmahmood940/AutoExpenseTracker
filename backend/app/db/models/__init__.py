@@ -5,6 +5,7 @@ metadata from a single import.
 """
 
 from app.db.base import Base
+from app.db.models.agent_proposal import AgentProposal, AgentProposalStatus, AgentTrace
 from app.db.models.ai_summary import AiSummary
 from app.db.models.auth_otp import AuthOtp, OtpPurpose
 from app.db.models.auth_rate_limit import AuthRateLimit
@@ -33,6 +34,9 @@ from app.db.models.transaction import Transaction
 from app.db.models.user import User
 
 __all__ = [
+    "AgentProposal",
+    "AgentProposalStatus",
+    "AgentTrace",
     "AiSummary",
     "AuthOtp",
     "AuthRateLimit",

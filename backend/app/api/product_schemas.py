@@ -250,6 +250,7 @@ class ChatAskOut(BaseModel):
     filter_term: str | None = None
     window_from: str | None = None
     window_to: str | None = None
+    proposal: dict | None = None
 
 
 class MonthlySummaryListOut(BaseModel):
