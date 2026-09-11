@@ -6,6 +6,7 @@ eventually flip from the Cloud Function do not need a body rewrite.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, replace
 from datetime import date, datetime
@@ -28,6 +29,8 @@ from app.db.models.enums import (
 from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.raw_ingestion import RawIngestion
 from app.db.models.transaction import Transaction
+
+logger = logging.getLogger(__name__)
 from app.db.models.user import User
 from app.services.categories import allowed_category_names
 from app.services.dates import day_name_from_date, parse_received_at
@@ -410,6 +413,20 @@ async def process_ingest(
 
     # Insights read live SQL; monthly_summaries is a later cache, not on this path.
     await index_after_commit(session, user_id=user.id, transaction_id=tx.id)
+    try:
+        from app.services.semantic.enrichment import enrich_merchant_if_needed
+
+        await enrich_merchant_if_needed(
+            session,
+            merchant_normalized=tx.merchant_normalized,
+            display_name=tx.merchant,
+            settings=settings,
+        )
+    except Exception:
+        logger.exception(
+            "merchant concept enrichment failed",
+            extra={"transaction_id": str(tx.id)},
+        )
     return WebhookResponse(
         success=True,
         ingestion_id=str(ingestion.id),

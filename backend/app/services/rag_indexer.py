@@ -388,39 +388,11 @@ async def index_after_commit(
     transaction_id: uuid.UUID,
     deleted: bool = False,
 ) -> None:
-    """Best-effort index update. Never raises to the caller.
+    """No-op: RAG indexing retired from the transaction write path.
 
-    Opens a separate session so a vector write failure cannot expire the
-    caller's already-committed transaction.
+    Semantic merchant concepts are enriched separately. Kept as a stub so
+    existing call sites and the optional /internal/jobs/reindex-rag job remain
+    import-safe during the dual-run window.
     """
-    del session
-    try:
-        from app.db.session import get_sessionmaker
-
-        async with get_sessionmaker()() as index_session:
-            user = await index_session.get(User, user_id)
-            tx = await index_session.get(Transaction, transaction_id)
-            if user is None or tx is None:
-                return
-            if deleted:
-                await delete_transaction_doc(
-                    index_session, user_id=user_id, tx_id=transaction_id
-                )
-            else:
-                await upsert_transaction_doc(index_session, user=user, tx=tx)
-            if tx.merchant_normalized:
-                await rebuild_merchant_doc(
-                    index_session,
-                    user=user,
-                    merchant_normalized=tx.merchant_normalized,
-                )
-            year_month = (
-                f"{tx.transaction_date.year:04d}-{tx.transaction_date.month:02d}"
-            )
-            await rebuild_period_doc(index_session, user=user, year_month=year_month)
-            await index_session.commit()
-    except Exception:
-        logger.exception(
-            "rag index failed",
-            extra={"user_id": str(user_id), "transaction_id": str(transaction_id)},
-        )
+    del session, user_id, transaction_id, deleted
+    return

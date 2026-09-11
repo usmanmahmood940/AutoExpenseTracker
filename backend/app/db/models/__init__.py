@@ -22,6 +22,7 @@ from app.db.models.enums import (
     TransactionStatus,
     TransactionType,
 )
+from app.db.models.merchant_concept import MerchantConcept, MerchantConceptOverride
 from app.db.models.merchant_override import MerchantCategoryOverride
 from app.db.models.monthly_summary import MonthlySummary
 from app.db.models.password_reset_session import PasswordResetSession
@@ -43,6 +44,8 @@ __all__ = [
     "ExternalIdType",
     "IngestionSource",
     "IngestionStatus",
+    "MerchantConcept",
+    "MerchantConceptOverride",
     "MerchantCategoryOverride",
     "MonthlySummary",
     "OtpPurpose",

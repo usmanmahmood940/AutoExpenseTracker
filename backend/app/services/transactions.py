@@ -5,6 +5,7 @@ returns, which SQL can do in one query.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, date, datetime
@@ -30,6 +31,8 @@ from app.services.merchant_key import normalize_merchant_key, resolve_merchant
 from app.services.money import as_money, money_float
 from app.services.sms_source import build_sms_source, decrypt_ingestion_raw
 from app.services.sql_like import contains_pattern
+
+logger = logging.getLogger(__name__)
 
 # Shown in home/search/merchant lists (includes absorbed merge rows).
 LIST_STATUSES = (
@@ -894,7 +897,25 @@ async def _index_after_commit(
     deleted: bool = False,
 ) -> None:
     from app.services.rag_indexer import index_after_commit
+    from app.services.semantic.enrichment import enrich_merchant_if_needed
 
     await index_after_commit(
         session, user_id=user_id, transaction_id=transaction_id, deleted=deleted
     )
+    if deleted:
+        return
+    tx = await session.get(Transaction, transaction_id)
+    if tx is None or tx.user_id != user_id:
+        return
+    try:
+        await enrich_merchant_if_needed(
+            session,
+            merchant_normalized=tx.merchant_normalized,
+            display_name=tx.merchant,
+        )
+    except Exception:
+        # Enrichment must never fail a successful write.
+        logger.exception(
+            "merchant concept enrichment failed",
+            extra={"transaction_id": str(transaction_id)},
+        )

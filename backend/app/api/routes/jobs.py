@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from app.api.deps import AppSettings, DbSession
 from app.core.errors import ServiceUnavailableError, UnauthorizedError
 from app.services.rag_indexer import reindex_users
+from app.services.semantic.enrichment import backfill_merchant_concepts
 from app.workers.cleanup import cleanup_expired_auth
 from app.workers.summaries import recompute_recent
 
@@ -44,6 +45,18 @@ class ReindexRagResult(BaseModel):
     periods: int
     skipped: int
     deleted: int
+
+
+class EnrichConceptsRequest(BaseModel):
+    limit: int = Field(default=200, ge=1, le=500)
+
+
+class EnrichConceptsResult(BaseModel):
+    pending: int
+    seeded: int
+    classified: int
+    failed: int
+    as_of: str
 
 
 def _require_cron(settings: AppSettings, x_cron_secret: str | None) -> None:
@@ -114,3 +127,22 @@ async def reindex_rag(
         skipped=stats.skipped,
         deleted=stats.deleted,
     )
+
+
+@router.post(
+    "/enrich-merchant-concepts",
+    response_model=EnrichConceptsResult,
+    summary="Backfill merchant_concepts for merchants missing concept tags",
+)
+async def enrich_concepts(
+    session: DbSession,
+    settings: AppSettings,
+    body: EnrichConceptsRequest | None = None,
+    x_cron_secret: Annotated[str | None, Header(alias="X-Cron-Secret")] = None,
+) -> EnrichConceptsResult:
+    _require_cron(settings, x_cron_secret)
+    payload = body or EnrichConceptsRequest()
+    stats = await backfill_merchant_concepts(
+        session, settings=settings, limit=payload.limit
+    )
+    return EnrichConceptsResult(**stats)

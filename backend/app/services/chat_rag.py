@@ -29,6 +29,8 @@ from app.services.money import as_money, money_float
 from app.services.rag_documents import build_transaction_doc
 from app.services.rag_retrieval import RagHit, retrieve, retrieve_lexical
 from app.services.rate_limit import enforce_rate_limit
+from app.services.semantic import merchants_for_concepts, seed_known_merchant_concepts
+from app.services.semantic.question_resolver import resolve_concepts_from_question
 from app.services.spending_signals import detect_signals
 from app.services.sql_like import contains_pattern
 from app.services.transactions import SUMMABLE_STATUSES
@@ -289,6 +291,7 @@ async def _matched_totals(
         )
     ).all()
     topics = topics_from_question(question)
+    term_set = {t.lower() for t in terms}
     by_merchant = [
         {
             "merchant": merchant,
@@ -298,7 +301,10 @@ async def _matched_totals(
             "last_date": last.isoformat() if last else None,
         }
         for merchant, total, count, first, last in rows
-        if merchant_belongs_to_topics(merchant, topics)
+        if (
+            (merchant or "").lower() in term_set
+            or merchant_belongs_to_topics(merchant, topics)
+        )
     ]
     grand = as_money(sum(as_money(item["total_debit"]) for item in by_merchant))
     return {
@@ -325,6 +331,7 @@ async def _matched_transactions(
     These are the only citations the UI should show for a topic question.
     """
     topics = topics_from_question(question)
+    term_set = {t.lower() for t in terms}
     result = await session.execute(
         select(Transaction)
         .where(
@@ -337,7 +344,9 @@ async def _matched_transactions(
     )
     out: list[Transaction] = []
     for tx in result.scalars():
-        if not merchant_belongs_to_topics(tx.merchant, topics):
+        if (tx.merchant or "").lower() not in term_set and not merchant_belongs_to_topics(
+            tx.merchant, topics
+        ):
             continue
         out.append(tx)
         if len(out) >= limit:
@@ -416,14 +425,31 @@ async def _resolve_terms(
     end: date,
     api_key: str,
 ) -> list[str]:
-    """Search terms for a question: deterministic aliases, then LLM fallback."""
+    """Search terms for a question: semantic concepts, then aliases, then LLM."""
+    # Status questions are answered by SQL, not merchant guessing.
+    if _is_settlement_question(question):
+        return []
+
+    concepts = await resolve_concepts_from_question(
+        question=question, api_key=api_key
+    )
+    if concepts:
+        await seed_known_merchant_concepts(session)
+        await session.commit()
+
+        merchants = await merchants_for_concepts(
+            session,
+            user_id=user.id,
+            concepts=concepts,
+            date_from=start,
+            date_to=end,
+        )
+        if merchants:
+            return merchants
+
     terms = terms_from_question(question)
     if terms:
         return terms
-    # Status questions are answered by SQL, not merchant guessing. "settle"
-    # matching analytics would otherwise send the planner looking for Cafe.
-    if _is_settlement_question(question):
-        return []
     if not api_key or not _ANALYTICS_HINT.search(question):
         return []
     pool = await _merchant_pool(session, user=user, start=start, end=end)
