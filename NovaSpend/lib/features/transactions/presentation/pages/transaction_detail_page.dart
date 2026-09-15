@@ -11,6 +11,8 @@ import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/category_visuals.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
+import 'package:nova_spend/core/widgets/app_dialogs.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/category_color_scope.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
@@ -63,6 +65,9 @@ class _DetailView extends StatefulWidget {
 }
 
 class _DetailViewState extends State<_DetailView> {
+  bool _openingLinked = false;
+  bool _unmergeConfirmOpen = false;
+
   Future<void> _openEditSheet() async {
     final l10n = context.l10n;
     final provider = context.read<TransactionDetailProvider>();
@@ -91,32 +96,59 @@ class _DetailViewState extends State<_DetailView> {
     );
   }
 
-  Future<void> _unmerge() async {
+  Future<void> _confirmUnmerge() async {
+    if (_unmergeConfirmOpen || _openingLinked) return;
+    _unmergeConfirmOpen = true;
     final l10n = context.l10n;
-    final ok =
-        await context.read<TransactionDetailProvider>().unmergeTransaction();
-    if (!mounted) return;
-    if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.transactionUnmerge)),
+    try {
+      final confirmed = await AppDialogs.showConfirm(
+        context,
+        title: l10n.transactionUnmergeConfirmTitle,
+        message: l10n.transactionUnmergeConfirmBody,
+        confirmLabel: l10n.transactionUnmerge,
       );
-    } else {
+      if (!confirmed || !mounted) return;
+      final ok = await context
+          .read<TransactionDetailProvider>()
+          .unmergeTransaction();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorGeneric)),
+        SnackBar(
+          content: Text(ok ? l10n.transactionUnmerge : l10n.errorGeneric),
+        ),
       );
+    } finally {
+      _unmergeConfirmOpen = false;
     }
   }
 
-  Future<void> _openMergedPrimary(String primaryId) async {
-    final linked = await context
-        .read<TransactionDetailProvider>()
-        .loadLinkedTransaction(primaryId);
-    if (!mounted || linked == null) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TransactionDetailPage(transaction: linked),
-      ),
-    );
+  Future<void> _openLinkedTransaction(String id) async {
+    if (_openingLinked) return;
+    _openingLinked = true;
+    setState(() {});
+    final l10n = context.l10n;
+    try {
+      final linked = await context
+          .read<TransactionDetailProvider>()
+          .loadLinkedTransaction(id);
+      if (!mounted) return;
+      if (linked == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TransactionDetailPage(transaction: linked),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        _openingLinked = false;
+        setState(() {});
+      }
+    }
   }
 
   Future<void> _confirmDelete() async {
@@ -258,24 +290,20 @@ class _DetailViewState extends State<_DetailView> {
         if (tx.isSettled) ...[
           _SettlementSection(
             transaction: tx,
+            openingLinked: _openingLinked,
             onUnsettle: provider.isSaving ? null : _unsettle,
-            onOpenMerged: (id) async {
-              final linked = await provider.loadLinkedTransaction(id);
-              if (!mounted || linked == null) return;
-              await Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => TransactionDetailPage(transaction: linked),
-                ),
-              );
-            },
+            onOpenMerged: _openLinkedTransaction,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
 
         if (tx.isMerged && tx.mergedIntoId != null) ...[
           _MergedIntoCard(
-            onOpenPrimary: () => _openMergedPrimary(tx.mergedIntoId!),
-            onUnmerge: provider.isSaving ? null : _unmerge,
+            isOpening: _openingLinked,
+            onOpenPrimary: () => _openLinkedTransaction(tx.mergedIntoId!),
+            onUnmerge: provider.isSaving || _openingLinked
+                ? null
+                : _confirmUnmerge,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -1160,11 +1188,13 @@ class _SmsExpandableCard extends StatelessWidget {
 class _SettlementSection extends StatelessWidget {
   const _SettlementSection({
     required this.transaction,
+    required this.openingLinked,
     required this.onUnsettle,
     required this.onOpenMerged,
   });
 
   final TransactionEntity transaction;
+  final bool openingLinked;
   final Future<void> Function(String groupId)? onUnsettle;
   final Future<void> Function(String transactionId) onOpenMerged;
 
@@ -1210,6 +1240,7 @@ class _SettlementSection extends StatelessWidget {
             for (final id in group.mergedTransactionIds)
               ListTile(
                 dense: true,
+                enabled: !openingLinked,
                 contentPadding: EdgeInsets.zero,
                 title: Text(
                   id,
@@ -1218,7 +1249,7 @@ class _SettlementSection extends StatelessWidget {
                   style: theme.textTheme.bodySmall,
                 ),
                 trailing: const Icon(Icons.chevron_right, size: 18),
-                onTap: () => onOpenMerged(id),
+                onTap: openingLinked ? null : () => onOpenMerged(id),
               ),
           ],
         ],
@@ -1229,43 +1260,85 @@ class _SettlementSection extends StatelessWidget {
 
 class _MergedIntoCard extends StatelessWidget {
   const _MergedIntoCard({
+    required this.isOpening,
     required this.onOpenPrimary,
     required this.onUnmerge,
   });
 
-  final VoidCallback onOpenPrimary;
+  final bool isOpening;
+  final VoidCallback? onOpenPrimary;
   final VoidCallback? onUnmerge;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final ink = AppColors.primaryInk(brightness);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final buttonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+    );
+
     return _SurfaceCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             l10n.transactionMergedInto,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.transactionMergedIntoHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: muted,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 52,
+            child: FilledButton(
+              onPressed: isOpening ? () {} : onOpenPrimary,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryStrong,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: buttonShape,
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+              child: isOpening
+                  ? const AppLoader(
+                      size: AppLoaderSize.small,
+                      color: Colors.white,
+                    )
+                  : Text(l10n.transactionViewPrimary),
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: onOpenPrimary,
-                  child: Text(l10n.transactionDetail),
+          SizedBox(
+            height: 52,
+            child: OutlinedButton(
+              onPressed: onUnmerge,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: ink,
+                side: BorderSide(color: AppColors.border(brightness)),
+                shape: buttonShape,
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
                 ),
               ),
-              FilledButton(
-                onPressed: onUnmerge,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primaryStrong,
-                ),
-                child: Text(l10n.transactionUnmerge),
-              ),
-            ],
+              child: Text(l10n.transactionUnmerge),
+            ),
           ),
         ],
       ),

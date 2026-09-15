@@ -524,12 +524,9 @@ class _HomeBodyState extends State<_HomeBody> {
                   onPressed: _clearSelection,
                   child: Text(l10n.transactionSettleCancel),
                 ),
-                FilledButton(
-                  onPressed: _selectedIds.length >= 2 ? _openSettle : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryStrong,
-                  ),
-                  child: Text(l10n.transactionSettle),
+                SettleActionButton(
+                  selectedCount: _selectedIds.length,
+                  onSettle: _openSettle,
                 ),
               ],
             ),

@@ -898,7 +898,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionUnmerge => 'Unmerge';
 
   @override
+  String get transactionUnmergeConfirmTitle => 'Unmerge this transaction?';
+
+  @override
+  String get transactionUnmergeConfirmBody =>
+      'This restores it as its own transaction, separate from the one it was merged into.';
+
+  @override
   String get transactionMergedInto => 'Merged into';
+
+  @override
+  String get transactionMergedIntoHint =>
+      'This transaction was combined into another.';
+
+  @override
+  String get transactionViewPrimary => 'View primary transaction';
 
   @override
   String get transactionSettle => 'Settle';
@@ -928,6 +942,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionSettleCancel => 'Cancel selection';
+
+  @override
+  String get transactionSettleNeedTwoTitle => 'Select more transactions';
+
+  @override
+  String get transactionSettleNeedTwo =>
+      'Select at least 2 transactions to settle.';
 
   @override
   String get transactionSettleLockedEdit =>

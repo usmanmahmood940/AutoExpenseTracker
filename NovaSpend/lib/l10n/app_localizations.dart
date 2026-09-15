@@ -1750,11 +1750,35 @@ abstract class AppLocalizations {
   /// **'Unmerge'**
   String get transactionUnmerge;
 
+  /// No description provided for @transactionUnmergeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmerge this transaction?'**
+  String get transactionUnmergeConfirmTitle;
+
+  /// No description provided for @transactionUnmergeConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This restores it as its own transaction, separate from the one it was merged into.'**
+  String get transactionUnmergeConfirmBody;
+
   /// No description provided for @transactionMergedInto.
   ///
   /// In en, this message translates to:
   /// **'Merged into'**
   String get transactionMergedInto;
+
+  /// No description provided for @transactionMergedIntoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This transaction was combined into another.'**
+  String get transactionMergedIntoHint;
+
+  /// No description provided for @transactionViewPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'View primary transaction'**
+  String get transactionViewPrimary;
 
   /// No description provided for @transactionSettle.
   ///
@@ -1803,6 +1827,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel selection'**
   String get transactionSettleCancel;
+
+  /// No description provided for @transactionSettleNeedTwoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select more transactions'**
+  String get transactionSettleNeedTwoTitle;
+
+  /// No description provided for @transactionSettleNeedTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least 2 transactions to settle.'**
+  String get transactionSettleNeedTwo;
 
   /// No description provided for @transactionSettleLockedEdit.
   ///

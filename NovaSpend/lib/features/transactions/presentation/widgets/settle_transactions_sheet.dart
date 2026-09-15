@@ -5,6 +5,7 @@ import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_motion.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/app_dialogs.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
 import 'package:nova_spend/features/transactions/domain/repositories/transaction_repository.dart';
@@ -243,6 +244,48 @@ class _SettleTransactionsSheetState extends State<SettleTransactionsSheet> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Settle CTA that stays visually disabled with fewer than 2 selected,
+/// but still opens a hint dialog if tapped.
+class SettleActionButton extends StatelessWidget {
+  const SettleActionButton({
+    super.key,
+    required this.selectedCount,
+    required this.onSettle,
+  });
+
+  final int selectedCount;
+  final VoidCallback onSettle;
+
+  bool get _canSettle => selectedCount >= 2;
+
+  Future<void> _showNeedTwoDialog(BuildContext context) {
+    final l10n = context.l10n;
+    return AppDialogs.showError(
+      context,
+      title: l10n.transactionSettleNeedTwoTitle,
+      message: l10n.transactionSettleNeedTwo,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return GestureDetector(
+      onTap: _canSettle ? null : () => _showNeedTwoDialog(context),
+      child: AbsorbPointer(
+        absorbing: !_canSettle,
+        child: FilledButton(
+          onPressed: _canSettle ? onSettle : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primaryStrong,
+          ),
+          child: Text(l10n.transactionSettle),
         ),
       ),
     );
