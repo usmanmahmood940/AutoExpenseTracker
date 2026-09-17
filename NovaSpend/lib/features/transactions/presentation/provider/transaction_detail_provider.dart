@@ -28,7 +28,9 @@ class TransactionDetailProvider extends ChangeNotifier {
         accountIdMasked = transaction.accountIdMasked,
         paymentMethod = normalizePaymentMethod(transaction.paymentMethod),
         transactionDate = transaction.transactionDate,
-        transactionTime = transaction.transactionTime;
+        transactionTime = transaction.transactionTime,
+        isLoadingSettlementMembers = transaction.isSettled,
+        settlementMembersResolved = !transaction.isSettled;
 
   final String uid;
   final UpdateTransaction _updateTransaction;
@@ -47,6 +49,8 @@ class TransactionDetailProvider extends ChangeNotifier {
   String transactionTime;
   bool rememberForMerchant = false;
   bool isLoadingRememberState = false;
+  bool isLoadingSettlementMembers = false;
+  bool settlementMembersResolved = false;
   bool isSaving = false;
   String? error;
   bool saved = false;
@@ -55,8 +59,23 @@ class TransactionDetailProvider extends ChangeNotifier {
   String? _activeOverrideKey;
   Future<void>? _rememberStateFuture;
   Future<void>? _detailFuture;
+  Future<void>? _settlementMembersFuture;
+  bool _detailLoaded = false;
+  int _settlementLoadGen = 0;
+  final Map<String, TransactionEntity> _settlementMembers = {};
 
   TransactionEntity get transaction => _transaction;
+
+  /// Linked settlement sources keyed by transaction id.
+  Map<String, TransactionEntity> get settlementMembers =>
+      Map.unmodifiable(_settlementMembers);
+
+  /// Settled primaries stay "not ready" until members are fetched (or detail
+  /// confirms there are no settlement groups).
+  bool get settlementMembersReady {
+    if (!_transaction.isSettled) return true;
+    return settlementMembersResolved;
+  }
 
   Future<void> loadMerchantRememberState() {
     return _rememberStateFuture ??= _fetchMerchantRememberState();
@@ -67,19 +86,131 @@ class TransactionDetailProvider extends ChangeNotifier {
     return _detailFuture ??= _fetchFullTransaction();
   }
 
+  /// Resolve settlement member rows for the Settlements section UI.
+  Future<void> loadSettlementMembers({bool force = false}) {
+    if (force) {
+      _settlementMembersFuture = null;
+    }
+    return _settlementMembersFuture ??= _fetchSettlementMembers();
+  }
+
   Future<void> _fetchFullTransaction() async {
-    if (_transaction.smsSource.raw.trim().isNotEmpty) return;
     try {
-      final full = await _repository.getTransaction(uid, _transaction.id);
-      if (saved) {
-        _transaction = _transaction.copyWith(smsSource: full.smsSource);
-      } else {
-        _transaction = full;
+      if (_transaction.smsSource.raw.trim().isEmpty) {
+        final full = await _repository.getTransaction(uid, _transaction.id);
+        if (saved) {
+          _transaction = _transaction.copyWith(smsSource: full.smsSource);
+        } else {
+          _transaction = full;
+        }
+        notifyListeners();
       }
-      notifyListeners();
     } catch (e) {
       debugPrint('loadFullTransaction failed: $e');
+    } finally {
+      _detailLoaded = true;
     }
+
+    final ids = _settlementMemberIds(_transaction);
+    if (!_transaction.isSettled || ids.isEmpty) {
+      _settlementMembers.clear();
+      isLoadingSettlementMembers = false;
+      settlementMembersResolved = true;
+      notifyListeners();
+      return;
+    }
+
+    final missing =
+        ids.where((id) => !_settlementMembers.containsKey(id)).toList();
+    if (missing.isEmpty) {
+      isLoadingSettlementMembers = false;
+      settlementMembersResolved = true;
+      notifyListeners();
+      await loadSettlementMembers();
+      return;
+    }
+
+    final shouldForce =
+        _settlementMembersFuture == null || !isLoadingSettlementMembers;
+    isLoadingSettlementMembers = true;
+    settlementMembersResolved = false;
+    notifyListeners();
+    await loadSettlementMembers(force: shouldForce);
+  }
+
+  Future<void> _fetchSettlementMembers() async {
+    final loadGen = ++_settlementLoadGen;
+    final ids = _settlementMemberIds(_transaction);
+    if (ids.isEmpty) {
+      if (_transaction.isSettled && !_detailLoaded) {
+        // Primary detail may still bring settlement_groups — keep skeletons.
+        isLoadingSettlementMembers = true;
+        settlementMembersResolved = false;
+        notifyListeners();
+        // Don't memoize this no-op; detail load will start a real fetch.
+        _settlementMembersFuture = null;
+        return;
+      }
+      if (_settlementMembers.isNotEmpty) {
+        _settlementMembers.clear();
+      }
+      if (loadGen != _settlementLoadGen) return;
+      isLoadingSettlementMembers = false;
+      settlementMembersResolved = true;
+      notifyListeners();
+      return;
+    }
+
+    final missing =
+        ids.where((id) => !_settlementMembers.containsKey(id)).toList();
+    if (missing.isEmpty) {
+      if (loadGen != _settlementLoadGen) return;
+      isLoadingSettlementMembers = false;
+      settlementMembersResolved = true;
+      notifyListeners();
+      return;
+    }
+
+    isLoadingSettlementMembers = true;
+    settlementMembersResolved = false;
+    notifyListeners();
+    try {
+      final fetched = await Future.wait(
+        missing.map((id) async {
+          try {
+            return await _repository.getTransaction(uid, id);
+          } catch (e) {
+            debugPrint('loadSettlementMember $id failed: $e');
+            return null;
+          }
+        }),
+      );
+      if (loadGen != _settlementLoadGen) return;
+      for (final tx in fetched) {
+        if (tx != null) {
+          _settlementMembers[tx.id] = tx;
+        }
+      }
+      _settlementMembers.removeWhere((id, _) => !ids.contains(id));
+      isLoadingSettlementMembers = false;
+      settlementMembersResolved = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('loadSettlementMembers failed: $e');
+      if (loadGen != _settlementLoadGen) return;
+      isLoadingSettlementMembers = false;
+      settlementMembersResolved = true;
+      notifyListeners();
+    }
+  }
+
+  static Set<String> _settlementMemberIds(TransactionEntity tx) {
+    final ids = <String>{};
+    for (final group
+        in tx.settlementGroups ?? const <SettlementGroupEntity>[]) {
+      ids.addAll(group.mergedTransactionIds);
+    }
+    return ids;
   }
 
   Future<void> _fetchMerchantRememberState() async {
@@ -320,6 +451,10 @@ class TransactionDetailProvider extends ChangeNotifier {
       _transaction = updated;
       amount = updated.amount;
       saved = true;
+      _settlementMembers.clear();
+      _settlementMembersFuture = null;
+      settlementMembersResolved = _settlementMemberIds(updated).isEmpty;
+      isLoadingSettlementMembers = !settlementMembersResolved;
       return true;
     } catch (e) {
       error = e.toString();

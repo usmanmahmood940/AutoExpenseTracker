@@ -895,6 +895,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionUnsettle => 'Unsettle';
 
   @override
+  String get transactionUnsettleConfirmTitle => 'Unsettle this group?';
+
+  @override
+  String get transactionUnsettleConfirmBody =>
+      'This restores the merged transactions as separate entries and reverts the primary amount.';
+
+  @override
   String get transactionUnmerge => 'Unmerge';
 
   @override

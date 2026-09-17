@@ -14,6 +14,7 @@ import 'package:nova_spend/core/utils/date_labels.dart';
 import 'package:nova_spend/core/widgets/app_dialogs.dart';
 import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/category_color_scope.dart';
+import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/features/auth/presentation/provider/auth_provider.dart';
 import 'package:nova_spend/features/merchants/presentation/pages/merchant_page.dart';
 import 'package:nova_spend/features/transactions/domain/entities/transaction_entity.dart';
@@ -21,6 +22,7 @@ import 'package:nova_spend/features/transactions/domain/repositories/transaction
 import 'package:nova_spend/features/transactions/domain/usecases/update_transaction.dart';
 import 'package:nova_spend/features/transactions/presentation/provider/transaction_detail_provider.dart';
 import 'package:nova_spend/features/transactions/presentation/widgets/edit_transaction_sheet.dart';
+import 'package:nova_spend/features/transactions/presentation/widgets/transaction_list_tile.dart';
 import 'package:nova_spend/l10n/app_localizations.dart';
 import 'package:nova_spend/l10n/app_strings.dart';
 import 'package:provider/provider.dart';
@@ -49,6 +51,7 @@ class TransactionDetailPage extends StatelessWidget {
           repository: sl<TransactionRepository>(),
         );
         unawaited(provider.loadMerchantRememberState());
+        unawaited(provider.loadSettlementMembers());
         unawaited(provider.loadFullTransaction());
         return provider;
       },
@@ -67,6 +70,7 @@ class _DetailView extends StatefulWidget {
 class _DetailViewState extends State<_DetailView> {
   bool _openingLinked = false;
   bool _unmergeConfirmOpen = false;
+  bool _unsettleConfirmOpen = false;
 
   Future<void> _openEditSheet() async {
     final l10n = context.l10n;
@@ -84,16 +88,30 @@ class _DetailViewState extends State<_DetailView> {
     ).showSnackBar(SnackBar(content: Text(l10n.transactionSaved)));
   }
 
-  Future<void> _unsettle(String groupId) async {
+  Future<void> _confirmUnsettle(String groupId) async {
+    if (_unsettleConfirmOpen || _openingLinked) return;
+    _unsettleConfirmOpen = true;
     final l10n = context.l10n;
-    final ok =
-        await context.read<TransactionDetailProvider>().unsettleGroup(groupId);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? l10n.transactionUnsettle : l10n.errorGeneric),
-      ),
-    );
+    try {
+      final confirmed = await AppDialogs.showConfirm(
+        context,
+        title: l10n.transactionUnsettleConfirmTitle,
+        message: l10n.transactionUnsettleConfirmBody,
+        confirmLabel: l10n.transactionUnsettle,
+      );
+      if (!confirmed || !mounted) return;
+      final ok = await context
+          .read<TransactionDetailProvider>()
+          .unsettleGroup(groupId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ok ? l10n.transactionUnsettle : l10n.errorGeneric),
+        ),
+      );
+    } finally {
+      _unsettleConfirmOpen = false;
+    }
   }
 
   Future<void> _confirmUnmerge() async {
@@ -290,8 +308,12 @@ class _DetailViewState extends State<_DetailView> {
         if (tx.isSettled) ...[
           _SettlementSection(
             transaction: tx,
+            members: provider.settlementMembers,
+            membersReady: provider.settlementMembersReady,
             openingLinked: _openingLinked,
-            onUnsettle: provider.isSaving ? null : _unsettle,
+            onUnsettle: provider.isSaving || _unsettleConfirmOpen
+                ? null
+                : _confirmUnsettle,
             onOpenMerged: _openLinkedTransaction,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1188,12 +1210,18 @@ class _SmsExpandableCard extends StatelessWidget {
 class _SettlementSection extends StatelessWidget {
   const _SettlementSection({
     required this.transaction,
+    required this.members,
+    required this.membersReady,
     required this.openingLinked,
     required this.onUnsettle,
     required this.onOpenMerged,
   });
 
+  static const _fallbackSkeletonRows = 3;
+
   final TransactionEntity transaction;
+  final Map<String, TransactionEntity> members;
+  final bool membersReady;
   final bool openingLinked;
   final Future<void> Function(String groupId)? onUnsettle;
   final Future<void> Function(String transactionId) onOpenMerged;
@@ -1203,57 +1231,134 @@ class _SettlementSection extends StatelessWidget {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final groups = transaction.settlementGroups ?? const <SettlementGroupEntity>[];
-    if (groups.isEmpty) return const SizedBox.shrink();
+    if (groups.isEmpty && membersReady) return const SizedBox.shrink();
 
     return _SurfaceCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.transactionSettlementGroups,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              0,
+            ),
+            child: Text(
+              l10n.transactionSettlementGroups,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          for (final group in groups) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.transactionSettlementGroupTitle(
-                      group.mergedTransactionIds.length,
-                    ),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: onUnsettle == null
-                      ? null
-                      : () => onUnsettle!(group.groupId),
-                  child: Text(l10n.transactionUnsettle),
-                ),
-              ],
-            ),
-            for (final id in group.mergedTransactionIds)
-              ListTile(
-                dense: true,
-                enabled: !openingLinked,
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  id,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall,
-                ),
-                trailing: const Icon(Icons.chevron_right, size: 18),
-                onTap: openingLinked ? null : () => onOpenMerged(id),
+          if (!membersReady && groups.isEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
               ),
-          ],
+              child: Text(
+                l10n.transactionSettlementGroupTitle(_fallbackSkeletonRows),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            SkeletonPulse(
+              child: Column(
+                children: [
+                  for (var i = 0; i < _fallbackSkeletonRows; i++)
+                    const SkeletonTransactionRow(),
+                ],
+              ),
+            ),
+          ] else
+            for (final group in groups) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.sm,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.transactionSettlementGroupTitle(
+                          group.mergedTransactionIds.length,
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: !membersReady || onUnsettle == null
+                          ? null
+                          : () => onUnsettle!(group.groupId),
+                      child: Text(l10n.transactionUnsettle),
+                    ),
+                  ],
+                ),
+              ),
+              _SettlementMemberList(
+                ids: group.mergedTransactionIds,
+                members: members,
+                membersReady: membersReady,
+                openingLinked: openingLinked,
+                onOpenMerged: onOpenMerged,
+              ),
+            ],
+          const SizedBox(height: AppSpacing.sm),
         ],
       ),
+    );
+  }
+}
+
+class _SettlementMemberList extends StatelessWidget {
+  const _SettlementMemberList({
+    required this.ids,
+    required this.members,
+    required this.membersReady,
+    required this.openingLinked,
+    required this.onOpenMerged,
+  });
+
+  final List<String> ids;
+  final Map<String, TransactionEntity> members;
+  final bool membersReady;
+  final bool openingLinked;
+  final Future<void> Function(String transactionId) onOpenMerged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!membersReady) {
+      return SkeletonPulse(
+        child: Column(
+          children: [
+            for (var i = 0; i < ids.length; i++) const SkeletonTransactionRow(),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        for (final id in ids)
+          if (members[id] != null)
+            TransactionListTile(
+              transaction: members[id]!,
+              showTime: true,
+              onTap: openingLinked ? null : () => onOpenMerged(members[id]!.id),
+            )
+          else
+            const SkeletonTransactionRow(),
+      ],
     );
   }
 }

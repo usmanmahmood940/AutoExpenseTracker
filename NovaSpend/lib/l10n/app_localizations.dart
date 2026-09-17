@@ -1744,6 +1744,18 @@ abstract class AppLocalizations {
   /// **'Unsettle'**
   String get transactionUnsettle;
 
+  /// No description provided for @transactionUnsettleConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsettle this group?'**
+  String get transactionUnsettleConfirmTitle;
+
+  /// No description provided for @transactionUnsettleConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This restores the merged transactions as separate entries and reverts the primary amount.'**
+  String get transactionUnsettleConfirmBody;
+
   /// No description provided for @transactionUnmerge.
   ///
   /// In en, this message translates to:

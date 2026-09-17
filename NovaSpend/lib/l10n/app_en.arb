@@ -374,6 +374,8 @@
     }
   },
   "transactionUnsettle": "Unsettle",
+  "transactionUnsettleConfirmTitle": "Unsettle this group?",
+  "transactionUnsettleConfirmBody": "This restores the merged transactions as separate entries and reverts the primary amount.",
   "transactionUnmerge": "Unmerge",
   "transactionUnmergeConfirmTitle": "Unmerge this transaction?",
   "transactionUnmergeConfirmBody": "This restores it as its own transaction, separate from the one it was merged into.",
