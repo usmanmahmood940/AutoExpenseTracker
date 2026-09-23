@@ -43,6 +43,7 @@ class TransactionDetailPage extends StatelessWidget {
     }
 
     return ChangeNotifierProvider(
+      key: ValueKey(transaction.id),
       create: (_) {
         final provider = TransactionDetailProvider(
           uid: uid,
@@ -74,13 +75,6 @@ class _DetailViewState extends State<_DetailView> {
 
   Future<void> _openEditSheet() async {
     final l10n = context.l10n;
-    final provider = context.read<TransactionDetailProvider>();
-    if (provider.transaction.isMerged) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.transactionSettleLockedEdit)),
-      );
-      return;
-    }
     final saved = await EditTransactionSheet.show(context);
     if (!mounted || saved != true) return;
     ScaffoldMessenger.of(
@@ -261,15 +255,14 @@ class _DetailViewState extends State<_DetailView> {
             ),
           ),
           actions: [
-            if (!provider.transaction.isSettlementLocked)
-              IconButton(
-                tooltip: l10n.commonDelete,
-                onPressed: provider.isSaving ? null : _confirmDelete,
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
+            IconButton(
+              tooltip: l10n.commonDelete,
+              onPressed: provider.isSaving ? null : _confirmDelete,
+              icon: Icon(
+                Icons.delete_outline,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
+            ),
           ],
         ),
         body: _buildBody(provider),
@@ -302,8 +295,8 @@ class _DetailViewState extends State<_DetailView> {
           _CategoryCard(category: tx.category),
         ],
         const SizedBox(height: AppSpacing.md),
-        if (!tx.isMerged) _EditButton(onPressed: _openEditSheet),
-        if (!tx.isMerged) const SizedBox(height: AppSpacing.md),
+        _EditButton(onPressed: _openEditSheet),
+        const SizedBox(height: AppSpacing.md),
 
         if (tx.isSettled) ...[
           _SettlementSection(

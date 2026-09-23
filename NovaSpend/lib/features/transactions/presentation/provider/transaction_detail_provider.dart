@@ -250,6 +250,7 @@ class TransactionDetailProvider extends ChangeNotifier {
   }
 
   void setAmount(double value) {
+    if (_transaction.isSettlementLocked) return;
     amount = value;
     notifyListeners();
   }
@@ -260,6 +261,7 @@ class TransactionDetailProvider extends ChangeNotifier {
   }
 
   void setType(String value) {
+    if (_transaction.isSettlementLocked) return;
     type = value;
     notifyListeners();
   }
@@ -340,7 +342,6 @@ class TransactionDetailProvider extends ChangeNotifier {
         'merchant': trimmedMerchant,
         'merchantDetails': trimmedDetails.isEmpty ? null : trimmedDetails,
         'category': category,
-        'type': type,
         'bank': resolvedBank,
         'accountIdMasked': accountIdMasked.trim(),
         'paymentMethod': resolvedPaymentMethod,
@@ -350,8 +351,9 @@ class TransactionDetailProvider extends ChangeNotifier {
         'isEdited': true,
         'categorySource': 'user',
       };
-      if (!_transaction.isSettled) {
+      if (!_transaction.isSettlementLocked) {
         fields['amount'] = amount;
+        fields['type'] = type;
       }
 
       if (needsReview && !_transaction.isSettlementLocked) {

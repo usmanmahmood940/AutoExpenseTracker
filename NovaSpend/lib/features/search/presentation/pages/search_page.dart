@@ -456,47 +456,11 @@ class _SearchViewState extends State<_SearchView> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    if (_selectionMode)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: AppSpacing.sm,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                l10n.transactionSettleSelectedCount(
-                                                  _selectedIds.length,
-                                                ),
-                                                style: theme
-                                                    .textTheme
-                                                    .titleSmall
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                              ),
-                                            ),
-                                            TextButton(
-                                              onPressed: _clearSelection,
-                                              child: Text(
-                                                l10n.transactionSettleCancel,
-                                              ),
-                                            ),
-                                            SettleActionButton(
-                                              selectedCount:
-                                                  _selectedIds.length,
-                                              onSettle: _openSettle,
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    else
-                                      _ResultsCountRow(
-                                        count: provider.matchCount,
-                                        spent: provider.matchSpent,
-                                        received: provider.matchReceived,
-                                      ),
+                                    _ResultsCountRow(
+                                      count: provider.matchCount,
+                                      spent: provider.matchSpent,
+                                      received: provider.matchReceived,
+                                    ),
                                     const SizedBox(height: AppSpacing.sm),
                                     provider.query.sort.groupsByDay
                                         ? _ResultsDayGroups(
@@ -522,7 +486,13 @@ class _SearchViewState extends State<_SearchView> {
                                     ],
                                     if (provider.isLoadingMore)
                                       const AppListFooterLoader(),
-                                    const SizedBox(height: AppSpacing.xxl),
+                                    SizedBox(
+                                      height: AppSpacing.xxl +
+                                          (_selectionMode
+                                              ? SettleSelectionBar
+                                                  .reservedHeight
+                                              : 0),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -543,6 +513,17 @@ class _SearchViewState extends State<_SearchView> {
             height: GlassHeaderBar.totalHeight(context),
             child: const ShellGlassHeaderBar(),
           ),
+          if (_selectionMode)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SettleSelectionBar(
+                selectedCount: _selectedIds.length,
+                onCancel: _clearSelection,
+                onSettle: _openSettle,
+              ),
+            ),
         ],
       ),
     );

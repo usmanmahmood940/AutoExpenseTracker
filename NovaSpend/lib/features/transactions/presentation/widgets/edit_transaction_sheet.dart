@@ -155,6 +155,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
     final merchantHint = _merchant.text.trim().isEmpty
         ? l10n.transactionMerchant
         : _merchant.text.trim();
+    final lockSettlementFields = provider.transaction.isSettlementLocked;
     final categories = CategoryCatalogScope.of(
       context,
     ).map((c) => c.name).toSet().toList()..sort();
@@ -194,10 +195,10 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                       muted: muted,
                       fieldFill: fieldFill,
                       border: border,
-                      readOnly: provider.transaction.isSettled,
+                      readOnly: lockSettlementFields,
                       onChanged: (_) => setState(() {}),
                     ),
-                    if (provider.transaction.isSettled) ...[
+                    if (lockSettlementFields) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         l10n.transactionSettleLockedEdit,
@@ -249,6 +250,7 @@ class _EditTransactionSheetState extends State<EditTransactionSheet> {
                         border: border,
                         debitLabel: l10n.feedFilterTypeDebit,
                         creditLabel: l10n.feedFilterTypeCredit,
+                        enabled: !lockSettlementFields,
                         onChanged: provider.setType,
                       ),
                     ),

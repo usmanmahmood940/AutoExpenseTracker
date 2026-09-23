@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
+import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
 import 'package:nova_spend/core/utils/category_visuals.dart';
 import 'package:nova_spend/core/utils/date_labels.dart';
@@ -119,89 +120,135 @@ class TransactionListTile extends StatelessWidget {
               CategoryAvatar(category: transaction.category),
               const SizedBox(width: AppSpacing.smPlus),
               Expanded(
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    onMerchantTap == null || selectionMode
-                        ? Text(
-                            merchantLabel,
-                            style: merchantStyle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : GestureDetector(
-                            onTap: onMerchantTap,
-                            child: Text(
-                              merchantLabel,
-                              style: merchantStyle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                    const SizedBox(height: 1),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          onMerchantTap == null || selectionMode
+                              ? Text(
+                                  merchantLabel,
+                                  style: merchantStyle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                              : GestureDetector(
+                                  onTap: onMerchantTap,
+                                  child: Text(
+                                    merchantLabel,
+                                    style: merchantStyle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                          const SizedBox(height: 1),
+                          Text(
                             categoryLabel,
                             style: categoryStyle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        if (statusChip != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            statusChip,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primaryInk(brightness),
+                          if (time.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/icons/icon_clock.svg',
+                                  width: 12,
+                                  height: 12,
+                                  colorFilter: ColorFilter.mode(
+                                    timeIconColor,
+                                    BlendMode.srcIn,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  time,
+                                  style: timeStyle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (time.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/icons/icon_clock.svg',
-                            width: 12,
-                            height: 12,
-                            colorFilter: ColorFilter.mode(
-                              timeIconColor,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            time,
-                            style: timeStyle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          ],
                         ],
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (statusChip != null) ...[
+                          _StatusPill(
+                            label: statusChip,
+                            settled: transaction.isSettled,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                        ],
+                        Text(
+                          '$sign${money.formatMoney(transaction.amount)}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.01 * 15,
+                            color: amountColor,
+                            decoration: mutedMerged
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                '$sign${money.formatMoney(transaction.amount)}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.01 * 15,
-                  color: amountColor,
-                  decoration: mutedMerged ? TextDecoration.lineThrough : null,
-                ),
-              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.settled});
+
+  final String label;
+  final bool settled;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final background = settled
+        ? AppColors.navActiveFill(brightness)
+        : AppColors.neutralFill(brightness);
+    final foreground = settled
+        ? AppColors.primaryInk(brightness)
+        : theme.colorScheme.onSurfaceVariant;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xsMax,
+          vertical: AppSpacing.xsMini,
+        ),
+        child: Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            height: 1.1,
+            color: foreground,
           ),
         ),
       ),

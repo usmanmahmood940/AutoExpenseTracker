@@ -399,11 +399,11 @@
       "count": {"type": "int"}
     }
   },
-  "transactionSettleCancel": "Cancel selection",
+  "transactionSettleCancel": "Cancel",
   "transactionSettleNeedTwoTitle": "Select more transactions",
   "transactionSettleNeedTwo": "Select at least 2 transactions to settle.",
-  "transactionSettleLockedEdit": "Unsettle or unmerge before editing this transaction",
-  "transactionSettleLockedDelete": "Unsettle or unmerge before deleting this transaction",
+  "transactionSettleLockedEdit": "Unsettle or unmerge before changing the amount or type.",
+  "transactionSettleLockedDelete": "First unsettle or unmerge this transaction to delete it.",
   "transactionEdited": "Edited",
   "transactionDuplicate": "Possible duplicate",
   "transactionRecurring": "Recurring",

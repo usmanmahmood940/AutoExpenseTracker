@@ -1837,7 +1837,7 @@ abstract class AppLocalizations {
   /// No description provided for @transactionSettleCancel.
   ///
   /// In en, this message translates to:
-  /// **'Cancel selection'**
+  /// **'Cancel'**
   String get transactionSettleCancel;
 
   /// No description provided for @transactionSettleNeedTwoTitle.
@@ -1855,13 +1855,13 @@ abstract class AppLocalizations {
   /// No description provided for @transactionSettleLockedEdit.
   ///
   /// In en, this message translates to:
-  /// **'Unsettle or unmerge before editing this transaction'**
+  /// **'Unsettle or unmerge before changing the amount or type.'**
   String get transactionSettleLockedEdit;
 
   /// No description provided for @transactionSettleLockedDelete.
   ///
   /// In en, this message translates to:
-  /// **'Unsettle or unmerge before deleting this transaction'**
+  /// **'First unsettle or unmerge this transaction to delete it.'**
   String get transactionSettleLockedDelete;
 
   /// No description provided for @transactionEdited.

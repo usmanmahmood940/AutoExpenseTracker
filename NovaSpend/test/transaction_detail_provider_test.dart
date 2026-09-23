@@ -143,6 +143,26 @@ class FakeDetailRepo implements TransactionRepository {
     required String uid,
     required String merchantKey,
   }) => throw UnimplementedError();
+
+  @override
+  Future<TransactionEntity> settle({
+    required String uid,
+    required String primaryId,
+    required List<String> sourceIds,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<TransactionEntity> unsettle({
+    required String uid,
+    required String primaryId,
+    required String groupId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<TransactionEntity> unmerge({
+    required String uid,
+    required String transactionId,
+  }) => throw UnimplementedError();
 }
 
 void main() {

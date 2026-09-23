@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nova_spend/core/currency/app_currency_scope.dart';
 import 'package:nova_spend/core/di/injection.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
@@ -56,10 +57,10 @@ class _SettleTransactionsSheetState extends State<SettleTransactionsSheet> {
     final sources = widget.selected.where((tx) => tx.id != primary.id);
     var net = primary.amount;
     for (final source in sources) {
-      if (source.type == 'credit') {
-        net -= source.amount;
-      } else {
+      if (source.type == primary.type) {
         net += source.amount;
+      } else {
+        net -= source.amount;
       }
     }
     return net;
@@ -110,11 +111,9 @@ class _SettleTransactionsSheetState extends State<SettleTransactionsSheet> {
     return AnimatedPadding(
       duration: AppMotion.fast,
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface(brightness),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+      child: Material(
+        color: AppColors.surface(brightness),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         clipBehavior: Clip.antiAlias,
         child: SafeArea(
           top: false,
@@ -223,7 +222,7 @@ class _SettleTransactionsSheetState extends State<SettleTransactionsSheet> {
                   child: FilledButton(
                     onPressed: _saving ||
                             _primaryId == null ||
-                            (preview != null && preview <= 0)
+                            (preview != null && preview < 0)
                         ? null
                         : _confirm,
                     style: FilledButton.styleFrom(
@@ -244,6 +243,97 @@ class _SettleTransactionsSheetState extends State<SettleTransactionsSheet> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sticky selection chrome for Home and Activity: count, cancel, and Settle.
+class SettleSelectionBar extends StatelessWidget {
+  const SettleSelectionBar({
+    required this.selectedCount,
+    required this.onCancel,
+    required this.onSettle,
+    super.key,
+  });
+
+  final int selectedCount;
+  final VoidCallback onCancel;
+  final VoidCallback onSettle;
+
+  /// Clearance so the last list rows stay above the bar.
+  static const double reservedHeight = 76;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final l10n = context.l10n;
+    final ink = AppColors.primaryInk(brightness);
+
+    return Material(
+      color: AppColors.card(brightness),
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.16),
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xl),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.smPlus,
+          AppSpacing.md,
+          AppSpacing.smPlus,
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.navActiveFill(brightness),
+              child: SvgPicture.asset(
+                'assets/icons/icon_layers.svg',
+                width: 18,
+                height: 18,
+                colorFilter: ColorFilter.mode(ink, BlendMode.srcIn),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.smPlus2),
+            Expanded(
+              child: Text(
+                l10n.transactionSettleSelectedCount(selectedCount),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onCancel,
+              style: TextButton.styleFrom(
+                foregroundColor: ink,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  height: 1.1,
+                ),
+              ),
+              child: Text(l10n.transactionSettleCancel),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            SettleActionButton(
+              selectedCount: selectedCount,
+              onSettle: onSettle,
+            ),
+          ],
         ),
       ),
     );
@@ -284,6 +374,18 @@ class SettleActionButton extends StatelessWidget {
           onPressed: _canSettle ? onSettle : null,
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primaryStrong,
+            foregroundColor: AppColors.onPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            minimumSize: const Size(88, 40),
+            fixedSize: const Size.fromHeight(40),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            shape: const StadiumBorder(),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
           ),
           child: Text(l10n.transactionSettle),
         ),

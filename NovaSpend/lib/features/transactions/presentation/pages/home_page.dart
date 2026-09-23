@@ -176,7 +176,7 @@ class _PeriodToggleSkeleton extends StatelessWidget {
   }
 }
 
-class _HomeView extends StatelessWidget {
+class _HomeView extends StatefulWidget {
   const _HomeView({
     required this.reviewBannerDismissed,
     required this.onDismissReviewBanner,
@@ -185,7 +185,52 @@ class _HomeView extends StatelessWidget {
   final bool reviewBannerDismissed;
   final VoidCallback onDismissReviewBanner;
 
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
   static const _sectionGap = AppSpacing.md - AppSpacing.sm; // 28
+  final Set<String> _selectedIds = {};
+
+  bool get _selectionMode => _selectedIds.isNotEmpty;
+
+  void _toggle(TransactionEntity tx) {
+    if (tx.isMerged) return;
+    setState(() {
+      if (_selectedIds.contains(tx.id)) {
+        _selectedIds.remove(tx.id);
+      } else {
+        _selectedIds.add(tx.id);
+      }
+    });
+  }
+
+  void _startSelect(TransactionEntity tx) {
+    if (tx.isMerged) return;
+    setState(() => _selectedIds.add(tx.id));
+  }
+
+  void _clearSelection() {
+    setState(() => _selectedIds.clear());
+  }
+
+  Future<void> _openSettle() async {
+    final home = context.read<HomeProvider>();
+    final selected = home.periodItems
+        .where((tx) => _selectedIds.contains(tx.id))
+        .toList();
+    if (selected.length < 2) return;
+    final settled = await SettleTransactionsSheet.show(
+      context,
+      selected: selected,
+    );
+    if (!mounted) return;
+    _clearSelection();
+    if (settled == true) {
+      await home.refresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +239,9 @@ class _HomeView extends StatelessWidget {
     final topPad = GlassHeaderBar.contentTopPadding(context);
     // Prefer [read] here — shell chrome must not rebuild on every period change.
     final home = context.read<HomeProvider>();
+    final listBottomPadding = _selectionMode
+        ? AppSpacing.lg + SettleSelectionBar.reservedHeight
+        : AppSpacing.xxl + PrimaryFab.size;
 
     return AdaptiveScaffold(
       applySafeArea: false,
@@ -222,10 +270,10 @@ class _HomeView extends StatelessWidget {
                     padding: EdgeInsets.only(top: _sectionGap),
                     sliver: SliverToBoxAdapter(child: _PeriodBalance()),
                   ),
-                  if (!reviewBannerDismissed)
+                  if (!widget.reviewBannerDismissed)
                     SliverToBoxAdapter(
                       child: _ReviewBannerSlot(
-                        onDismiss: onDismissReviewBanner,
+                        onDismiss: widget.onDismissReviewBanner,
                       ),
                     ),
                   SliverPadding(
@@ -233,9 +281,15 @@ class _HomeView extends StatelessWidget {
                       AppSpacing.md,
                       _sectionGap,
                       AppSpacing.md,
-                      AppSpacing.xxl + PrimaryFab.size,
+                      listBottomPadding,
                     ),
-                    sliver: const SliverToBoxAdapter(child: _HomeBody()),
+                    sliver: SliverToBoxAdapter(
+                      child: _HomeBody(
+                        selectedIds: _selectedIds,
+                        onToggle: _toggle,
+                        onStartSelect: _startSelect,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -248,14 +302,26 @@ class _HomeView extends StatelessWidget {
             height: GlassHeaderBar.totalHeight(context),
             child: const ShellGlassHeaderBar(),
           ),
-          Positioned(
-            right: AppSpacing.md,
-            bottom: AppSpacing.lg,
-            child: PrimaryFab(
-              tooltip: l10n.homeAddTransaction,
-              onPressed: () => _openManualLog(context),
+          if (_selectionMode)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SettleSelectionBar(
+                selectedCount: _selectedIds.length,
+                onCancel: _clearSelection,
+                onSettle: _openSettle,
+              ),
+            )
+          else
+            Positioned(
+              right: AppSpacing.md,
+              bottom: AppSpacing.lg,
+              child: PrimaryFab(
+                tooltip: l10n.homeAddTransaction,
+                onPressed: () => _openManualLog(context),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -392,49 +458,20 @@ class _ReviewBannerSlot extends StatelessWidget {
 }
 
 /// Highlights + transaction list for the selected period.
-class _HomeBody extends StatefulWidget {
-  const _HomeBody();
+class _HomeBody extends StatelessWidget {
+  const _HomeBody({
+    required this.selectedIds,
+    required this.onToggle,
+    required this.onStartSelect,
+  });
 
-  @override
-  State<_HomeBody> createState() => _HomeBodyState();
-}
+  final Set<String> selectedIds;
+  final void Function(TransactionEntity tx) onToggle;
+  final void Function(TransactionEntity tx) onStartSelect;
 
-class _HomeBodyState extends State<_HomeBody> {
   static const _sectionGap = AppSpacing.lg;
-  final Set<String> _selectedIds = {};
-  bool get _selectionMode => _selectedIds.isNotEmpty;
 
-  void _toggle(TransactionEntity tx) {
-    if (tx.isMerged) return;
-    setState(() {
-      if (_selectedIds.contains(tx.id)) {
-        _selectedIds.remove(tx.id);
-      } else {
-        _selectedIds.add(tx.id);
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() => _selectedIds.clear());
-  }
-
-  Future<void> _openSettle() async {
-    final home = context.read<HomeProvider>();
-    final selected = home.periodItems
-        .where((tx) => _selectedIds.contains(tx.id))
-        .toList();
-    if (selected.length < 2) return;
-    final settled = await SettleTransactionsSheet.show(
-      context,
-      selected: selected,
-    );
-    if (!mounted) return;
-    _clearSelection();
-    if (settled == true) {
-      await home.refresh();
-    }
-  }
+  bool get _selectionMode => selectedIds.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -507,50 +544,22 @@ class _HomeBodyState extends State<_HomeBody> {
         ],
         const _Highlights(),
         const SizedBox(height: _sectionGap),
-        if (_selectionMode)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.transactionSettleSelectedCount(_selectedIds.length),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: _clearSelection,
-                  child: Text(l10n.transactionSettleCancel),
-                ),
-                SettleActionButton(
-                  selectedCount: _selectedIds.length,
-                  onSettle: _openSettle,
-                ),
-              ],
-            ),
-          )
-        else
-          SectionHeader(
-            title: l10n.homeRecentTransactions,
-            actionLabel: hasMore ? l10n.homeViewAll : null,
-            onActionTap: hasMore
-                ? () => _openActivityForPeriod(context, period)
-                : null,
-          ),
+        SectionHeader(
+          title: l10n.homeRecentTransactions,
+          actionLabel: hasMore ? l10n.homeViewAll : null,
+          onActionTap: hasMore
+              ? () => _openActivityForPeriod(context, period)
+              : null,
+        ),
         const SizedBox(height: _Highlights._headerGap),
         _dayGroups(
           context,
           l10n,
           home,
           selectionMode: _selectionMode,
-          selectedIds: _selectedIds,
-          onToggle: _toggle,
-          onStartSelect: (tx) {
-            if (tx.isMerged) return;
-            setState(() => _selectedIds.add(tx.id));
-          },
+          selectedIds: selectedIds,
+          onToggle: onToggle,
+          onStartSelect: onStartSelect,
         ),
         if (periodHasMore) ...[
           const SizedBox(height: AppSpacing.lg),

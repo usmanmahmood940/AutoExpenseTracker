@@ -425,6 +425,7 @@ class TransactionTypeSegmentedControl extends StatelessWidget {
     required this.debitLabel,
     required this.creditLabel,
     required this.onChanged,
+    this.enabled = true,
     super.key,
   });
 
@@ -435,6 +436,7 @@ class TransactionTypeSegmentedControl extends StatelessWidget {
   final String debitLabel;
   final String creditLabel;
   final ValueChanged<String> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -452,7 +454,7 @@ class TransactionTypeSegmentedControl extends StatelessWidget {
               label: debitLabel,
               selected: value == 'debit',
               muted: muted,
-              onTap: () => onChanged('debit'),
+              onTap: enabled ? () => onChanged('debit') : null,
             ),
           ),
           Expanded(
@@ -460,7 +462,7 @@ class TransactionTypeSegmentedControl extends StatelessWidget {
               label: creditLabel,
               selected: value == 'credit',
               muted: muted,
-              onTap: () => onChanged('credit'),
+              onTap: enabled ? () => onChanged('credit') : null,
             ),
           ),
         ],
@@ -480,7 +482,7 @@ class _TypeSegment extends StatelessWidget {
   final String label;
   final bool selected;
   final Color muted;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

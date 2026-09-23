@@ -948,7 +948,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get transactionSettleCancel => 'Cancel selection';
+  String get transactionSettleCancel => 'Cancel';
 
   @override
   String get transactionSettleNeedTwoTitle => 'Select more transactions';
@@ -959,11 +959,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionSettleLockedEdit =>
-      'Unsettle or unmerge before editing this transaction';
+      'Unsettle or unmerge before changing the amount or type.';
 
   @override
   String get transactionSettleLockedDelete =>
-      'Unsettle or unmerge before deleting this transaction';
+      'First unsettle or unmerge this transaction to delete it.';
 
   @override
   String get transactionEdited => 'Edited';
