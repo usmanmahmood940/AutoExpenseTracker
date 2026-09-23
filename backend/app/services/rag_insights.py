@@ -25,7 +25,7 @@ from app.services.transactions import SUMMABLE_STATUSES, parse_iso_date
 
 logger = logging.getLogger(__name__)
 
-_MAX_CARDS = 4
+_MAX_CARDS = 2
 _MIN_CARDS = 2
 
 _CARD_PROMPT = """You write 2-3 sentences about one spending pattern for this person.
