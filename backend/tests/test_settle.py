@@ -97,12 +97,12 @@ def test_settle_cafe_reimbursement_flow(api_client: TestClient) -> None:
     assert group_id  # used above via primary path
 
 
-def test_settle_rejects_non_positive_net(api_client: TestClient) -> None:
+def test_settle_rejects_negative_net(api_client: TestClient) -> None:
     cafe = _post_tx(api_client, merchant="Cafe", amount=1000, tx_date="2026-09-01")
     friend = _post_tx(
         api_client,
         merchant="Friend",
-        amount=1000,
+        amount=1500,
         tx_date="2026-09-02",
         tx_type="credit",
     )
@@ -111,6 +111,202 @@ def test_settle_rejects_non_positive_net(api_client: TestClient) -> None:
         json={"primaryId": cafe["id"], "sourceIds": [friend["id"]]},
     )
     assert response.status_code == 400
+    assert response.json()["code"] == "settle_amount_invalid"
+
+
+def test_settle_to_zero_debit_primary(api_client: TestClient) -> None:
+    zoom = _post_tx(
+        api_client,
+        merchant="ZOOM LAHORE",
+        amount=600,
+        tx_date="2026-09-01",
+        tx_type="debit",
+    )
+    touseef = _post_tx(
+        api_client,
+        merchant="M.Touseef",
+        amount=600,
+        tx_date="2026-09-02",
+        tx_type="credit",
+        category="Transfer",
+    )
+    response = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": zoom["id"], "sourceIds": [touseef["id"]]},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["amount"] == 0
+    assert body["original_amount"] == 600
+    assert body["status"] == "settled"
+
+
+def test_settle_to_zero_credit_primary(api_client: TestClient) -> None:
+    touseef = _post_tx(
+        api_client,
+        merchant="M.Touseef",
+        amount=600,
+        tx_date="2026-09-02",
+        tx_type="credit",
+        category="Transfer",
+    )
+    zoom = _post_tx(
+        api_client,
+        merchant="ZOOM LAHORE",
+        amount=600,
+        tx_date="2026-09-01",
+        tx_type="debit",
+    )
+    response = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": touseef["id"], "sourceIds": [zoom["id"]]},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["amount"] == 0
+    assert body["original_amount"] == 600
+    assert body["status"] == "settled"
+
+
+def test_settle_same_type_credits_increase_primary(api_client: TestClient) -> None:
+    payroll = _post_tx(
+        api_client,
+        merchant="Payroll",
+        amount=1000,
+        tx_date="2026-09-01",
+        tx_type="credit",
+        category="Transfer",
+    )
+    bonus = _post_tx(
+        api_client,
+        merchant="Bonus",
+        amount=200,
+        tx_date="2026-09-02",
+        tx_type="credit",
+        category="Transfer",
+    )
+    response = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": payroll["id"], "sourceIds": [bonus["id"]]},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["amount"] == 1200
+    assert body["original_amount"] == 1000
+    assert body["status"] == "settled"
+    assert body["settlement_groups"][0]["amountApplied"] == -200
+
+
+def test_unmerge_after_credit_primary_settle(api_client: TestClient) -> None:
+    touseef = _post_tx(
+        api_client,
+        merchant="M.Touseef",
+        amount=1000,
+        tx_date="2026-09-02",
+        tx_type="credit",
+        category="Transfer",
+    )
+    zoom = _post_tx(
+        api_client,
+        merchant="ZOOM LAHORE",
+        amount=400,
+        tx_date="2026-09-01",
+        tx_type="debit",
+    )
+    settled = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": touseef["id"], "sourceIds": [zoom["id"]]},
+    )
+    assert settled.status_code == 200, settled.text
+    assert settled.json()["amount"] == 600
+
+    unmerged = api_client.post(f"/transactions/{zoom['id']}/unmerge")
+    assert unmerged.status_code == 200, unmerged.text
+    assert unmerged.json()["status"] == "active"
+
+    primary = api_client.get(f"/transactions/{touseef['id']}").json()
+    assert primary["status"] == "active"
+    assert primary["amount"] == 1000
+    assert primary["settlement_groups"] is None
+    assert primary["original_amount"] is None
+
+
+def test_settlement_edit_locks_amount_and_type_only(api_client: TestClient) -> None:
+    cafe = _post_tx(
+        api_client, merchant="Cafe", amount=4000, tx_date="2026-09-01", tx_type="debit"
+    )
+    friend = _post_tx(
+        api_client,
+        merchant="Friend",
+        amount=1000,
+        tx_date="2026-09-02",
+        tx_type="credit",
+        category="Transfer",
+    )
+    settled = api_client.post(
+        "/transactions/settle",
+        json={"primaryId": cafe["id"], "sourceIds": [friend["id"]]},
+    )
+    assert settled.status_code == 200, settled.text
+    assert settled.json()["amount"] == 3000
+
+    edited = api_client.patch(
+        f"/transactions/{friend['id']}",
+        json={"merchant": "Ali", "category": "Food"},
+    )
+    assert edited.status_code == 200, edited.text
+    body = edited.json()
+    assert body["status"] == "merged"
+    assert body["merchant"] == "Ali"
+    assert body["category"] == "Food"
+    assert body["amount"] == 1000
+    assert body["type"] == "credit"
+
+    locked_amount = api_client.patch(
+        f"/transactions/{friend['id']}", json={"amount": 50}
+    )
+    assert locked_amount.status_code == 400
+    assert locked_amount.json()["code"] == "settlement_amount_locked"
+
+    locked_type = api_client.patch(
+        f"/transactions/{friend['id']}", json={"type": "debit"}
+    )
+    assert locked_type.status_code == 400
+    assert locked_type.json()["code"] == "settlement_type_locked"
+
+    same_type = api_client.patch(
+        f"/transactions/{friend['id']}", json={"type": "credit", "bank": "HBL"}
+    )
+    assert same_type.status_code == 200, same_type.text
+    assert same_type.json()["bank"] == "HBL"
+    assert same_type.json()["type"] == "credit"
+
+    primary = api_client.patch(
+        f"/transactions/{cafe['id']}", json={"merchant": "Cafe Updated"}
+    )
+    assert primary.status_code == 200, primary.text
+    assert primary.json()["status"] == "settled"
+    assert primary.json()["merchant"] == "Cafe Updated"
+    assert primary.json()["amount"] == 3000
+    assert primary.json()["type"] == "debit"
+
+    primary_amount = api_client.patch(
+        f"/transactions/{cafe['id']}", json={"amount": 10}
+    )
+    assert primary_amount.status_code == 400
+    assert primary_amount.json()["code"] == "settlement_amount_locked"
+
+    primary_type = api_client.patch(
+        f"/transactions/{cafe['id']}", json={"type": "credit"}
+    )
+    assert primary_type.status_code == 400
+    assert primary_type.json()["code"] == "settlement_type_locked"
+
+    unmerged = api_client.post(f"/transactions/{friend['id']}/unmerge")
+    assert unmerged.status_code == 200, unmerged.text
+    restored = api_client.get(f"/transactions/{cafe['id']}").json()
+    assert restored["status"] == "active"
+    assert restored["amount"] == 4000
 
 
 def test_should_index_settled_not_merged() -> None:

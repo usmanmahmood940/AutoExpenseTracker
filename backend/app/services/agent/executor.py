@@ -351,13 +351,13 @@ async def _settle_without_commit(
                 code="settle_currency_mismatch",
             )
     amount_applied = sum(
-        (_source_contribution(source) for source in sources),
+        (_source_contribution(source, primary.type) for source in sources),
         Decimal("0"),
     )
     new_amount = as_money(primary.amount) - as_money(amount_applied)
-    if new_amount <= 0:
+    if new_amount < 0:
         raise BadRequestError(
-            "Settle would reduce the primary amount to zero or below.",
+            "Settle would reduce the primary amount below zero.",
             code="settle_amount_invalid",
         )
     if primary.original_amount is None:
@@ -468,7 +468,7 @@ async def _unmerge_without_commit(
     )
     if target_idx is None:
         raise BadRequestError("Settlement group not found.", code="settle_group_not_found")
-    contribution = _source_contribution(merged)
+    contribution = _source_contribution(merged, primary.type)
     target = dict(groups[target_idx])
     member_ids = [
         str(item) for item in (target.get("mergedTransactionIds") or []) if str(item)

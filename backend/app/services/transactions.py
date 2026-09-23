@@ -512,16 +512,22 @@ async def update_transaction(
     tx = await get_owned(session, user_id=user_id, transaction_id=transaction_id)
     if tx.status is TransactionStatus.deleted:
         raise NotFoundError("Transaction not found.", code="transaction_not_found")
-    if tx.status is TransactionStatus.merged:
-        raise BadRequestError(
-            "Unmerge this transaction before editing it.",
-            code="merged_locked",
-        )
-    if tx.status is TransactionStatus.settled and "amount" in updates:
-        raise BadRequestError(
-            "Unsettle this transaction before changing its amount.",
-            code="settled_amount_locked",
-        )
+    if tx.status in (TransactionStatus.settled, TransactionStatus.merged):
+        # Amount and type are the inputs to settlement math. Other fields can change.
+        if "amount" in updates and updates["amount"] is not None:
+            raise BadRequestError(
+                "Unsettle or unmerge this transaction before changing its amount.",
+                code="settlement_amount_locked",
+            )
+        if "type" in updates and updates["type"] is not None:
+            requested_type = updates["type"]
+            if isinstance(requested_type, str):
+                requested_type = TransactionType(requested_type)
+            if requested_type != tx.type:
+                raise BadRequestError(
+                    "Unsettle or unmerge this transaction before changing its type.",
+                    code="settlement_type_locked",
+                )
     # Never let PATCH clobber settle/merge lifecycle statuses.
     if "status" in updates and updates["status"] is not None:
         requested = updates["status"]
@@ -636,10 +642,13 @@ async def mark_reviewed(
     return tx
 
 
-def _source_contribution(tx: Transaction) -> Decimal:
-    """How much this source reduces the primary amount (credits reduce, debits increase)."""
+def _source_contribution(tx: Transaction, primary_type: TransactionType) -> Decimal:
+    """Signed amount this source applies to the primary.
+
+    Opposite type reduces the primary; same type increases it.
+    """
     amount = as_money(tx.amount)
-    if tx.type is TransactionType.credit:
+    if tx.type != primary_type:
         return amount
     return -amount
 
@@ -731,13 +740,13 @@ async def settle(
             )
 
     amount_applied = sum(
-        (_source_contribution(source) for source in sources),
+        (_source_contribution(source, primary.type) for source in sources),
         Decimal("0"),
     )
     new_amount = as_money(primary.amount) - as_money(amount_applied)
-    if new_amount <= 0:
+    if new_amount < 0:
         raise BadRequestError(
-            "Settle would reduce the primary amount to zero or below.",
+            "Settle would reduce the primary amount below zero.",
             code="settle_amount_invalid",
         )
 
@@ -851,7 +860,7 @@ async def unmerge(
     if target_idx is None:
         raise NotFoundError("Settlement group not found.", code="settle_group_not_found")
 
-    contribution = _source_contribution(merged)
+    contribution = _source_contribution(merged, primary.type)
     target = dict(groups[target_idx])
     member_ids = [
         str(item) for item in (target.get("mergedTransactionIds") or []) if str(item)
