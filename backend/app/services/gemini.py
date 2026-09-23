@@ -23,9 +23,11 @@ from app.services.payment_methods import (
 
 logger = logging.getLogger(__name__)
 
+# Temporary: gemini-3.1-flash-lite is returning 503 high demand.
+# Ask uses only the first model, so prefer 2.5-flash until lite recovers.
 GEMINI_MODELS = (
-    "gemini-3.1-flash-lite",
     "gemini-2.5-flash",
+    "gemini-3.1-flash-lite",
     "gemini-3.5-flash",
 )
 MIN_PARSE_CONFIDENCE = 0.5
