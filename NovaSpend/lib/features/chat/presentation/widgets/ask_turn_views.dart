@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:nova_spend/core/theme/app_colors.dart';
 import 'package:nova_spend/core/theme/app_radius.dart';
 import 'package:nova_spend/core/theme/app_spacing.dart';
+import 'package:nova_spend/core/widgets/app_loader.dart';
 import 'package:nova_spend/core/widgets/skeleton.dart';
 import 'package:nova_spend/features/analytics/domain/insights_math.dart';
 import 'package:nova_spend/features/chat/domain/entities/chat_citation_entity.dart';
@@ -65,6 +66,7 @@ class AskAssistantCard extends StatelessWidget {
     this.onOpenActivity,
     this.onCitationTap,
     this.onReviewProposal,
+    this.openingCitationId,
     super.key,
   });
 
@@ -75,6 +77,7 @@ class AskAssistantCard extends StatelessWidget {
   final VoidCallback? onOpenActivity;
   final ValueChanged<ChatCitationEntity>? onCitationTap;
   final VoidCallback? onReviewProposal;
+  final String? openingCitationId;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +181,10 @@ class AskAssistantCard extends StatelessWidget {
               _CitationRow(
                 citation: answer.citations[i],
                 formatMoney: formatMoney,
-                onTap: answer.citations[i].transactionId == null
+                opening: openingCitationId != null &&
+                    openingCitationId == answer.citations[i].transactionId,
+                onTap: openingCitationId != null ||
+                        answer.citations[i].transactionId == null
                     ? null
                     : () => onCitationTap?.call(answer.citations[i]),
               ),
@@ -264,11 +270,13 @@ class _CitationRow extends StatelessWidget {
   const _CitationRow({
     required this.citation,
     required this.formatMoney,
+    this.opening = false,
     this.onTap,
   });
 
   final ChatCitationEntity citation;
   final String Function(double amount) formatMoney;
+  final bool opening;
   final VoidCallback? onTap;
 
   @override
@@ -328,7 +336,10 @@ class _CitationRow extends StatelessWidget {
                   ),
                 ),
               ],
-              if (onTap != null) ...[
+              if (opening) ...[
+                const SizedBox(width: AppSpacing.xs),
+                const AppLoader(size: AppLoaderSize.small),
+              ] else if (onTap != null) ...[
                 const SizedBox(width: AppSpacing.xs),
                 Icon(
                   Icons.chevron_right_rounded,
