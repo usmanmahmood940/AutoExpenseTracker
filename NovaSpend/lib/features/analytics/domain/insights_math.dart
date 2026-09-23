@@ -59,33 +59,6 @@ double? displayableNetChangePercent(double currentNet, double? previousNet) {
   return percentChange(currentNet, previousNet);
 }
 
-class OtherCategorySpend {
-  const OtherCategorySpend({required this.amount, required this.share});
-
-  final double amount;
-  final double share;
-}
-
-/// Remaining spend outside the top [limit] categories, if any.
-OtherCategorySpend? otherCategorySpend(
-  Map<String, double> byCategory,
-  double totalSpent, {
-  int limit = 5,
-}) {
-  final positive = byCategory.entries
-      .where((entry) => entry.value.abs() > 0.0001)
-      .length;
-  if (positive <= limit) return null;
-  final top = topEntries(byCategory, limit: limit);
-  final topSum = top.fold<double>(0, (sum, entry) => sum + entry.value);
-  final remainder = totalSpent - topSum;
-  if (remainder.abs() <= 0.0001) return null;
-  return OtherCategorySpend(
-    amount: remainder,
-    share: shareOfTotal(remainder, totalSpent),
-  );
-}
-
 /// Maps previous-period trend debits onto [current] point indices.
 List<double> alignPreviousTrendValues({
   required List<TrendPointEntity> current,
@@ -104,6 +77,13 @@ List<double> alignPreviousTrendValues({
 double shareOfTotal(double amount, double total) {
   if (total.abs() < 0.0001) return 0;
   return amount / total;
+}
+
+/// Categories with spend, highest first. Zero and near-zero amounts are omitted.
+List<MapEntry<String, double>> spentCategoryEntries(Map<String, double> map) {
+  final list = map.entries.where((e) => e.value > 0.0001).toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return list;
 }
 
 List<MapEntry<String, double>> topEntries(

@@ -15,24 +15,19 @@ class InsightsCategoryBars extends StatelessWidget {
     required this.byCategory,
     required this.totalSpent,
     required this.formatMoney,
-    required this.otherLabel,
     this.onCategoryTap,
-    this.onOtherTap,
     super.key,
   });
 
   final Map<String, double> byCategory;
   final double totalSpent;
   final String Function(double amount) formatMoney;
-  final String otherLabel;
   final void Function(String categoryKey, String displayName)? onCategoryTap;
-  final VoidCallback? onOtherTap;
 
   @override
   Widget build(BuildContext context) {
-    final top = topEntries(byCategory);
-    final other = otherCategorySpend(byCategory, totalSpent);
-    if (top.isEmpty) {
+    final categories = spentCategoryEntries(byCategory);
+    if (categories.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -41,26 +36,16 @@ class InsightsCategoryBars extends StatelessWidget {
     return AppCard(
       child: Column(
         children: [
-          for (var i = 0; i < top.length; i++) ...[
+          for (var i = 0; i < categories.length; i++) ...[
             if (i != 0) const SizedBox(height: AppSpacing.smPlus2),
             _CategoryBarRow(
-              categoryKey: top[i].key,
-              displayName: categoryDisplayName(catalog, top[i].key),
-              amountLabel: formatMoney(top[i].value),
-              amount: top[i].value,
+              categoryKey: categories[i].key,
+              displayName: categoryDisplayName(catalog, categories[i].key),
+              amountLabel: formatMoney(categories[i].value),
+              amount: categories[i].value,
               totalSpent: totalSpent,
               animationIndex: i,
               onTap: onCategoryTap,
-            ),
-          ],
-          if (other != null) ...[
-            const SizedBox(height: AppSpacing.smPlus2),
-            _OtherCategoryRow(
-              label: otherLabel,
-              amountLabel: formatMoney(other.amount),
-              share: other.share,
-              animationIndex: top.length,
-              onTap: onOtherTap,
             ),
           ],
         ],
@@ -130,72 +115,6 @@ class _CategoryBarRow extends StatelessWidget {
                 barBackgroundColor:
                     theme.colorScheme.onSurface.withValues(alpha: 0.08),
                 displayName: displayName,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 96),
-              child: Text(
-                amountLabel,
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OtherCategoryRow extends StatelessWidget {
-  const _OtherCategoryRow({
-    required this.label,
-    required this.amountLabel,
-    required this.share,
-    required this.animationIndex,
-    required this.onTap,
-  });
-
-  final String label;
-  final String amountLabel;
-  final double share;
-  final int animationIndex;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final percent = (share * 100).round();
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
-
-    return Semantics(
-      label: '$label, $percent percent of spend, $amountLabel',
-      button: onTap != null,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-              child: Icon(Icons.more_horiz, size: 18, color: muted),
-            ),
-            const SizedBox(width: AppSpacing.smPlus2),
-            Expanded(
-              child: _AnimatedCategoryShare(
-                share: share,
-                animationIndex: animationIndex,
-                percentStyle: theme.textTheme.bodySmall?.copyWith(color: muted),
-                barColor: muted,
-                barBackgroundColor:
-                    theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                displayName: label,
-                displayNameStyle:
-                    theme.textTheme.bodyMedium?.copyWith(color: muted),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),

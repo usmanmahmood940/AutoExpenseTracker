@@ -1246,9 +1246,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightsTryLastMonth => 'Try last month';
 
   @override
-  String get insightsOtherCategory => 'Other';
-
-  @override
   String get insightsPrevMonth => 'Previous';
 
   @override

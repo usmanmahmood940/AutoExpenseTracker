@@ -9,21 +9,25 @@ class InsightsSmartCards extends StatelessWidget {
   const InsightsSmartCards({
     required this.cards,
     required this.onAsk,
+    this.maxCards,
     super.key,
   });
 
   final List<SmartCardEntity> cards;
   final ValueChanged<String> onAsk;
+  final int? maxCards;
 
   @override
   Widget build(BuildContext context) {
+    final displayCards =
+        maxCards != null ? cards.take(maxCards!).toList() : cards;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         children: [
-          for (var i = 0; i < cards.length; i++) ...[
+          for (var i = 0; i < displayCards.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpacing.smPlus2),
-            _SmartCardTile(card: cards[i], onAsk: onAsk),
+            _SmartCardTile(card: displayCards[i], onAsk: onAsk),
           ],
         ],
       ),

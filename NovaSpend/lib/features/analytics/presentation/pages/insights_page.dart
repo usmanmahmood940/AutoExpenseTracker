@@ -206,10 +206,10 @@ class _InsightsSections extends StatelessWidget {
       children: const [
         _TrendSection(),
         _NarrativeSection(),
-        _SmartCardsSection(),
         _CategoriesSection(),
         _TopMerchantsSection(),
         _RecurringSection(),
+        _SmartCardsSection(),
       ],
     );
   }
@@ -303,47 +303,6 @@ class _NarrativeSection extends StatelessWidget {
   }
 }
 
-class _SmartCardsSection extends StatelessWidget {
-  const _SmartCardsSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final snapshot = context.select(
-      (InsightsProvider p) =>
-          (p.isLoading, p.isLoadingSmartCards, p.smartCards),
-    );
-    final (isLoading, isLoadingSmartCards, smartCards) = snapshot;
-    if (!isLoadingSmartCards && smartCards.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: _InsightsView._sectionGap),
-        _PaddedSectionHeader(l10n.insightsSmartCards),
-        if (isLoading || isLoadingSmartCards)
-          const InsightsNarrativeSkeleton()
-        else
-          InsightsSmartCards(
-            cards: smartCards,
-            onAsk: (question) {
-              final insights = context.read<InsightsProvider>();
-              final bounds = insights.range;
-              context.read<AskProvider>().submit(
-                question,
-                from: bounds.from,
-                to: bounds.to,
-              );
-              MainShellScope.selectAskTab(context);
-            },
-          ),
-      ],
-    );
-  }
-}
-
 class _CategoriesSection extends StatelessWidget {
   const _CategoriesSection();
 
@@ -364,7 +323,7 @@ class _CategoriesSection extends StatelessWidget {
     final (isLoading, summary) = snapshot;
     final waitingForSummary = isLoading && summary == null;
     final hasCategories =
-        summary != null && topEntries(summary.byCategory).isNotEmpty;
+        summary != null && spentCategoryEntries(summary.byCategory).isNotEmpty;
     final showCategoriesEmpty =
         !waitingForSummary && !isLoading && !hasCategories;
 
@@ -393,7 +352,6 @@ class _CategoriesSection extends StatelessWidget {
               byCategory: summary!.byCategory,
               totalSpent: summary.totalDebit,
               formatMoney: money.formatMoney,
-              otherLabel: l10n.insightsOtherCategory,
               onCategoryTap: (key, displayName) {
                 context.read<SearchProvider>().applyActivityFilters(
                   range: context.read<InsightsProvider>().activityDateRange,
@@ -401,10 +359,6 @@ class _CategoriesSection extends StatelessWidget {
                 );
                 MainShellScope.selectTransactionsTab(context);
               },
-              onOtherTap: () => _openActivityForRange(
-                context,
-                context.read<InsightsProvider>(),
-              ),
             ),
           ),
       ],
@@ -506,6 +460,50 @@ class _RecurringSection extends StatelessWidget {
               items: recurring,
               formatMoney: money.formatMoney,
             ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SmartCardsSection extends StatelessWidget {
+  const _SmartCardsSection();
+
+  static const _maxCards = 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final snapshot = context.select(
+      (InsightsProvider p) =>
+          (p.isLoading, p.isLoadingSmartCards, p.smartCards),
+    );
+    final (isLoading, isLoadingSmartCards, smartCards) = snapshot;
+    if (!isLoadingSmartCards && smartCards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: _InsightsView._sectionGap),
+        _PaddedSectionHeader(l10n.insightsSmartCards),
+        if (isLoading || isLoadingSmartCards)
+          const InsightsNarrativeSkeleton()
+        else
+          InsightsSmartCards(
+            cards: smartCards,
+            maxCards: _maxCards,
+            onAsk: (question) {
+              final insights = context.read<InsightsProvider>();
+              final bounds = insights.range;
+              context.read<AskProvider>().submit(
+                question,
+                from: bounds.from,
+                to: bounds.to,
+              );
+              MainShellScope.selectAskTab(context);
+            },
           ),
       ],
     );

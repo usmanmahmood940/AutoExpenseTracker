@@ -2296,12 +2296,6 @@ abstract class AppLocalizations {
   /// **'Try last month'**
   String get insightsTryLastMonth;
 
-  /// No description provided for @insightsOtherCategory.
-  ///
-  /// In en, this message translates to:
-  /// **'Other'**
-  String get insightsOtherCategory;
-
   /// No description provided for @insightsPrevMonth.
   ///
   /// In en, this message translates to:

@@ -591,7 +591,6 @@
   "insightsEmpty": "No summary for this period yet",
   "insightsEmptyHint": "Add transactions or pick another period to see your spending story.",
   "insightsTryLastMonth": "Try last month",
-  "insightsOtherCategory": "Other",
   "insightsPrevMonth": "Previous",
   "insightsNextMonth": "Next",
   "insightsSectionTrendEmpty": "Not enough spending data to show a trend for this period.",

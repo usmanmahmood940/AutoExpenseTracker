@@ -11,30 +11,16 @@ void main() {
     });
   });
 
-  group('otherCategorySpend', () {
-    test('returns remainder outside top five', () {
-      final other = otherCategorySpend(
-        {
-          'a': 100,
-          'b': 90,
-          'c': 80,
-          'd': 70,
-          'e': 60,
-          'f': 50,
-          'g': 40,
-        },
-        490,
-      );
-      expect(other, isNotNull);
-      expect(other!.amount, 90);
-      expect(other.share, closeTo(90 / 490, 0.001));
-    });
-
-    test('is null when five or fewer categories', () {
-      expect(
-        otherCategorySpend({'Food': 100, 'Fuel': 50}, 150),
-        isNull,
-      );
+  group('spentCategoryEntries', () {
+    test('returns every category with spend, highest first', () {
+      final entries = spentCategoryEntries({
+        'Food': 40,
+        'Fuel': 0,
+        'Bills': 10,
+        'Shopping': 25,
+        'Rent': 0.00001,
+      });
+      expect(entries.map((e) => e.key).toList(), ['Food', 'Shopping', 'Bills']);
     });
   });
 
