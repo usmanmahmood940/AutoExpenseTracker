@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +13,7 @@ from app.core.config import get_settings
 from app.db.models.ai_summary import AiSummary
 from app.db.models.user import User
 from app.services import analytics as analytics_service
-from app.services.gemini import _ENDPOINT, GEMINI_MODELS, _extract_text
+from app.services.gemini import _extract_text, generate_content
 from app.services.transactions import parse_iso_date
 
 logger = logging.getLogger(__name__)
@@ -71,28 +70,19 @@ async def _get_cached_narrative(
 
 async def generate_spend_narrative_text(api_key: str, prompt: str) -> tuple[str, str]:
     """Returns (narrative, model). Empty narrative if every model fails."""
-    last_error = "unknown"
-    async with httpx.AsyncClient(timeout=45.0) as client:
-        for model_name in GEMINI_MODELS:
-            try:
-                url = _ENDPOINT.format(model=model_name)
-                body = {
-                    "contents": [
-                        {"role": "user", "parts": [{"text": prompt}]},
-                    ],
-                    "generationConfig": {"temperature": 0.4},
-                }
-                response = await client.post(url, params={"key": api_key}, json=body)
-                if response.status_code >= 400:
-                    raise RuntimeError(f"{response.status_code} {response.text[:400]}")
-                text = _extract_text(response.json())
-                if text:
-                    return text, model_name
-            except Exception as exc:
-                last_error = str(exc)
-                logger.warning("Insights narrative failed on %s: %s", model_name, exc)
-    logger.warning("Insights narrative unavailable: %s", last_error)
-    return "", ""
+    body = {
+        "contents": [
+            {"role": "user", "parts": [{"text": prompt}]},
+        ],
+        "generationConfig": {"temperature": 0.4},
+    }
+    try:
+        payload, model_name = await generate_content(api_key, body)
+        text = _extract_text(payload)
+    except Exception as exc:
+        logger.warning("Insights narrative unavailable: %s", exc)
+        return "", ""
+    return (text, model_name) if text else ("", "")
 
 
 def _facts_prompt(summary: dict) -> str:

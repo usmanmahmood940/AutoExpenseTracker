@@ -6,10 +6,8 @@ import json
 import logging
 from functools import lru_cache
 
-import httpx
-
 from app.db.seeds.concepts import CONCEPT_VOCABULARY, canonicalize_concepts
-from app.services.gemini import GEMINI_MODELS, _ENDPOINT, _extract_text
+from app.services.gemini import _extract_text, generate_content
 from app.services.semantic import concepts_from_question_deterministic
 
 logger = logging.getLogger(__name__)
@@ -91,19 +89,17 @@ async def resolve_concepts_from_question(
             "responseSchema": _SCHEMA,
         },
     }
-    url = _ENDPOINT.format(model=GEMINI_MODELS[0])
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            response = await client.post(url, params={"key": api_key}, json=body)
-            if response.status_code >= 400:
-                raise RuntimeError(f"{response.status_code} {response.text[:300]}")
-            payload = json.loads(_extract_text(response.json()) or "{}")
-            raw = payload.get("concepts") if isinstance(payload, dict) else None
-            if not isinstance(raw, list):
-                return []
-            clean = canonicalize_concepts([str(item) for item in raw])
-            _QUESTION_CONCEPT_CACHE[key] = tuple(clean)
-            return clean
+        response_payload, _model = await generate_content(
+            api_key, body, request_timeout=_TIMEOUT
+        )
+        payload = json.loads(_extract_text(response_payload) or "{}")
+        raw = payload.get("concepts") if isinstance(payload, dict) else None
+        if not isinstance(raw, list):
+            return []
+        clean = canonicalize_concepts([str(item) for item in raw])
+        _QUESTION_CONCEPT_CACHE[key] = tuple(clean)
+        return clean
     except Exception as exc:
         logger.warning("question concept resolve failed: %s", exc)
         return []

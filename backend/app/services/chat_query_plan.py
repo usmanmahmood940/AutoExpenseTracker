@@ -11,9 +11,7 @@ from __future__ import annotations
 import json
 import logging
 
-import httpx
-
-from app.services.gemini import _ENDPOINT, GEMINI_MODELS, _extract_text
+from app.services.gemini import _extract_text, generate_content
 
 logger = logging.getLogger(__name__)
 
@@ -97,13 +95,11 @@ async def plan_merchants(
             "responseSchema": _SCHEMA,
         },
     }
-    url = _ENDPOINT.format(model=GEMINI_MODELS[0])
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            response = await client.post(url, params={"key": api_key}, json=body)
-            if response.status_code >= 400:
-                raise RuntimeError(f"{response.status_code} {response.text[:300]}")
-            return _pick_valid(_extract_text(response.json()), candidates)
+        payload, _model = await generate_content(
+            api_key, body, request_timeout=_TIMEOUT
+        )
+        return _pick_valid(_extract_text(payload), candidates)
     except Exception as exc:
         logger.warning("query planner unavailable: %s", exc)
         return []

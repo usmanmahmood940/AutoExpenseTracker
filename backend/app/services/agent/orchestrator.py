@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 import time
@@ -10,7 +9,6 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -30,7 +28,7 @@ from app.services.agent.write_tools import (
     proposal_to_dict,
 )
 from app.services.chat_question_range import resolve_ask_window
-from app.services.gemini import GEMINI_MODELS, _ENDPOINT, _extract_text
+from app.services.gemini import GEMINI_MODELS, _extract_text, generate_content
 from app.services.rate_limit import enforce_rate_limit
 from app.services.transactions import SUMMABLE_STATUSES
 from sqlalchemy import func, select
@@ -101,10 +99,9 @@ def _guardrail(question: str) -> None:
 async def _gemini_turn(
     *,
     api_key: str,
-    model: str,
     contents: list[dict],
     system: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], str]:
     body = {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": contents,
@@ -112,12 +109,7 @@ async def _gemini_turn(
         "toolConfig": {"functionCallingConfig": {"mode": "AUTO"}},
         "generationConfig": {"temperature": 0.0},
     }
-    url = _ENDPOINT.format(model=model)
-    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        response = await client.post(url, params={"key": api_key}, json=body)
-        if response.status_code >= 400:
-            raise RuntimeError(f"{response.status_code} {response.text[:400]}")
-        return response.json()
+    return await generate_content(api_key, body, request_timeout=_TIMEOUT)
 
 
 def _parts_from_response(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -241,9 +233,8 @@ async def run_agent(
 
     for _ in range(_MAX_ITERATIONS):
         try:
-            payload = await _gemini_turn(
+            payload, model = await _gemini_turn(
                 api_key=api_key,
-                model=model,
                 contents=contents,
                 system=system,
             )

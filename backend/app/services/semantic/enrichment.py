@@ -6,7 +6,6 @@ import json
 import logging
 from datetime import date
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +13,7 @@ from app.core.config import Settings, get_settings
 from app.db.models.merchant_concept import MerchantConcept
 from app.db.models.transaction import Transaction
 from app.db.seeds.concepts import CONCEPT_VOCABULARY, canonicalize_concepts
-from app.services.gemini import GEMINI_MODELS, _ENDPOINT, _extract_text
+from app.services.gemini import _extract_text, generate_content
 from app.services.merchant_key import normalize_merchant_key
 from app.services.semantic import (
     ensure_merchant_concepts,
@@ -57,11 +56,14 @@ async def classify_merchant_concepts(
     *,
     api_key: str,
     merchant: str,
-) -> list[str]:
-    """Ask Gemini for closed-vocabulary concepts for one merchant."""
+) -> tuple[list[str], str]:
+    """Ask Gemini for closed-vocabulary concepts for one merchant.
+
+    Returns (concepts, model). Concepts are empty when every model fails.
+    """
     text = (merchant or "").strip()
     if not api_key or not text:
-        return []
+        return [], ""
     body = {
         "contents": [
             {
@@ -82,21 +84,19 @@ async def classify_merchant_concepts(
             "responseSchema": _SCHEMA,
         },
     }
-    url = _ENDPOINT.format(model=GEMINI_MODELS[0])
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            response = await client.post(url, params={"key": api_key}, json=body)
-            if response.status_code >= 400:
-                raise RuntimeError(f"{response.status_code} {response.text[:300]}")
-            payload = json.loads(_extract_text(response.json()) or "{}")
-            raw = payload.get("concepts") if isinstance(payload, dict) else None
-            if not isinstance(raw, list):
-                return []
-            clean = canonicalize_concepts([str(item) for item in raw])
-            return clean or ["other"]
+        response_payload, model_name = await generate_content(
+            api_key, body, request_timeout=_TIMEOUT
+        )
+        payload = json.loads(_extract_text(response_payload) or "{}")
+        raw = payload.get("concepts") if isinstance(payload, dict) else None
+        if not isinstance(raw, list):
+            return [], model_name
+        clean = canonicalize_concepts([str(item) for item in raw])
+        return clean or ["other"], model_name
     except Exception as exc:
         logger.warning("merchant concept classify failed: %s", exc)
-        return []
+        return [], ""
 
 
 async def enrich_merchant_if_needed(
@@ -119,7 +119,7 @@ async def enrich_merchant_if_needed(
         return
     settings = settings or get_settings()
     api_key = settings.gemini_api_key or ""
-    concepts = await classify_merchant_concepts(
+    concepts, model_name = await classify_merchant_concepts(
         api_key=api_key, merchant=display_name or key
     )
     if not concepts:
@@ -129,7 +129,7 @@ async def enrich_merchant_if_needed(
         session,
         merchant_normalized=key,
         concepts=concepts,
-        model=GEMINI_MODELS[0] if api_key else "fallback",
+        model=model_name or "fallback",
     )
     await session.commit()
 
@@ -177,7 +177,7 @@ async def backfill_merchant_concepts(
             )
             seeded += 1
             continue
-        concepts = await classify_merchant_concepts(
+        concepts, model_name = await classify_merchant_concepts(
             api_key=settings.gemini_api_key or "", merchant=display
         )
         if not concepts:
@@ -189,7 +189,7 @@ async def backfill_merchant_concepts(
             session,
             merchant_normalized=key,
             concepts=concepts,
-            model=GEMINI_MODELS[0] if settings.gemini_api_key else "fallback",
+            model=model_name or "fallback",
         )
     await session.commit()
     return {

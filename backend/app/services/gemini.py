@@ -24,12 +24,15 @@ from app.services.payment_methods import (
 logger = logging.getLogger(__name__)
 
 # Temporary: gemini-3.1-flash-lite is returning 503 high demand.
-# Ask uses only the first model, so prefer 2.5-flash until lite recovers.
+# 2.5-flash is first, but its free tier is 20 requests/day. Callers must
+# fall through this tuple on 429/503; do not pin GEMINI_MODELS[0].
 GEMINI_MODELS = (
     "gemini-2.5-flash",
     "gemini-3.1-flash-lite",
     "gemini-3.5-flash",
 )
+# Daily free-tier exhaustion does not recover until the quota window resets.
+_quota_exhausted: set[str] = set()
 MIN_PARSE_CONFIDENCE = 0.5
 _KARACHI = ZoneInfo("Asia/Karachi")
 _ENDPOINT = (
@@ -264,17 +267,84 @@ def _extract_text(payload: dict[str, Any]) -> str:
     return text
 
 
-async def _generate(
-    client: httpx.AsyncClient,
-    *,
+def _mark_quota_exhausted(model_name: str, message: str) -> None:
+    lower = message.lower()
+    if (
+        "free_tier" in lower
+        or "quota exceeded" in lower
+        or "exceeded your current quota" in lower
+    ):
+        _quota_exhausted.add(model_name)
+
+
+async def generate_content(
     api_key: str,
-    model_name: str,
+    body: dict[str, Any],
+    *,
+    request_timeout: float = 45.0,
+) -> tuple[dict[str, Any], str]:
+    """POST generateContent, walking GEMINI_MODELS on retryable errors.
+
+    Returns (response JSON, model name). Raises RuntimeError when every
+    candidate fails. A daily-quota 429 is remembered so later calls skip it.
+    """
+    last_error = "Unknown Gemini error"
+    models = [name for name in GEMINI_MODELS if name not in _quota_exhausted]
+    if not models:
+        models = list(GEMINI_MODELS)
+
+    async with httpx.AsyncClient(timeout=request_timeout) as client:
+        for index, model_name in enumerate(models):
+            try:
+                url = _ENDPOINT.format(model=model_name)
+                response = await client.post(
+                    url,
+                    headers={"x-goog-api-key": api_key},
+                    json=body,
+                )
+                if response.status_code >= 400:
+                    raise RuntimeError(f"{response.status_code} {response.text[:500]}")
+                if index > 0:
+                    logger.warning(
+                        "gemini_fallback_ok",
+                        extra={"model": model_name, "skipped": models[:index]},
+                    )
+                return response.json(), model_name
+            except Exception as exc:
+                message = str(exc)
+                last_error = f"[{model_name}] {message}"
+                if _is_retryable(message):
+                    _mark_quota_exhausted(model_name, message)
+                    # `message` is reserved on LogRecord; using it as extra
+                    # raises KeyError and aborts the fallback loop.
+                    logger.warning(
+                        "gemini_model_retry",
+                        extra={"model": model_name, "detail": message},
+                    )
+                    await asyncio.sleep(1.5)
+                    continue
+                logger.error(
+                    "gemini_model_failed",
+                    extra={"model": model_name, "detail": message},
+                )
+                raise RuntimeError(last_error) from exc
+
+    logger.error("gemini_models_exhausted", extra={"detail": last_error})
+    raise RuntimeError(last_error)
+
+
+async def parse_transaction(
+    api_key: str,
     raw_message: str,
     allowed_categories: list[str],
-    current_date: str,
-    current_datetime: str,
-) -> str:
-    url = _ENDPOINT.format(model=model_name)
+    now: datetime | None = None,
+) -> ParseResult:
+    if not allowed_categories:
+        return ParseFail(error="No allowed categories configured")
+    if not api_key:
+        return ParseFail(error="Gemini is not configured (GEMINI_API_KEY)")
+
+    current_date, current_datetime = format_pakistan_now(now or datetime.now(UTC))
     body = {
         "systemInstruction": {
             "parts": [
@@ -304,70 +374,15 @@ async def _generate(
             "responseSchema": _schema(allowed_categories),
         },
     }
-    response = await client.post(url, params={"key": api_key}, json=body)
-    if response.status_code >= 400:
-        raise RuntimeError(f"{response.status_code} {response.text[:500]}")
-    return _extract_text(response.json())
-
-
-async def parse_transaction(
-    api_key: str,
-    raw_message: str,
-    allowed_categories: list[str],
-    now: datetime | None = None,
-) -> ParseResult:
-    if not allowed_categories:
-        return ParseFail(error="No allowed categories configured")
-    if not api_key:
-        return ParseFail(error="Gemini is not configured (GEMINI_API_KEY)")
-
-    current_date, current_datetime = format_pakistan_now(now or datetime.now(UTC))
-    last_error = "Unknown Gemini parse error"
-    attempts: list[str] = []
-
-    async with httpx.AsyncClient(timeout=45.0) as client:
-        for index, model_name in enumerate(GEMINI_MODELS):
-            try:
-                text = await _generate(
-                    client,
-                    api_key=api_key,
-                    model_name=model_name,
-                    raw_message=raw_message,
-                    allowed_categories=allowed_categories,
-                    current_date=current_date,
-                    current_datetime=current_datetime,
-                )
-                parsed = _normalize(json.loads(text), allowed_categories)
-                if parsed.parse_confidence < MIN_PARSE_CONFIDENCE:
-                    return ParseFail(
-                        error=f"Low parse confidence: {parsed.parse_confidence}",
-                        low_confidence=True,
-                    )
-                if index > 0:
-                    logger.warning(
-                        "gemini_fallback_ok",
-                        extra={
-                            "model": model_name,
-                            "skipped": list(GEMINI_MODELS[:index]),
-                        },
-                    )
-                return ParseOk(parsed=parsed, model=model_name)
-            except Exception as exc:
-                message = str(exc)
-                last_error = f"[{model_name}] {message}"
-                attempts.append(last_error)
-                if _is_retryable(message):
-                    logger.warning(
-                        "gemini_model_retry",
-                        extra={"model": model_name, "message": message},
-                    )
-                    await asyncio.sleep(1.5)
-                    continue
-                logger.error(
-                    "gemini_parse_failed",
-                    extra={"model": model_name, "message": message},
-                )
-                return ParseFail(error=last_error)
-
-    logger.error("gemini_parse_exhausted", extra={"attempts": attempts})
-    return ParseFail(error=last_error)
+    try:
+        payload, model_name = await generate_content(api_key, body)
+        text = _extract_text(payload)
+        parsed = _normalize(json.loads(text), allowed_categories)
+    except Exception as exc:
+        return ParseFail(error=str(exc))
+    if parsed.parse_confidence < MIN_PARSE_CONFIDENCE:
+        return ParseFail(
+            error=f"Low parse confidence: {parsed.parse_confidence}",
+            low_confidence=True,
+        )
+    return ParseOk(parsed=parsed, model=model_name)

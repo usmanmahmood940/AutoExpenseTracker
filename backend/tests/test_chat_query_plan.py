@@ -65,7 +65,7 @@ def test_transport_failure_returns_empty(monkeypatch) -> None:
     """A planner outage must degrade silently, not raise."""
     import httpx
 
-    from app.services import chat_query_plan
+    from app.services import gemini
 
     class BoomClient:
         def __init__(self, *args, **kwargs) -> None:
@@ -80,7 +80,7 @@ def test_transport_failure_returns_empty(monkeypatch) -> None:
         async def post(self, *args, **kwargs):
             raise httpx.ConnectError("planner unreachable")
 
-    monkeypatch.setattr(chat_query_plan.httpx, "AsyncClient", BoomClient)
+    monkeypatch.setattr(gemini.httpx, "AsyncClient", BoomClient)
     result = asyncio.run(
         plan_merchants(
             api_key="key", question="how much on power", merchants=_MERCHANTS
